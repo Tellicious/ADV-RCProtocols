@@ -1,0 +1,585 @@
+/* BEGIN Header */
+/**
+ ******************************************************************************
+ * \file            CRSF_types.h
+ * \author          Andrea Vivani
+ * \brief           CRSF protocol-specific types
+ ******************************************************************************
+ * \copyright
+ *
+ * Copyright 2025 Andrea Vivani
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ ******************************************************************************
+ */
+/* END Header */
+
+#ifndef __CRSF_TYPES_H__
+#define __CRSF_TYPES_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+
+/* Configuration -------------------------------------------------------------*/
+
+#define CRSF_MAX_RPM_VALUES         19 /* Max RPM values */
+#define CRSF_MAX_TEMPERATURE_VALUES 20 /* Max temperature values */
+#define CRSF_MAX_VOLTAGE_VALUES     29 /* Max voltage values */
+#define CRSF_RC_CHANNELS            16 /* Number of RC channels */
+
+#ifndef CRSF_MAX_FLIGHT_MODE_NAME_LEN
+#define CRSF_MAX_FLIGHT_MODE_NAME_LEN 16 /* Max flight mode name length */
+#endif
+
+#ifndef CRSF_MAX_DEVICE_NAME_LEN
+#define CRSF_MAX_DEVICE_NAME_LEN 16 /* Max device name length */
+#endif
+
+#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56 /* Max parameter settings payload */
+
+#ifndef CRSF_MAX_PARAM_DATA_LEN
+#define CRSF_MAX_PARAM_DATA_LEN 32 /* Max parameter value length */
+#endif
+
+#ifndef CRSF_MAX_COMMAND_PAYLOAD
+#define CRSF_MAX_COMMAND_PAYLOAD 32 /* Max command payload */
+#endif
+
+#ifndef CRSF_MAX_MAVLINK_PAYLOAD
+#define CRSF_MAX_MAVLINK_PAYLOAD 58 /* Max MAVLink payload */
+#endif
+
+/* Characteristics -----------------------------------------------------------*/
+
+#define CRSF_MIN_FRAME_LEN 2U  // Excluding Sync byte and Frame Length
+#define CRSF_MAX_FRAME_LEN 62U // Excluding Sync byte and Frame Length
+#define CRSF_STD_HDR_SIZE  3U  /* addr,len,type */
+#define CRSF_CRC_SIZE      1U
+
+/* Typedefs ------------------------------------------------------------------*/
+
+/**
+ * Addresses
+ */
+typedef enum {
+    CRSF_ADDRESS_BROADCAST = 0x00,
+    CRSF_ADDRESS_USB = 0x10,
+    CRSF_ADDRESS_TBS_CORE_PNP_PRO = 0x80,
+    CRSF_ADDRESS_RESERVED1 = 0x8A,
+    CRSF_ADDRESS_CURRENT_SENSOR = 0xC0,
+    CRSF_ADDRESS_GPS = 0xC2,
+    CRSF_ADDRESS_TBS_BLACKBOX = 0xC4,
+    CRSF_ADDRESS_FLIGHT_CONTROLLER = 0xC8,
+    CRSF_ADDRESS_RESERVED2 = 0xCA,
+    CRSF_ADDRESS_RACE_TAG = 0xCC,
+    CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
+    CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
+    CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
+    CRSF_ADDRESS_ELRS_LUA = 0xEF
+} CRSF_Address_t;
+
+/**
+ * Frame types
+ */
+typedef enum {
+    /* Telemetry (standard header) */
+    CRSF_FRAMETYPE_GPS = 0x02,
+    CRSF_FRAMETYPE_GPS_TIME = 0x03,
+    CRSF_FRAMETYPE_GPS_EXTENDED = 0x06,
+    CRSF_FRAMETYPE_VARIO = 0x07,
+    CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
+    CRSF_FRAMETYPE_BAROALT_VSPEED = 0x09,
+    CRSF_FRAMETYPE_AIRSPEED = 0x0A,
+    CRSF_FRAMETYPE_HEARTBEAT = 0x0B,
+    CRSF_FRAMETYPE_RPM = 0x0C,
+    CRSF_FRAMETYPE_TEMPERATURE = 0x0D,
+    CRSF_FRAMETYPE_VOLTAGES = 0x0E,
+    CRSF_FRAMETYPE_DISCONTINUED = 0x0F,
+    CRSF_FRAMETYPE_VTX = 0x10,
+    CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
+    CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
+    CRSF_FRAMETYPE_SUBSET_RC_CHANNELS = 0x17,
+    CRSF_FRAMETYPE_RC_CHANNELS_PACKED_UNUSED = 0x18, //Unused
+    CRSF_FRAMETYPE_RESERVED_CROSSFIRE_1 = 0x19,      //Reserved
+    CRSF_FRAMETYPE_RESERVED_CROSSFIRE_2 = 0x1A,      //Reserved
+    CRSF_FRAMETYPE_RESERVED_CROSSFIRE_3 = 0x1B,      //Reserved
+    CRSF_FRAMETYPE_LINK_STATISTICS_RX = 0X1C,
+    CRSF_FRAMETYPE_LINK_STATISTICS_TX = 0X1D,
+    CRSF_FRAMETYPE_ATTITUDE = 0x1E,
+    CRSF_FRAMETYPE_MAVLINK_FC = 0x1F,
+    CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
+    CRSF_FRAMETYPE_ESP_NOW_MESSAGES = 0X22,
+    CRSF_FRAMETYPE_RESERVED = 0X27, //Reserved
+
+    /* Extended header frames (TBS) 0x28-0x96 */
+    CRSF_FRAMETYPE_DEVICE_PING = 0x28,
+    CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
+    CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
+    CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
+    CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
+    /* Direct Command */
+    CRSF_FRAMETYPE_COMMAND = 0x32,
+
+    /* Other */
+    CRSF_FRAMETYPE_LOGGING = 0x34,    //Not implemented
+    CRSF_FRAMETYPE_RESERVED_2 = 0x36, //Reserved
+    CRSF_FRAMETYPE_RESERVED_3 = 0x38, //Reserved
+    CRSF_FRAMETYPE_RADIO_ID = 0x3A,   //Not implemented
+    CRSF_FRAMETYPE_GAME = 0x3C,       //Not implemented
+    CRSF_FRAMETYPE_RESERVED_4 = 0x3E, //Reserved
+    CRSF_FRAMETYPE_RESERVED_5 = 0x40, //Reserved
+
+    /* MSP/KISS chunked */
+    CRSF_FRAMETYPE_KISS_REQ = 0x78,  //Not implemented
+    CRSF_FRAMETYPE_KISS_RESP = 0x79, //Not implemented
+    CRSF_FRAMETYPE_MSP_REQ = 0x7A,   //Not implemented
+    CRSF_FRAMETYPE_MSP_RESP = 0x7B,  //Not implemented
+    CRSF_FRAMETYPE_MSP_WRITE = 0x7C,
+    /* Ardupilot frames */
+    CRSF_FRAMETYPE_ARDUPILOT_LEGACY = 0x7F, //Reserved
+    CRSF_FRAMETYPE_ARDUPILOT_RESP = 0x80,   //Reserved
+
+    /* mLRS reserved */
+    CRSF_FRAMETYPE_MLRS_RESERVED_1 = 0x81, //Reserved
+    CRSF_FRAMETYPE_MLRS_RESERVED_2 = 0x82, //Reserved
+
+    /* MAVLink */
+    CRSF_FRAMETYPE_MAVLINK_ENVELOPE = 0xAA,
+    CRSF_FRAMETYPE_MAVLINK_STATUS = 0xAC,
+} CRSF_FrameType_t;
+
+/**
+ * Parameter types for device configuration
+ */
+typedef enum {
+    CRSF_UINT8 = 0,  // Deprecated, use CRSF_FLOAT
+    CRSF_INT8 = 1,   // Deprecated, use CRSF_FLOAT
+    CRSF_UINT16 = 2, // Deprecated, use CRSF_FLOAT
+    CRSF_INT16 = 3,  // Deprecated, use CRSF_FLOAT
+    CRSF_UINT32 = 4, // Deprecated, use CRSF_FLOAT
+    CRSF_INT32 = 5,  // Deprecated, use CRSF_FLOAT
+    CRSF_FLOAT = 8,
+    CRSF_TEXT_SELECTION = 9,
+    CRSF_STRING = 10,
+    CRSF_FOLDER = 11,
+    CRSF_INFO = 12,
+    CRSF_COMMAND = 13,
+    CRSF_OUT_OF_RANGE = 127
+} CRSF_ParamType_t;
+
+/* Payloads ------------------------------------------------------------------*/
+
+#pragma pack(push, 1)
+
+/**
+ * CRSF_FRAMETYPE_GPS payload
+ */
+typedef struct {
+    int32_t latitude;     // degree / 10`000`000
+    int32_t longitude;    // degree / 10`000`000
+    uint16_t groundspeed; // km/h / 100
+    uint16_t heading;     // degree / 100
+    uint16_t altitude;    // meter - 1000m offset
+    uint8_t satellites;   // # of sats in view
+} CRSF_GPS_t;
+
+/**
+ * CRSF_FRAMETYPE_GPS_TIME payload
+ */
+typedef struct {
+    int16_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint16_t millisecond;
+} CRSF_GPS_Time_t;
+
+/**
+ * CRSF_FRAMETYPE_GPS_EXTENDED payload
+ */
+typedef struct {
+    uint8_t fix_type;      // Current GPS fix quality
+    int16_t n_speed;       // Northward (north = positive) Speed [cm/sec]
+    int16_t e_speed;       // Eastward (east = positive) Speed [cm/sec]
+    int16_t v_speed;       // Vertical (up = positive) Speed [cm/sec]
+    int16_t h_speed_acc;   // Horizontal Speed accuracy cm/sec
+    int16_t track_acc;     // Heading accuracy in degrees scaled with 1e-1 degrees times 10)
+    int16_t alt_ellipsoid; // Meters Height above GPS Ellipsoid (not MSL)
+    int16_t h_acc;         // horizontal accuracy in cm
+    int16_t v_acc;         // vertical accuracy in cm
+    uint8_t reserved;
+    uint8_t hDOP; // Horizontal dilution of precision,Dimensionless in nits of.1.
+    uint8_t vDOP; // vertical dilution of precision, Dimensionless in nits of .1.
+} CRSF_GPS_Ext_t;
+
+/**
+ * CRSF_FRAMETYPE_VARIO payload
+ */
+typedef struct {
+    int16_t v_speed; // Vertical speed cm/s
+} CRSF_Vario_t;
+
+/**
+ * CRSF_FRAMETYPE_BATTERY payload
+ */
+typedef struct {
+    int16_t voltage; // Voltage (LSB = 10 µV)
+    int16_t current; // Current (LSB = 10 µA)
+    //uint24_t capacity_used; // Capacity used (mAh) - as per specs
+    uint32_t capacity_used; // Capacity used (mAh)
+    uint8_t remaining;      // Battery remaining (percent)
+} CRSF_Battery_t;
+
+/**
+ * CRSF_FRAMETYPE_BAROALT_VSPEED payload
+ */
+/** Payload sent
+typedef struct {
+    uint16_t altitude_packed;     // Altitude above start (calibration) point
+                                  // Altitude value depends on MSB (bit 15):
+                                  //   MSB = 0: altitude is in decimeters - 10000dm offset (so 0 represents -1000m; 10000 represents 0m (starting altitude); 0x7fff represents 2276.7m);
+                                  //   MSB = 1: altitude is in meters. Without any offset.
+    int8_t vertical_speed_packed; // vertical speed is represented in cm/s with logarithmic scale
+}
+CRSF_BaroAlt_VS_t;*/
+typedef struct {
+    int32_t altitude;       // Altitude above start (calibration) point in dm
+    int16_t vertical_speed; // Vertical speed in cm/s
+} CRSF_BaroAlt_VS_t;
+
+/** 
+ * CRSF_FRAMETYPE_AIRSPEED payload
+ */
+typedef struct {
+    uint16_t speed; // Airspeed in 0.1 * km/h (hectometers/h)
+} CRSF_Airspeed_t;
+
+/** 
+ * CRSF_FRAMETYPE_HEARTBEAT payload
+ */
+typedef struct {
+    int16_t origin_address; // Origin Device address
+} CRSF_Heartbeat_t;
+
+/** 
+ * CRSF_FRAMETYPE_RPM payload
+ */
+typedef struct {
+    uint8_t rpm_source_id; // Identifies the source of the RPM data (e.g., 0 = Motor 1, 1 = Motor 2, etc.)
+    //int24_t rpm_value[CRSF_MAX_RPM_VALUES]; // 1 - 19 RPM values with negative ones representing the motor spinning in reverse - payload sent
+    int32_t rpm_value[CRSF_MAX_RPM_VALUES]; // 1 - 19 RPM values with negative ones representing the motor spinning in reverse
+} CRSF_RPM_t;
+
+/** 
+ * CRSF_FRAMETYPE_TEMPERATURE payload
+ */
+typedef struct {
+    uint8_t temp_source_id; // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    int16_t
+        temperature[CRSF_MAX_TEMPERATURE_VALUES]; // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
+} CRSF_Temperature_t;
+
+/** 
+ * CRSF_FRAMETYPE_VOLTAGES payload
+ */
+typedef struct {
+    uint8_t Voltage_source_id;                        // source of the voltages
+    uint16_t Voltage_values[CRSF_MAX_VOLTAGE_VALUES]; // Up to 29 voltages in millivolts (e.g. 3.850V = 3850)
+} CRSF_Voltages_t;
+
+/**
+ * CRSF_FRAMETYPE_VTX payload.
+ */
+typedef struct {
+    uint8_t origin_address;
+    uint8_t power_dBm;           // VTX power in dBm
+    uint16_t frequency_MHz;      // VTX frequency in MHz
+    uint8_t pit_mode        : 1; // 0=Off, 1=On
+    uint8_t pitmode_control : 2; // 0=Off, 1=On, 2=Switch, 3=Failsafe
+    uint8_t pitmode_switch  : 4; // 0=Ch5, 1=Ch5 Inv, … , 15=Ch12 Inv
+} CRSF_VTX_t;
+
+/**
+ * CRSF_FRAMETYPE_LINK_STATISTICS payload
+ */
+typedef struct {
+    uint8_t up_rssi_ant1;      // Uplink RSSI Antenna 1 (dBm * -1)
+    uint8_t up_rssi_ant2;      // Uplink RSSI Antenna 2 (dBm * -1)
+    uint8_t up_link_quality;   // Uplink Package success rate / Link quality (%)
+    int8_t up_snr;             // Uplink SNR (dB)
+    uint8_t active_antenna;    // number of currently best antenna
+    uint8_t rf_profile;        // enum {4fps = 0 , 50fps, 150fps}
+    uint8_t up_rf_power;       // enum {0mW = 0, 10mW, 25mW, 100mW,
+                               // 500mW, 1000mW, 2000mW, 250mW, 50mW}
+    uint8_t down_rssi;         // Downlink RSSI (dBm * -1)
+    uint8_t down_link_quality; // Downlink Package success rate / Link quality (%)
+    int8_t down_snr;           // Downlink SNR (dB)
+} CRSF_LinkStatistics_t;
+
+/**
+ * CRSF_FRAMETYPE_CHANNELS_PACKED payload
+ */
+typedef struct {
+    uint16_t channel_01 : 11;
+    uint16_t channel_02 : 11;
+    uint16_t channel_03 : 11;
+    uint16_t channel_04 : 11;
+    uint16_t channel_05 : 11;
+    uint16_t channel_06 : 11;
+    uint16_t channel_07 : 11;
+    uint16_t channel_08 : 11;
+    uint16_t channel_09 : 11;
+    uint16_t channel_10 : 11;
+    uint16_t channel_11 : 11;
+    uint16_t channel_12 : 11;
+    uint16_t channel_13 : 11;
+    uint16_t channel_14 : 11;
+    uint16_t channel_15 : 11;
+    uint16_t channel_16 : 11;
+} CRSF_RC_Channels_Packed_t;
+
+typedef union {
+    struct {
+        uint16_t channel_01;
+        uint16_t channel_02;
+        uint16_t channel_03;
+        uint16_t channel_04;
+        uint16_t channel_05;
+        uint16_t channel_06;
+        uint16_t channel_07;
+        uint16_t channel_08;
+        uint16_t channel_09;
+        uint16_t channel_10;
+        uint16_t channel_11;
+        uint16_t channel_12;
+        uint16_t channel_13;
+        uint16_t channel_14;
+        uint16_t channel_15;
+        uint16_t channel_16;
+    };
+
+    uint16_t channels[CRSF_RC_CHANNELS]; // Range 1000-2000
+} CRSF_RC_Channels_t;
+
+/**
+ * CRSF_FRAMETYPE_SUBSET_RC_CHANNELS payload - in revision
+ */
+// #define PACK_TX(x)      ((x - 3750) * 8 / 25 + 993)
+//#define UNPACK_RX(x, S) (x * S + 988)
+// S = 1.0 for 10-bit, S = 0.5 for 11-bit, S = 0.25 for 12-bit, S = 0.125 for 13-bit
+/*typedef struct {
+    uint8_t starting_channel    : 5;        // which channel number is the first one in the frame
+    uint8_t res_configuration   : 2;        // configuration for the RC data resolution
+                                            // (10 - 13 bits)
+    uint8_t digital_switch_flag : 1;        // configuration bit for digital channel
+    uint16_t channel[] : resolution;        // variable amount of channels
+                                            // (with variable resolution based on the
+                                            // res_configuration)
+                                            // based on the frame size
+    uint16_t digital_switch_channel[] : 10; // digital switch channel
+} CRSF_RC_ChannelsSubset_t;*/
+
+/**
+ * CRSF_FRAMETYPE_LINK_STATISTICS_RX payload
+ */
+typedef struct {
+
+    uint8_t rssi_db;      // RSSI (dBm * -1)
+    uint8_t rssi_percent; // RSSI in percent
+    uint8_t link_quality; // Package success rate / Link quality (%)
+    int8_t snr;           // SNR (dB)
+    uint8_t rf_power_db;  // rf power in dBm
+} CRSF_LinkStatisticsRX_t;
+
+/**
+ * CRSF_FRAMETYPE_LINK_STATISTICS_TX payload
+ */
+typedef struct {
+    uint8_t rssi_db;      // RSSI (dBm * -1)
+    uint8_t rssi_percent; // RSSI in percent
+    uint8_t link_quality; // Package success rate / Link quality (%)
+    int8_t snr;           // SNR (dB)
+    uint8_t rf_power_db;  // rf power in dBm
+    uint8_t fps;          // rf frames per second (fps / 10)
+} CRSF_LinkStatisticsTX_t;
+
+/**
+ * CRSF_FRAMETYPE_ATTITUDE payload
+ */
+typedef struct {
+    int16_t pitch; // Pitch angle (LSB = 100 µrad)
+    int16_t roll;  // Roll angle  (LSB = 100 µrad)
+    int16_t yaw;   // Yaw angle   (LSB = 100 µrad)
+} CRSF_Attitude_t;
+
+/**
+ * CRSF_FRAMETYPE_MAVLINK_FC payload
+ */
+typedef struct {
+    int16_t airspeed;
+    uint8_t base_mode;      // vehicle mode flags, defined in MAV_MODE_FLAG enum
+    uint32_t custom_mode;   // autopilot-specific flags
+    uint8_t autopilot_type; // FC type; defined in MAV_AUTOPILOT enum
+    uint8_t firmware_type;  // vehicle type; defined in MAV_TYPE enum
+} CRSF_MAVLinkFC_t;
+
+/**
+ * CRSF_FRAMETYPE_FLIGHT_MODE payload
+ */
+typedef struct {
+    char flight_mode[CRSF_MAX_FLIGHT_MODE_NAME_LEN]; // Null-terminated string
+} CRSF_FlightMode_t;
+
+/**
+ * CRSF_FRAMETYPE_ESP_NOW_MESSAGES payload
+ */
+typedef struct {
+    uint8_t VAL1;       // Used for Seat Position of the Pilot
+    uint8_t VAL2;       // Used for the Current Pilots Lap
+    char VAL3[15];      // 15 characters for the lap time current/split
+    char VAL4[15];      // 15 characters for the lap time current/split
+    char FREE_TEXT[20]; // Free text of 20 character at the bottom of the screen
+} CRSF_ESPNowMessages_t;
+
+/**
+ * CRSF_FRAMETYPE_DEVICE_PING payload
+ */
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+} CRSF_Ping_t;
+
+/**
+ * CRSF_FRAMETYPE_DEVICE_INFO payload
+ */
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+    char Device_name[CRSF_MAX_DEVICE_NAME_LEN]; // Null-terminated string
+    uint32_t Serial_number;
+    uint32_t Hardware_ID;
+    uint32_t Firmware_ID;
+    uint8_t Parameters_total; // Total amount of parameters
+    uint8_t Parameter_version_number;
+} CRSF_DeviceInfo_t;
+
+/**
+ * CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY payload
+ */
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+    uint8_t Parameter_number;                         // Starting from 0
+    uint8_t Parameter_chunks_remaining;               // Chunks remaining count
+    uint8_t Payload[CRSF_MAX_PARAM_SETTINGS_PAYLOAD]; // Depending on parameter type
+} CRSF_ParamSettingsEntry_t;
+
+/**
+ * CRSF_FRAMETYPE_PARAMETER_READ payload
+ */
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+    uint8_t Parameter_number;
+    uint8_t Parameter_chunk_number; // Chunk number to request, starts with 0
+} CRSF_ParamRead_t;
+
+/**
+ * CRSF_FRAMETYPE_PARAMETER_WRITE payload
+ */
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+    uint8_t Parameter_number;
+    uint8_t Data[CRSF_MAX_PARAM_DATA_LEN];
+} CRSF_ParamWrite_t;
+
+/**
+ * CRSF_FRAMETYPE_COMMAND payload
+ */
+
+typedef struct {
+    uint8_t dest_address;
+    uint8_t origin_address;
+    uint8_t Command_ID;
+    uint8_t Payload[CRSF_MAX_COMMAND_PAYLOAD]; // Depending on Command ID
+    // uint8_t Command_CRC8;                      // 8 bit CRC POLYNOM = 0xBA
+} CRSF_Command_t;
+
+/**
+ * CRSF_FRAMETYPE_MAVLINK_ENVELOPE payload
+ */
+typedef struct {
+    uint8_t total_chunks  : 4;              // total count of chunks
+    uint8_t current_chunk : 4;              // current chunk number
+    uint8_t data_size;                      // size of data (max 58)
+    uint8_t data[CRSF_MAX_MAVLINK_PAYLOAD]; // data array (58 bytes max)
+} CRSF_MAVLinkEnv_t;
+
+/**
+ * CRSF_FRAMETYPE_MAVLINK_STATUS payload
+ */
+typedef struct {
+    uint32_t sensor_present;
+    uint32_t sensor_enabled;
+    uint32_t sensor_health;
+} CRSF_MAVLinkStat_t;
+
+#pragma pack(pop)
+
+/* Byte Conversion -----------------------------------------------------------*/
+
+#if defined(__GNUC__) || defined(__clang__)
+#define BSWAP32(x) __builtin_bswap32(x)
+#define BSWAP16(x) __builtin_bswap16(x)
+#elif defined(_MSC_VER)
+#include <stdlib.h>
+#define BSWAP32(x) _byteswap_ulong(x)
+#define BSWAP16(x) _byteswap_ushort(x)
+#else
+#define BSWAP32(x) ((((x) & 0xFF000000U) >> 24) | (((x) & 0x00FF0000U) >> 8) | (((x) & 0x0000FF00U) << 8) | (((x) & 0x000000FFU) << 24))
+#define BSWAP16(x) ((((x) & 0xFF00U) >> 8) | (((x) & 0x00FFU) << 8))
+#endif
+
+#if !defined(__linux__)
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define HTOBE16(VAL) (VAL)
+#define HTOBE32(VAL) (VAL)
+#define BE16TOH(VAL) (VAL)
+#define BE32TOH(VAL) (VAL)
+#else
+#define HTOBE16(VAL) BSWAP16(VAL)
+#define HTOBE32(VAL) BSWAP32(VAL)
+#define BE16TOH(VAL) BSWAP16(VAL)
+#define BE32TOH(VAL) BSWAP32(VAL)
+#endif
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __CRSF_TYPES_H__ */
