@@ -1,0 +1,49 @@
+name: Format code
+
+on:
+    pull_request:
+        types: [opened, reopened, edited, synchronize]
+    workflow_dispatch:
+    push:
+      branches:
+        - main
+
+env:
+ BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+jobs:
+  formatCode:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - name: Install clang-format 18
+      run: |
+        sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        sudo apt-get update &&
+        sudo apt-get install -y clang-format-18
+
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ env.BRANCH_NAME }}
+        fetch-depth: 0
+
+    - name: Format code and commit changes
+      run : |
+        find ${{github.workspace}}/ -iname '*.h' -o -iname '*.c' | xargs clang-format-18 -i
+    
+    - name: Commit changes
+      run : |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git diff-index --quiet HEAD || git commit -m "Fixed formatting" -a
+   
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ env.BRANCH_NAME }}
+  
+

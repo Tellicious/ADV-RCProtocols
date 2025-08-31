@@ -1,0 +1,38 @@
+codecov:
+    disable_default_path_fixes: no
+    require_ci_to_pass: yes
+    notify:
+        after_n_builds: 1
+        wait_for_ci: yes
+coverage:
+    precision: 2
+    round: down
+    range: "80...100"
+parsers:
+    gcov:
+        branch_detection:
+            conditional: no
+            loop: yes
+            method: no
+            macro: yes
+ignore:
+    - "**/test_*"
+comment:
+  layout: "header, diff, flags, components" 
+component_management:
+    default_rules:
+        statuses:
+            - type: project
+              target: auto
+              branches:
+                - '!main'
+    individual_components:
+        - component_id: SymaX
+          paths:
+            - "**/SymaX.*"
+        - component_id: iBus
+          paths:
+            - "**/iBus.*"
+        - component_id: CRSF
+          paths:
+            - "**/CRSF.*"

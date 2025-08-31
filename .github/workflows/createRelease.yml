@@ -1,0 +1,36 @@
+name: Create release
+on:
+    push:
+      # Sequence of patterns matched against refs/tags
+      tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Wait for tests to succeed
+        uses: lewagon/wait-on-check-action@v1.4.0
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'unitTests'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success
+
+      - name: Create release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag: ${{ github.ref }}
+          name: ADV-RCProtocols ${{ github.ref_name }}
+          bodyFile: ".github/releaseBody.md"
+          makeLatest: true
+          draft: false
+          prerelease: false

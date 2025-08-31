@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.c": "c",
+        "__config": "c",
+        "locale": "c",
+        "type_traits": "c",
+        "complex": "c",
+        "cstdint": "c"
+    }
+}
