@@ -354,7 +354,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         }
 #endif
 
-#if CRSF_ENABLE_COMMAND
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_COMMAND: {
             uint8_t cmdLen = (values > CRSF_MAX_COMMAND_PAYLOAD ? CRSF_MAX_COMMAND_PAYLOAD : values) + 3U;
             memcpy(payload, &crsf->Command, cmdLen);
@@ -574,6 +574,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE: {
             strncpy(crsf->FlightMode.flight_mode, (char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1); // Last charachter is always \0
+            crsf->FlightMode.flight_mode[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1] = '\0';
             UPDATE_FRESHNESS(FLIGHT_MODE);
         }
 #endif
@@ -592,6 +593,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             crsf->DeviceInfo.dest_address = payload[0];
             crsf->DeviceInfo.origin_address = payload[1];
             strncpy(crsf->DeviceInfo.Device_name, (char*)(payload + 2U), CRSF_MAX_DEVICE_NAME_LEN - 1U); // Last charachter is always \0
+            crsf->DeviceInfo.Device_name[CRSF_MAX_DEVICE_NAME_LEN - 1U] = '\0';
             crsf->DeviceInfo.Serial_number = CRSF_unpackBE32(payload + nameLen + 2U);
             crsf->DeviceInfo.Hardware_ID = CRSF_unpackBE32(payload + nameLen + 6U);
             crsf->DeviceInfo.Firmware_ID = CRSF_unpackBE32(payload + nameLen + 10U);
@@ -611,7 +613,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(PARAMETER_WRITE);
 #endif
 
-#if CRSF_ENABLE_COMMAND
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_COMMAND:
             if (payload[payloadLength - 1U] != CRSF_calcChecksumCMD(payload - 1U, payloadLength)) {
                 return CRSF_ERROR_CMD_CHECKSUM_FAIL;
