@@ -114,8 +114,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet) {
             break;
 #endif
         case SYMAX_BIND_IN_PROGRESS:
-            if (SymaX->link.rf_address[0] == 0xAB && SymaX->link.rf_address[1] == 0xAC && SymaX->link.rf_address[2] == 0xAD && SymaX->link.rf_address[3] == 0xAE
-                && SymaX->link.rf_address[4] == 0xAF) {
+            if (SymaX->link.rf_address[0] == 0xAB && SymaX->link.rf_address[1] == 0xAC && SymaX->link.rf_address[2] == 0xAD && SymaX->link.rf_address[3] == 0xAE && SymaX->link.rf_address[4] == 0xAF) {
                 SymaX_calcTXAddr(SymaX);
             }
             packet[0] = SymaX->link.rf_address[4];
@@ -186,7 +185,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet) {
             // Change channel every SYMAX_HOP_DATA_RATE packets
             if (++SymaX->link.packet_count >= SYMAX_HOP_DATA_RATE) {
                 SymaX->link.packet_count = 0;
-                SymaX->link.current_channel_idx = ++SymaX->link.current_channel_idx % 4;
+                SymaX->link.current_channel_idx = (SymaX->link.current_channel_idx + 1) % 4;
             }
             return SYMAX_OK;
             break;

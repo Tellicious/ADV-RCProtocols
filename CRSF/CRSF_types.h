@@ -297,9 +297,8 @@ typedef struct {
  * CRSF_FRAMETYPE_TEMPERATURE payload
  */
 typedef struct {
-    uint8_t temp_source_id; // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
-    int16_t
-        temperature[CRSF_MAX_TEMPERATURE_VALUES]; // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
+    uint8_t temp_source_id;                           // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    int16_t temperature[CRSF_MAX_TEMPERATURE_VALUES]; // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
 } CRSF_Temperature_t;
 
 /** 
@@ -342,25 +341,6 @@ typedef struct {
 /**
  * CRSF_FRAMETYPE_CHANNELS_PACKED payload
  */
-typedef struct {
-    uint16_t channel_01 : 11;
-    uint16_t channel_02 : 11;
-    uint16_t channel_03 : 11;
-    uint16_t channel_04 : 11;
-    uint16_t channel_05 : 11;
-    uint16_t channel_06 : 11;
-    uint16_t channel_07 : 11;
-    uint16_t channel_08 : 11;
-    uint16_t channel_09 : 11;
-    uint16_t channel_10 : 11;
-    uint16_t channel_11 : 11;
-    uint16_t channel_12 : 11;
-    uint16_t channel_13 : 11;
-    uint16_t channel_14 : 11;
-    uint16_t channel_15 : 11;
-    uint16_t channel_16 : 11;
-} CRSF_RC_Channels_Packed_t;
-
 typedef union {
     struct {
         uint16_t channel_01;

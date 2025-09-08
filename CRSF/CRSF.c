@@ -39,9 +39,6 @@
 
 /* Macros --------------------------------------------------------------------*/
 
-#define PC16(X)                *(uint16_t*)&X
-#define PC32(X)                *(uint32_t*)&X
-
 // Helper macros
 #define CRSF_RC_TICKS_TO_US(x) (((x) - 992) * 5 / 8 + 1500)
 #define CRSF_RC_US_TO_TICKS(x) (((x) - 1500) * 8 / 5 + 992)
@@ -172,6 +169,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_VARIO && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_VARIO: CRSF_packBE16(payload, crsf->Vario.v_speed); UPDATE_LENGTH(Vario);
 #endif
+
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_BATTERY_SENSOR:
             CRSF_packBE16(payload, crsf->Battery.voltage);
@@ -183,8 +181,12 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             *frameLength += sizeof(CRSF_Battery_t) - 1;
             break;
 #endif
+
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_RX)
-        case CRSF_FRAMETYPE_BAROALT_VSPEED: CRSF_packBaroAltVSpeed(payload, &crsf->BaroAlt_VS); UPDATE_LENGTH(BaroAlt_VS);
+        case CRSF_FRAMETYPE_BAROALT_VSPEED:
+            CRSF_packBaroAltVSpeed(payload, &crsf->BaroAlt_VS);
+            *frameLength += 3;
+            break;
 #endif
 
 #if CRSF_TEL_ENABLE_AIRSPEED && defined(CRSF_CONFIG_RX)
@@ -696,7 +698,7 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
         case CRSF_FRAMETYPE_BATTERY_SENSOR: return ((payloadLength) >= sizeof(CRSF_Battery_t) - 1U);
 #endif
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_BAROALT_VSPEED: return CHECK_LENGTH(payloadLength, type, BaroAlt_VS);
+        case CRSF_FRAMETYPE_BAROALT_VSPEED: return ((payloadLength) >= 3);
 #endif
 #if CRSF_TEL_ENABLE_AIRSPEED && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_AIRSPEED: return CHECK_LENGTH(payloadLength, type, Airspeed);
@@ -829,26 +831,6 @@ static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* 
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
 static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
-
-#if CRSF_USE_RC_DIRECT_CONVERSION
-    CRSF_RC_Channels_Packed_t* pack = (CRSF_RC_Channels_Packed_t*)payload;
-    pack->channel_01 = CRSF_RC_US_TO_TICKS(channels[0]) & 0x7FFU;
-    pack->channel_02 = CRSF_RC_US_TO_TICKS(channels[1]) & 0x7FFU;
-    pack->channel_03 = CRSF_RC_US_TO_TICKS(channels[2]) & 0x7FFU;
-    pack->channel_04 = CRSF_RC_US_TO_TICKS(channels[3]) & 0x7FFU;
-    pack->channel_05 = CRSF_RC_US_TO_TICKS(channels[4]) & 0x7FFU;
-    pack->channel_06 = CRSF_RC_US_TO_TICKS(channels[5]) & 0x7FFU;
-    pack->channel_07 = CRSF_RC_US_TO_TICKS(channels[6]) & 0x7FFU;
-    pack->channel_08 = CRSF_RC_US_TO_TICKS(channels[7]) & 0x7FFU;
-    pack->channel_09 = CRSF_RC_US_TO_TICKS(channels[8]) & 0x7FFU;
-    pack->channel_10 = CRSF_RC_US_TO_TICKS(channels[9]) & 0x7FFU;
-    pack->channel_11 = CRSF_RC_US_TO_TICKS(channels[10]) & 0x7FFU;
-    pack->channel_12 = CRSF_RC_US_TO_TICKS(channels[11]) & 0x7FFU;
-    pack->channel_13 = CRSF_RC_US_TO_TICKS(channels[12]) & 0x7FFU;
-    pack->channel_14 = CRSF_RC_US_TO_TICKS(channels[13]) & 0x7FFU;
-    pack->channel_15 = CRSF_RC_US_TO_TICKS(channels[14]) & 0x7FFU;
-    pack->channel_16 = CRSF_RC_US_TO_TICKS(channels[15]) & 0x7FFU;
-#else
     uint32_t bitbuf = 0;
     uint8_t bitcnt = 0;
     uint8_t* p = payload;
@@ -865,36 +847,11 @@ static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
             bitcnt -= 8;
         }
     }
-
-    if (bitcnt > 0) {
-        *p = (uint8_t)bitbuf;
-    }
-#endif
 }
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
 static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
-
-#if CRSF_USE_RC_DIRECT_CONVERSION
-    CRSF_RC_Channels_Packed_t* pack = (CRSF_RC_Channels_Packed_t*)payload;
-    channels[0] = CRSF_RC_TICKS_TO_US(pack->channel_01);
-    channels[1] = CRSF_RC_TICKS_TO_US(pack->channel_02);
-    channels[2] = CRSF_RC_TICKS_TO_US(pack->channel_03);
-    channels[3] = CRSF_RC_TICKS_TO_US(pack->channel_04);
-    channels[4] = CRSF_RC_TICKS_TO_US(pack->channel_05);
-    channels[5] = CRSF_RC_TICKS_TO_US(pack->channel_06);
-    channels[6] = CRSF_RC_TICKS_TO_US(pack->channel_07);
-    channels[7] = CRSF_RC_TICKS_TO_US(pack->channel_08);
-    channels[8] = CRSF_RC_TICKS_TO_US(pack->channel_09);
-    channels[9] = CRSF_RC_TICKS_TO_US(pack->channel_10);
-    channels[10] = CRSF_RC_TICKS_TO_US(pack->channel_11);
-    channels[11] = CRSF_RC_TICKS_TO_US(pack->channel_12);
-    channels[12] = CRSF_RC_TICKS_TO_US(pack->channel_13);
-    channels[13] = CRSF_RC_TICKS_TO_US(pack->channel_14);
-    channels[14] = CRSF_RC_TICKS_TO_US(pack->channel_15);
-    channels[15] = CRSF_RC_TICKS_TO_US(pack->channel_16);
-#else
     uint32_t bitbuf = 0;
     uint8_t bitcnt = 0;
     const uint8_t* p = payload;
@@ -909,7 +866,6 @@ static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
         bitbuf >>= 11U;
         bitcnt -= 11U;
     }
-#endif
 }
 #endif
 
