@@ -202,6 +202,20 @@ static void test_getCurrentChannel(void** state) {
     }
 }
 
+static void test_startBinding(void** state) {
+    (void)state;
+    SymaX_t st;
+    SymaX_init(&st);
+
+#if SYMAX_SKIP_PREBIND
+    SymaX_startBinding(&st);
+    assert_true(st.link.phase == SYMAX_BIND_IN_PROGRESS);
+#else
+    SymaX_startBinding(&st);
+    assert_true(st.link.phase == SYMAX_PREBIND);
+#endif
+}
+
 static void test_isBound(void** state) {
     (void)state;
     SymaX_t st;
@@ -1469,6 +1483,9 @@ static void test_stats_mixed_operations(void** state) {
 
     SymaX_Stats_t stats;
 
+    //reset with NULL, it should not crash
+    SymaX_resetStats(NULL);
+
     // Process some bind packets (RX side)
     uint8_t test_address[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     uint8_t bind_packet[SYMAX_PACKET_SIZE];
@@ -1719,8 +1736,7 @@ static void test_bind_packet_address_extraction_edge_cases(void** state) {
     st.link.phase = SYMAX_BIND_IN_PROGRESS;
 
     // Test with all possible byte values in address
-    uint8_t test_addresses[][5] = {
-        {0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
+    uint8_t test_addresses[][5] = {{0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
 
     for (size_t i = 0; i < sizeof(test_addresses) / sizeof(test_addresses[0]); i++) {
         uint8_t bind_packet[SYMAX_PACKET_SIZE];
@@ -1748,12 +1764,10 @@ static void test_data_packet_channel_extraction_comprehensive(void** state) {
     struct {
         uint8_t raw_bytes[4];
         int16_t expected[4];
-    } test_cases[] = {{{0x00, 0x00, 0x00, 0x00}, {0, 0, 0, 0}},
-                      {{0x7F, 0x7F, 0x7F, 0x7F}, {127, 127, 127, 127}},
-                      {{0xFF, 0xFF, 0xFF, 0xFF}, {255, -127, -127, -127}}, // thr is uint8_t, others are signed
-                      {{0x80, 0x80, 0x80, 0x80}, {128, 0, 0, 0}},          // Sign bit with zero value
-                      {{0x81, 0x81, 0x81, 0x81}, {129, -1, -1, -1}},
-                      {{0x55, 0xAA, 0x33, 0xCC}, {85, -42, 51, -76}}};
+    } test_cases[] = {
+        {{0x00, 0x00, 0x00, 0x00}, {0, 0, 0, 0}},      {{0x7F, 0x7F, 0x7F, 0x7F}, {127, 127, 127, 127}}, {{0xFF, 0xFF, 0xFF, 0xFF}, {255, -127, -127, -127}}, // thr is uint8_t, others are signed
+        {{0x80, 0x80, 0x80, 0x80}, {128, 0, 0, 0}},                                                                                                           // Sign bit with zero value
+        {{0x81, 0x81, 0x81, 0x81}, {129, -1, -1, -1}}, {{0x55, 0xAA, 0x33, 0xCC}, {85, -42, 51, -76}}};
 
     for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
         uint8_t packet[SYMAX_PACKET_SIZE] = {0};
@@ -2084,6 +2098,7 @@ int main(void) {
 
         /* GETTER/SETTER API TESTS */
         cmocka_unit_test(test_getCurrentChannel),
+        cmocka_unit_test(test_startBinding),
         cmocka_unit_test(test_isBound),
         cmocka_unit_test(test_getAddress_macro),
 #if SYMAX_ENABLE_STATS

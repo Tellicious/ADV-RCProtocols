@@ -234,6 +234,18 @@ SymaX_Status_t SymaX_processPacket(SymaX_t* SymaX, const uint8_t* packet);
 #endif
 
 /**
+ * \brief           Start binding phase
+ * 
+ * \param[in]       SymaX: SymaX decoder
+ * 
+ */
+#if SYMAX_SKIP_PREBIND
+#define SymaX_startBinding(SymaX) (SymaX)->link.phase = SYMAX_BIND_IN_PROGRESS
+#else
+#define SymaX_startBinding(SymaX) (SymaX)->link.phase = SYMAX_PREBIND
+#endif
+
+/**
  * \brief Check if binding is complete
  * 
  * \param[in] SymaX : SymaX structure

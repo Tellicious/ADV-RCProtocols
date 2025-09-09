@@ -439,7 +439,6 @@ static void MCU_SerialNumber(uint8_t* var, int len) {
 #endif
 }
 
-static uint32_t rand_seed = 0xb2c54a2ful;
 // Linear feedback shift register with 32-bit Xilinx polinomial x^32 + x^22 + x^2 + x + 1
 static const uint32_t LFSR_FEEDBACK = 0x80200003ul;
 static const uint32_t LFSR_INTAP = 32 - 1;
@@ -451,32 +450,24 @@ static void update_lfsr(uint32_t* lfsr, uint8_t b) {
     }
 }
 
-uint32_t rand32_r(uint32_t* seed, uint8_t update) {
-    if (!seed) {
-        seed = &rand_seed;
-    }
-    update_lfsr(seed, update);
-    return *seed;
-}
-
 static void SymaX_calcTXAddr(SymaX_t* SymaX) {
     uint32_t lfsr = 0xB2C54A2FUL;
 
     uint8_t var[12] = {0};
     MCU_SerialNumber(var, 12);
     for (int i = 0; i < 12; ++i) {
-        rand32_r(&lfsr, var[i]);
+        update_lfsr(&lfsr, var[i]);
     }
 
     // Pump zero bytes for LFSR to diverge more
     for (uint8_t i = 0; i < sizeof(lfsr); ++i) {
-        rand32_r(&lfsr, 0);
+        update_lfsr(&lfsr, 0);
     }
 
     SymaX->link.rf_address[4] = 0xa2;
     for (uint8_t i = 0; i < sizeof(SymaX->link.rf_address) - 1; ++i) {
         SymaX->link.rf_address[i] = lfsr & 0xff;
-        rand32_r(&lfsr, i);
+        update_lfsr(&lfsr, i);
     }
 }
 #endif
