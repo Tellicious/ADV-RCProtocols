@@ -158,8 +158,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_GPS_EXTENDED && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_GPS_EXTENDED:
-            payload[off] = crsf->GPS_Ext.fix_type;
-            off += sizeof(uint8_t);
+            payload[off++] = crsf->GPS_Ext.fix_type;
             CRSF_packBE16(payload + off, crsf->GPS_Ext.n_speed);
             off += sizeof(uint16_t);
             CRSF_packBE16(payload + off, crsf->GPS_Ext.e_speed);
@@ -176,10 +175,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             off += sizeof(uint16_t);
             CRSF_packBE16(payload + off, crsf->GPS_Ext.v_acc);
             off += sizeof(uint16_t);
-            payload[off] = crsf->GPS_Ext.reserved;
-            off += sizeof(uint8_t);
-            payload[off] = crsf->GPS_Ext.hDOP;
-            off += sizeof(uint8_t);
+            payload[off++] = crsf->GPS_Ext.reserved;
+            payload[off++] = crsf->GPS_Ext.hDOP;
             payload[off] = crsf->GPS_Ext.vDOP;
             UPDATE_LENGTH(GPS_Ext);
 
@@ -195,14 +192,11 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             off += sizeof(uint16_t);
             CRSF_packBE16(payload + off, crsf->Battery.current);
             off += sizeof(uint16_t);
-            payload[off] = (uint8_t)(crsf->Battery.capacity_used >> 16);
-            off += sizeof(uint8_t);
-            payload[off] = (uint8_t)((crsf->Battery.capacity_used >> 8) & 0xFFU);
-            off += sizeof(uint8_t);
-            payload[off] = (uint8_t)((crsf->Battery.capacity_used) & 0xFFU);
-            off += sizeof(uint8_t);
-            payload[off] = crsf->Battery.remaining;
-            *frameLength += sizeof(CRSF_Battery_t) - 1;
+            payload[off++] = (uint8_t)(crsf->Battery.capacity_used >> 16);
+            payload[off++] = (uint8_t)((crsf->Battery.capacity_used >> 8) & 0xFFU);
+            payload[off++] = (uint8_t)((crsf->Battery.capacity_used) & 0xFFU);
+            payload[off++] = crsf->Battery.remaining;
+            *frameLength += off;
             break;
 #endif
 
@@ -223,60 +217,59 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_RPM: {
-            payload[0] = crsf->RPM.rpm_source_id;
-            *frameLength += 1U;
+            payload[off++] = crsf->RPM.rpm_source_id;
 
             for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_RPM_VALUES; ii++) {
                 uint32_t val = (uint32_t)(crsf->RPM.rpm_value[ii] & 0xFFFFFFU);
-                payload[ii * 3U + 1U] = (uint8_t)((val >> 16) & 0xFFU);
-                payload[ii * 3U + 2U] = (uint8_t)((val >> 8) & 0xFFU);
-                payload[ii * 3U + 3U] = (uint8_t)(val & 0xFFU);
-                *frameLength += 3U; // int24_t size;
+                payload[off++] = (uint8_t)((val >> 16) & 0xFFU);
+                payload[off++] = (uint8_t)((val >> 8) & 0xFFU);
+                payload[off++] = (uint8_t)(val & 0xFFU);
             }
 
-            if (*frameLength < 4U) {
-                payload[1] = 0;
-                payload[2] = 0;
-                payload[3] = 0;
-                *frameLength += 3U;
+            if (off < 4U) {
+                payload[off++] = 0;
+                payload[off++] = 0;
+                payload[off++] = 0;
             }
+
+            *frameLength += off;
             break;
         }
 #endif
 
 #if CRSF_TEL_ENABLE_TEMPERATURE && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_TEMPERATURE:
-            payload[0] = crsf->Temperature.temp_source_id;
-            *frameLength += 1U;
+            payload[off++] = crsf->Temperature.temp_source_id;
 
             for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
-                CRSF_packBE16(payload + ii * 2 + 1U, crsf->Temperature.temperature[ii]);
-                *frameLength += sizeof(uint16_t);
+                CRSF_packBE16(payload + off, crsf->Temperature.temperature[ii]);
+                off += sizeof(uint16_t);
             }
 
-            if (*frameLength < 3U) {
-                payload[1] = 0;
-                payload[2] = 0;
-                *frameLength += sizeof(uint16_t);
+            if (off < 3U) {
+                payload[off++] = 0;
+                payload[off++] = 0;
             }
+
+            *frameLength += off;
             break;
 #endif
 
 #if CRSF_TEL_ENABLE_VOLTAGES && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_VOLTAGES:
-            payload[0] = crsf->Voltages.Voltage_source_id;
-            *frameLength += 1U;
+            payload[off++] = crsf->Voltages.Voltage_source_id;
 
             for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
-                CRSF_packBE16(payload + ii * 2 + 1U, crsf->Voltages.Voltage_values[ii]);
-                *frameLength += sizeof(uint16_t);
+                CRSF_packBE16(payload + off, crsf->Voltages.Voltage_values[ii]);
+                off += sizeof(uint16_t);
             }
 
-            if (*frameLength < 3U) {
-                payload[1] = 0;
-                payload[2] = 0;
-                *frameLength += sizeof(uint16_t);
+            if (off < 3U) {
+                payload[off++] = 0;
+                payload[off++] = 0;
             }
+
+            *frameLength += off;
             break;
 #endif
 
@@ -346,10 +339,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_DEVICE_INFO: {
             uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name) + 1U; //Adding also null termination
-            payload[0] = crsf->DeviceInfo.dest_address;
-            off += sizeof(uint8_t);
-            payload[off] = crsf->DeviceInfo.origin_address;
-            off += sizeof(uint8_t);
+            payload[off++] = crsf->DeviceInfo.dest_address;
+            payload[off++] = crsf->DeviceInfo.origin_address;
             strncpy_s((char*)(payload + off), CRSF_MAX_DEVICE_NAME_LEN, crsf->DeviceInfo.Device_name, nameLen);
             off += nameLen;
             CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
@@ -358,10 +349,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             off += sizeof(uint32_t);
             CRSF_packBE32(payload + off, crsf->DeviceInfo.Firmware_ID);
             off += sizeof(uint32_t);
-            payload[off] = crsf->DeviceInfo.Parameters_total;
-            off += sizeof(uint8_t);
-            payload[off] = crsf->DeviceInfo.Parameter_version_number;
-            off += sizeof(uint8_t);
+            payload[off++] = crsf->DeviceInfo.Parameters_total;
+            payload[off++] = crsf->DeviceInfo.Parameter_version_number;
             *frameLength += off;
             break;
         }
@@ -508,8 +497,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_GPS_EXTENDED && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_GPS_EXTENDED:
-            crsf->GPS_Ext.fix_type = payload[0];
-            off += sizeof(uint8_t);
+            crsf->GPS_Ext.fix_type = payload[off++];
             crsf->GPS_Ext.n_speed = CRSF_unpackBE16(payload + off);
             off += sizeof(uint16_t);
             crsf->GPS_Ext.e_speed = CRSF_unpackBE16(payload + off);
@@ -526,10 +514,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             off += sizeof(uint16_t);
             crsf->GPS_Ext.v_acc = CRSF_unpackBE16(payload + off);
             off += sizeof(uint16_t);
-            crsf->GPS_Ext.reserved = payload[off];
-            off += sizeof(uint8_t);
-            crsf->GPS_Ext.hDOP = payload[off];
-            off += sizeof(uint8_t);
+            crsf->GPS_Ext.reserved = payload[off++];
+            crsf->GPS_Ext.hDOP = payload[off++];
             crsf->GPS_Ext.vDOP = payload[off];
             UPDATE_FRESHNESS(GPS_EXTENDED);
 #endif
@@ -562,11 +548,12 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_RPM: {
-            uint8_t rpmCount = (payloadLength - sizeof(crsf->RPM.rpm_source_id)) / 3;
-            crsf->RPM.rpm_source_id = payload[0];
+            uint8_t rpmCount = (payloadLength - sizeof(crsf->RPM.rpm_source_id)) / 3U;
+            crsf->RPM.rpm_source_id = payload[off++];
             for (uint8_t ii = 0; ii < rpmCount && ii < CRSF_MAX_RPM_VALUES; ii++) {
-                uint32_t val = ((uint32_t)payload[ii * 3U + 1U] << 16) | ((uint32_t)payload[ii * 3U + 2U] << 8) | ((uint32_t)payload[ii * 3U + 3U]);
+                uint32_t val = ((uint32_t)payload[off] << 16) | ((uint32_t)payload[off + 1U] << 8) | ((uint32_t)payload[off + 2U]);
                 crsf->RPM.rpm_value[ii] = val & 0x800000 ? (int32_t)(val | 0xFF000000) : (int32_t)val; // Sign extend if negative
+                off += 3U;
             }
             UPDATE_FRESHNESS(RPM);
         }
@@ -574,10 +561,11 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_TEMPERATURE && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_TEMPERATURE: {
-            uint8_t tempCount = (payloadLength - sizeof(crsf->Temperature.temp_source_id)) / 2;
-            crsf->Temperature.temp_source_id = payload[0];
+            uint8_t tempCount = (payloadLength - sizeof(crsf->Temperature.temp_source_id)) / sizeof(uint16_t);
+            crsf->Temperature.temp_source_id = payload[off++];
             for (uint8_t ii = 0; ii < tempCount && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
-                crsf->Temperature.temperature[ii] = CRSF_unpackBE16(payload + ii * 2U + 1U);
+                crsf->Temperature.temperature[ii] = CRSF_unpackBE16(payload + off);
+                off += sizeof(uint16_t);
             }
             UPDATE_FRESHNESS(TEMPERATURE);
         }
@@ -586,9 +574,10 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #if CRSF_TEL_ENABLE_VOLTAGES && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_VOLTAGES: {
             uint8_t voltCount = (payloadLength - sizeof(crsf->Voltages.Voltage_source_id)) / 2;
-            crsf->Voltages.Voltage_source_id = payload[0];
+            crsf->Voltages.Voltage_source_id = payload[off++];
             for (uint8_t ii = 0; ii < voltCount && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
-                crsf->Voltages.Voltage_values[ii] = CRSF_unpackBE16(payload + ii * 2U + 1U);
+                crsf->Voltages.Voltage_values[ii] = CRSF_unpackBE16(payload + off);
+                off += sizeof(uint16_t);
             }
             UPDATE_FRESHNESS(VOLTAGES);
         }
@@ -596,7 +585,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_VTX && defined(CRSF_CONFIG_TX)
             PROCESS_FRAME(VTX, VTX);
-            crsf->VTX.frequency_MHz = CRSF_unpackBE16(payload + 2U);
+            off += sizeof(uint16_t);
+            crsf->VTX.frequency_MHz = CRSF_unpackBE16(payload + off);
             UPDATE_FRESHNESS(VTX);
 #endif
 
@@ -655,10 +645,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
         case CRSF_FRAMETYPE_DEVICE_INFO: {
             uint16_t nameLen = strlen((char*)(payload + 2U * sizeof(uint8_t))) + 1U; // Including null termination
-            crsf->DeviceInfo.dest_address = payload[0];
-            off += sizeof(uint8_t);
-            crsf->DeviceInfo.origin_address = payload[off];
-            off += sizeof(uint8_t);
+            crsf->DeviceInfo.dest_address = payload[off++];
+            crsf->DeviceInfo.origin_address = payload[off++];
             strncpy_s(crsf->DeviceInfo.Device_name, CRSF_MAX_DEVICE_NAME_LEN, (char*)(payload + off), nameLen); // Last charachter is always \0
             off += nameLen;
             crsf->DeviceInfo.Serial_number = CRSF_unpackBE32(payload + off);
@@ -667,8 +655,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             off += sizeof(uint32_t);
             crsf->DeviceInfo.Firmware_ID = CRSF_unpackBE32(payload + off);
             off += sizeof(uint32_t);
-            crsf->DeviceInfo.Parameters_total = payload[off];
-            off += sizeof(uint8_t);
+            crsf->DeviceInfo.Parameters_total = payload[off++];
             crsf->DeviceInfo.Parameter_version_number = payload[off];
             UPDATE_FRESHNESS(DEVICE_INFO);
         }

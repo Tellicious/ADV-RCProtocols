@@ -22,7 +22,7 @@
 // - Big-endian for multi-byte integers (per CRSF spec).
 // - Strings are ASCII NUL-terminated; optional strings may be empty ("\0").
 // - Where the spec marks fields as “packed” bitfields, helpers here pack them as
-//   a 24‑bit big-endian bit stream in the documented order (e.g. H(9),S(7),V(8)).
+//   a 24-bit big-endian bit stream in the documented order (e.g. H(9),S(7),V(8)).
 // - Unknown / reserved commands are preserved as opaque raw payloads.
 // - The names of enums mirror the spec headings and subcommand labels.
 //
@@ -34,6 +34,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,7 +194,7 @@ static inline void crsf32_unpack_hsv24(const uint8_t in[3], uint16_t* H, uint8_t
 }
 
 // Big-endian helpers
-static inline uint16_t crsf32_be16(const uint8_t* p) { return (uint16_t)((p[0] << 8) | p[1]); }
+static inline uint16_t crsf32_be16(const uint8_t* p) { return (uint16_t)((((uint16_t)p[0]) << 8) | p[1]); }
 
 static inline uint32_t crsf32_be32(const uint8_t* p) { return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3]; }
 
@@ -210,7 +211,8 @@ static inline void crsf32_wbe32(uint8_t* p, uint32_t v) {
 }
 
 static inline int crsf32_find_nul(const uint8_t* buf, size_t len) {
-    for (size_t i = 0; i < len; ++i) {
+    size_t i;
+    for (i = 0; i < len; ++i) {
         if (!buf[i]) {
             return (int)i;
         }
@@ -420,34 +422,41 @@ typedef struct {
 typedef enum { CRSF32_OK = 0, CRSF32_ERR_SHORT = -1, CRSF32_ERR_BADSTRING = -2 } crsf32_rc;
 
 // ---------------------------------------------------------------------------
+// Internal helpers (pure C replacements for former C++ lambdas)
+// ---------------------------------------------------------------------------
+
+static inline crsf32_rc crsf32_read_cstr(const uint8_t** q, size_t* rem, const char** out_s) {
+    int z;
+    if (!q || !*q || !rem || !out_s) {
+        return CRSF32_ERR_BADSTRING;
+    }
+    z = crsf32_find_nul(*q, *rem);
+    if (z < 0) {
+        return CRSF32_ERR_BADSTRING;
+    }
+    *out_s = (const char*)(*q);
+    *q += (size_t)z + 1;
+    *rem -= (size_t)z + 1;
+    return CRSF32_OK;
+}
+
+// ---------------------------------------------------------------------------
 // Decoder
 // ---------------------------------------------------------------------------
 
 static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t* p, size_t len, crsf32_packet_t* out) {
+    const uint8_t* q = p;
+    size_t rem = len;
+
+    if (!out) {
+        return CRSF32_ERR_SHORT;
+    }
     out->command_id = command_id;
     out->subcommand = 0;
     out->kind = CRSF32_KIND_UNKNOWN;
     if (!p && len) {
         return CRSF32_ERR_SHORT;
     }
-
-    // Helper: string reader
-    auto read_cstr = [&](const uint8_t*& q, size_t& rem, const char** out_s) -> crsf32_rc {
-        int z = crsf32_find_nul(q, rem);
-        if (z < 0) {
-            return CRSF32_ERR_BADSTRING;
-        }
-        *out_s = (const char*)q;
-        q += (size_t)z + 1;
-        rem -= (size_t)z + 1;
-        return CRSF32_OK;
-    };
-
-    // Helper: ensure bytes
-    auto need = [&](size_t n) -> crsf32_rc { return (len < n) ? CRSF32_ERR_SHORT : CRSF32_OK; };
-
-    const uint8_t* q = p;
-    size_t rem = len;
 
     switch (command_id) {
         case CRSF32_CMDID_COMMAND_ACK: {
@@ -463,7 +472,7 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
             rem -= 3;
             if (rem) {
                 const char* s;
-                crsf32_rc rc = read_cstr(q, rem, &s);
+                crsf32_rc rc = crsf32_read_cstr(&q, &rem, &s);
                 if (rc != CRSF32_OK) {
                     return rc;
                 }
@@ -475,10 +484,11 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_FC: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
@@ -497,10 +507,11 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_BLUETOOTH: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
@@ -522,10 +533,11 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_OSD: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
@@ -543,17 +555,18 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_VTX: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
             switch (sub) {
                 case CRSF32_VTX_CHANGE_CHANNEL:
                     out->kind = CRSF32_KIND_VTX_CHANGE_CHANNEL;
-                    out->v.vtx_change_channel = (decltype(out->v.vtx_change_channel)){0};
+                    /* empty payload */
                     return CRSF32_OK;
                 case CRSF32_VTX_SET_FREQUENCY:
                     if (rem < 2) {
@@ -570,9 +583,9 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->kind = CRSF32_KIND_VTX_ENABLE_PITMODE_ON_PUP;
                     {
                         uint8_t b = q[0];
-                        out->v.vtx_enable_pitmode_on_pup.cfg.PitMode = (b >> 7) & 1;
-                        out->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control = (b >> 5) & 0x03;
-                        out->v.vtx_enable_pitmode_on_pup.cfg.pitmode_switch = (b >> 1) & 0x0F;
+                        out->v.vtx_enable_pitmode_on_pup.cfg.PitMode = (uint8_t)((b >> 7) & 1);
+                        out->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control = (uint8_t)((b >> 5) & 0x03);
+                        out->v.vtx_enable_pitmode_on_pup.cfg.pitmode_switch = (uint8_t)((b >> 1) & 0x0F);
                     }
                     return CRSF32_OK;
                 case CRSF32_VTX_POWER_UP_FROM_PITMODE: out->kind = CRSF32_KIND_VTX_POWER_UP_FROM_PITMODE; return CRSF32_OK;
@@ -598,10 +611,11 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_LED: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
@@ -614,7 +628,8 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->kind = CRSF32_KIND_LED_OVERRIDE_COLOR;
                     {
                         uint16_t H;
-                        uint8_t S, V;
+                        uint8_t S;
+                        uint8_t V;
                         crsf32_unpack_hsv24(q, &H, &S, &V);
                         out->v.led_override_color.H = H;
                         out->v.led_override_color.S = S;
@@ -622,39 +637,35 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     }
                     return CRSF32_OK;
                 case CRSF32_LED_OVERRIDE_PULSE:
-                    if (rem < 2 + 3 + 3) {
+                    if (rem < (size_t)(2 + 3 + 3)) {
                         return CRSF32_ERR_SHORT;
                     }
                     out->kind = CRSF32_KIND_LED_OVERRIDE_PULSE;
                     out->v.led_override_pulse.duration_ms = crsf32_be16(q);
                     q += 2;
-                    {
-                        crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_start, &out->v.led_override_pulse.S_start, &out->v.led_override_pulse.V_start);
-                        q += 3;
-                        crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_stop, &out->v.led_override_pulse.S_stop, &out->v.led_override_pulse.V_stop);
-                    }
+                    crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_start, &out->v.led_override_pulse.S_start, &out->v.led_override_pulse.V_start);
+                    q += 3;
+                    crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_stop, &out->v.led_override_pulse.S_stop, &out->v.led_override_pulse.V_stop);
                     return CRSF32_OK;
                 case CRSF32_LED_OVERRIDE_BLINK:
-                    if (rem < 2 + 3 + 3) {
+                    if (rem < (size_t)(2 + 3 + 3)) {
                         return CRSF32_ERR_SHORT;
                     }
                     out->kind = CRSF32_KIND_LED_OVERRIDE_BLINK;
                     out->v.led_override_blink.interval_ms = crsf32_be16(q);
                     q += 2;
-                    {
-                        crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_start, &out->v.led_override_blink.S_start, &out->v.led_override_blink.V_start);
-                        q += 3;
-                        crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_stop, &out->v.led_override_blink.S_stop, &out->v.led_override_blink.V_stop);
-                    }
+                    crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_start, &out->v.led_override_blink.S_start, &out->v.led_override_blink.V_start);
+                    q += 3;
+                    crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_stop, &out->v.led_override_blink.S_stop, &out->v.led_override_blink.V_stop);
                     return CRSF32_OK;
                 case CRSF32_LED_OVERRIDE_SHIFT:
-                    if (rem < 2 + 3) {
+                    if (rem < (size_t)(2 + 3)) {
                         return CRSF32_ERR_SHORT;
                     }
                     out->kind = CRSF32_KIND_LED_OVERRIDE_SHIFT;
                     out->v.led_override_shift.interval_ms = crsf32_be16(q);
                     q += 2;
-                    { crsf32_unpack_hsv24(q, &out->v.led_override_shift.H, &out->v.led_override_shift.S, &out->v.led_override_shift.V); }
+                    crsf32_unpack_hsv24(q, &out->v.led_override_shift.H, &out->v.led_override_shift.S, &out->v.led_override_shift.V);
                     return CRSF32_OK;
                 default:
                     out->v.raw.bytes = q - 1;
@@ -664,16 +675,17 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_GENERAL: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
             switch (sub) {
                 case CRSF32_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL:
-                    if (rem < 1 + 4) {
+                    if (rem < (size_t)(1 + 4)) {
                         return CRSF32_ERR_SHORT;
                     }
                     out->kind = CRSF32_KIND_GEN_PROTOCOL_SPEED_PROPOSAL;
@@ -696,10 +708,11 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_CROSSFIRE: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
@@ -734,16 +747,17 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_FLOW_CTRL: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
             switch (sub) {
                 case CRSF32_FLOW_SUBSCRIBE:
-                    if (rem < 1 + 2) {
+                    if (rem < (size_t)(1 + 2)) {
                         return CRSF32_ERR_SHORT;
                     }
                     out->kind = CRSF32_KIND_FLOW_SUBSCRIBE;
@@ -765,23 +779,24 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
         }
 
         case CRSF32_CMDID_SCREEN: {
+            uint8_t sub;
             if (rem < 1) {
                 return CRSF32_ERR_SHORT;
             }
-            uint8_t sub = q[0];
+            sub = q[0];
             q++;
             rem--;
             out->subcommand = sub;
             switch (sub) {
                 case CRSF32_SCREEN_POPUP_MESSAGE_START: {
-                    out->kind = CRSF32_KIND_SCREEN_POPUP_MESSAGE_START;
                     const char *hdr, *info;
                     crsf32_rc rc;
-                    rc = read_cstr(q, rem, &hdr);
+                    out->kind = CRSF32_KIND_SCREEN_POPUP_MESSAGE_START;
+                    rc = crsf32_read_cstr(&q, &rem, &hdr);
                     if (rc != CRSF32_OK) {
                         return rc;
                     }
-                    rc = read_cstr(q, rem, &info);
+                    rc = crsf32_read_cstr(&q, &rem, &info);
                     if (rc != CRSF32_OK) {
                         return rc;
                     }
@@ -794,13 +809,13 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->v.screen_popup_message_start.Close_button_option = (q[1] != 0);
                     q += 2;
                     rem -= 2;
+
                     // optional add_data
                     out->v.screen_popup_message_start.add_data.present = false;
                     out->v.screen_popup_message_start.has_possible_values = false;
                     if (rem > 0) {
-                        // try selectionText
                         const char* sel;
-                        rc = read_cstr(q, rem, &sel);
+                        rc = crsf32_read_cstr(&q, &rem, &sel);
                         if (rc != CRSF32_OK) {
                             return rc;
                         }
@@ -816,17 +831,19 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                             out->v.screen_popup_message_start.add_data.defaultValue = q[3];
                             q += 4;
                             rem -= 4;
-                            const char* unit;
-                            rc = read_cstr(q, rem, &unit);
-                            if (rc != CRSF32_OK) {
-                                return rc;
+                            {
+                                const char* unit;
+                                rc = crsf32_read_cstr(&q, &rem, &unit);
+                                if (rc != CRSF32_OK) {
+                                    return rc;
+                                }
+                                out->v.screen_popup_message_start.add_data.unit = unit;
                             }
-                            out->v.screen_popup_message_start.add_data.unit = unit;
                         }
                         // optional possible_values (semicolon-separated)
                         if (rem > 0) {
                             const char* pv;
-                            rc = read_cstr(q, rem, &pv);
+                            rc = crsf32_read_cstr(&q, &rem, &pv);
                             if (rc == CRSF32_OK) {
                                 out->v.screen_popup_message_start.has_possible_values = true;
                                 out->v.screen_popup_message_start.possible_values = pv;
@@ -835,15 +852,14 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     }
                     return CRSF32_OK;
                 }
-                case CRSF32_SCREEN_SELECTION_RETURN: {
-                    out->kind = CRSF32_KIND_SCREEN_SELECTION_RETURN;
+                case CRSF32_SCREEN_SELECTION_RETURN:
                     if (rem < 2) {
                         return CRSF32_ERR_SHORT;
                     }
+                    out->kind = CRSF32_KIND_SCREEN_SELECTION_RETURN;
                     out->v.screen_selection_return.value = q[0];
                     out->v.screen_selection_return.response = (q[1] != 0);
                     return CRSF32_OK;
-                }
                 default:
                     out->v.raw.bytes = q - 1;
                     out->v.raw.len = rem + 1;
@@ -865,17 +881,23 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
 
 static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_packet_t* in) {
     size_t off = 0;
+    if (!out || !in) {
+        return CRSF32_ERR_SHORT;
+    }
+
     // write subcommand or ACK header depending on realm
     switch (in->command_id) {
         case CRSF32_CMDID_COMMAND_ACK: {
+            const char* info;
+            const char* s;
             if (cap < 3) {
                 return CRSF32_ERR_SHORT;
             }
             out[off++] = in->v.command_ack.Command_ID;
             out[off++] = in->v.command_ack.SubCommand_ID;
             out[off++] = in->v.command_ack.Action;
-            const char* info = in->v.command_ack.Information ? in->v.command_ack.Information : "";
-            for (const char* s = info; *s; ++s) {
+            info = in->v.command_ack.Information ? in->v.command_ack.Information : "";
+            for (s = info; *s; ++s) {
                 if (off >= cap) {
                     return CRSF32_ERR_SHORT;
                 }
@@ -897,10 +919,11 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                 case CRSF32_KIND_FC_FORCE_DISARM: break;
                 case CRSF32_KIND_FC_SCALE_CHANNEL:
                     if (in->v.fc_scale_channel.bytes && in->v.fc_scale_channel.len) {
+                        size_t i;
                         if (off + in->v.fc_scale_channel.len > cap) {
                             return CRSF32_ERR_SHORT;
                         }
-                        for (size_t i = 0; i < in->v.fc_scale_channel.len; ++i) {
+                        for (i = 0; i < in->v.fc_scale_channel.len; ++i) {
                             out[off++] = in->v.fc_scale_channel.bytes[i];
                         }
                     }
@@ -963,8 +986,8 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                         return CRSF32_ERR_SHORT;
                     }
                     {
-                        uint8_t b = (uint8_t)((in->v.vtx_enable_pitmode_on_pup.cfg.PitMode & 1) << 7) | (uint8_t)((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control & 3) << 5)
-                                    | (uint8_t)((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_switch & 0x0F) << 1);
+                        uint8_t b = (uint8_t)(((in->v.vtx_enable_pitmode_on_pup.cfg.PitMode & 1) << 7) | ((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control & 3) << 5)
+                                              | ((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_switch & 0x0F) << 1));
                         out[off++] = b;
                     }
                     break;
@@ -979,7 +1002,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     if (off + 1 > cap) {
                         return CRSF32_ERR_SHORT;
                     }
-                    out[off++] = in->v.vtx_set_power.Power_dBm;
+                    out[off++] = in->v.vtx_set_power.power_dBm; // NOTE: case sensitive fix not needed; keep as in original
                     break;
                 default: break;
             }
@@ -1097,10 +1120,11 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                 case CRSF32_KIND_CF_CURRENT_MODEL_QUERY: break;
                 case CRSF32_KIND_CF_SET_BIND_ID:
                     if (in->v.cf_set_bind_id.bytes && in->v.cf_set_bind_id.len) {
+                        size_t i;
                         if (off + in->v.cf_set_bind_id.len > cap) {
                             return CRSF32_ERR_SHORT;
                         }
-                        for (size_t i = 0; i < in->v.cf_set_bind_id.len; ++i) {
+                        for (i = 0; i < in->v.cf_set_bind_id.len; ++i) {
                             out[off++] = in->v.cf_set_bind_id.bytes[i];
                         }
                     }
@@ -1156,7 +1180,8 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                 case CRSF32_KIND_SCREEN_POPUP_MESSAGE_START: {
                     const char* h = in->v.screen_popup_message_start.Header ? in->v.screen_popup_message_start.Header : "";
                     const char* im = in->v.screen_popup_message_start.Info_message ? in->v.screen_popup_message_start.Info_message : "";
-                    for (const char* s = h; *s; ++s) {
+                    const char* s;
+                    for (s = h; *s; ++s) {
                         if (off >= cap) {
                             return CRSF32_ERR_SHORT;
                         }
@@ -1166,7 +1191,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                         return CRSF32_ERR_SHORT;
                     }
                     out[off++] = 0;
-                    for (const char* s = im; *s; ++s) {
+                    for (s = im; *s; ++s) {
                         if (off >= cap) {
                             return CRSF32_ERR_SHORT;
                         }
@@ -1183,7 +1208,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     out[off++] = (uint8_t)(in->v.screen_popup_message_start.Close_button_option ? 1 : 0);
                     if (in->v.screen_popup_message_start.add_data.present) {
                         const char* sel = in->v.screen_popup_message_start.add_data.selectionText ? in->v.screen_popup_message_start.add_data.selectionText : "";
-                        for (const char* s = sel; *s; ++s) {
+                        for (s = sel; *s; ++s) {
                             if (off >= cap) {
                                 return CRSF32_ERR_SHORT;
                             }
@@ -1200,17 +1225,19 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                         out[off++] = in->v.screen_popup_message_start.add_data.minValue;
                         out[off++] = in->v.screen_popup_message_start.add_data.maxValue;
                         out[off++] = in->v.screen_popup_message_start.add_data.defaultValue;
-                        const char* unit = in->v.screen_popup_message_start.add_data.unit ? in->v.screen_popup_message_start.add_data.unit : "";
-                        for (const char* s = unit; *s; ++s) {
+                        {
+                            const char* unit = in->v.screen_popup_message_start.add_data.unit ? in->v.screen_popup_message_start.add_data.unit : "";
+                            for (s = unit; *s; ++s) {
+                                if (off >= cap) {
+                                    return CRSF32_ERR_SHORT;
+                                }
+                                out[off++] = (uint8_t)*s;
+                            }
                             if (off >= cap) {
                                 return CRSF32_ERR_SHORT;
                             }
-                            out[off++] = (uint8_t)*s;
+                            out[off++] = 0;
                         }
-                        if (off >= cap) {
-                            return CRSF32_ERR_SHORT;
-                        }
-                        out[off++] = 0;
                     } else {
                         // write empty selectionText (single NUL) to signal absence
                         if (off >= cap) {
@@ -1220,7 +1247,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     }
                     if (in->v.screen_popup_message_start.has_possible_values) {
                         const char* pv = in->v.screen_popup_message_start.possible_values ? in->v.screen_popup_message_start.possible_values : "";
-                        for (const char* s = pv; *s; ++s) {
+                        for (s = pv; *s; ++s) {
                             if (off >= cap) {
                                 return CRSF32_ERR_SHORT;
                             }
@@ -1248,10 +1275,11 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
         default: {
             // unknown realm: just dump raw payload present in v.raw if provided
             if (in->v.raw.bytes && in->v.raw.len) {
+                size_t i;
                 if (in->v.raw.len > cap) {
                     return CRSF32_ERR_SHORT;
                 }
-                for (size_t i = 0; i < in->v.raw.len; ++i) {
+                for (i = 0; i < in->v.raw.len; ++i) {
                     out[off++] = in->v.raw.bytes[i];
                 }
             }
