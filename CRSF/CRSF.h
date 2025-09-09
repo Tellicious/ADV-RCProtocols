@@ -39,9 +39,9 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#include "CRSF_types.h"
 #include <stdint.h>
 #include <string.h>
-#include "CRSF_types.h"
 
 /* Configuration Options -----------------------------------------------------*/
 
@@ -68,7 +68,8 @@ extern "C" {
 #endif
 
 #ifndef CRSF_USE_CRC_CALCULATION
-#define CRSF_USE_CRC_CALCULATION 0 /* Use CRC calculation instead of lookup tables (saves flash). */
+#define CRSF_USE_CRC_CALCULATION                                               \
+  0 /* Use CRC calculation instead of lookup tables (saves flash). */
 #endif
 
 #ifndef CRSF_USE_RC_DIRECT_CONVERSION
@@ -148,165 +149,171 @@ extern "C" {
 #define CRSF_TEL_ENABLE_MAVLINK_STATUS 1
 #endif
 
-/* Status codes ---------------------------------------------------------------*/
+/* Status codes
+ * ---------------------------------------------------------------*/
 typedef enum {
-    CRSF_OK = 0,                  /** Operation completed successfully */
-    CRSF_ERROR_NULL_POINTER,      /** Null pointer provided */
-    CRSF_ERROR_INVALID_FRAME,     /** Invalid frame type */
-    CRSF_ERROR_CHECKSUM_FAIL,     /** Frame checksum verification failed */
-    CRSF_ERROR_CMD_CHECKSUM_FAIL, /** Command checksum verification failed */
-    CRSF_ERROR_LENGTH,            /** Received frame length error */
-    CRSF_ERROR_TYPE_LENGTH,       /** Frame length invalid for type */
-    CRSF_ERROR_ADDR,              /** Invalid address */
+  CRSF_OK = 0,                  /** Operation completed successfully */
+  CRSF_ERROR_NULL_POINTER,      /** Null pointer provided */
+  CRSF_ERROR_INVALID_FRAME,     /** Invalid frame type */
+  CRSF_ERROR_CHECKSUM_FAIL,     /** Frame checksum verification failed */
+  CRSF_ERROR_CMD_CHECKSUM_FAIL, /** Command checksum verification failed */
+  CRSF_ERROR_LENGTH,            /** Received frame length error */
+  CRSF_ERROR_TYPE_LENGTH,       /** Frame length invalid for type */
+  CRSF_ERROR_ADDR,              /** Invalid address */
 } CRSF_Status_t;
 
-/* Tracked packet classes -----------------------------------------------------*/
-#define CRSF_TRACKED_FRAME_TYPES                    16
+/* Tracked packet classes
+ * -----------------------------------------------------*/
+#define CRSF_TRACKED_FRAME_TYPES 16
 
-#define CRSF_TRK_FRAMETYPE_GPS                      0
-#define CRSF_TRK_FRAMETYPE_GPS_TIME                 1
-#define CRSF_TRK_FRAMETYPE_GPS_EXTENDED             2
-#define CRSF_TRK_FRAMETYPE_VARIO                    3
-#define CRSF_TRK_FRAMETYPE_BATTERY_SENSOR           4
-#define CRSF_TRK_FRAMETYPE_BAROALT_VSPEED           5
-#define CRSF_TRK_FRAMETYPE_AIRSPEED                 6
-#define CRSF_TRK_FRAMETYPE_HEARTBEAT                0xFF
-#define CRSF_TRK_FRAMETYPE_RPM                      7
-#define CRSF_TRK_FRAMETYPE_TEMPERATURE              8
-#define CRSF_TRK_FRAMETYPE_VOLTAGES                 9
-#define CRSF_TRK_FRAMETYPE_VTX                      10
-#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS          11
-#define CRSF_TRK_FRAMETYPE_RC_CHANNELS_PACKED       12
-#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS_RX       13
-#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS_TX       14
-#define CRSF_TRK_FRAMETYPE_ATTITUDE                 15
-#define CRSF_TRK_FRAMETYPE_MAVLINK_FC               0xFF
-#define CRSF_TRK_FRAMETYPE_FLIGHT_MODE              0xFF
-#define CRSF_TRK_FRAMETYPE_ESP_NOW_MESSAGES         0xFF
-#define CRSF_TRK_FRAMETYPE_DEVICE_PING              0xFF
-#define CRSF_TRK_FRAMETYPE_DEVICE_INFO              0xFF
+#define CRSF_TRK_FRAMETYPE_GPS 0
+#define CRSF_TRK_FRAMETYPE_GPS_TIME 1
+#define CRSF_TRK_FRAMETYPE_GPS_EXTENDED 2
+#define CRSF_TRK_FRAMETYPE_VARIO 3
+#define CRSF_TRK_FRAMETYPE_BATTERY_SENSOR 4
+#define CRSF_TRK_FRAMETYPE_BAROALT_VSPEED 5
+#define CRSF_TRK_FRAMETYPE_AIRSPEED 6
+#define CRSF_TRK_FRAMETYPE_HEARTBEAT 0xFF
+#define CRSF_TRK_FRAMETYPE_RPM 7
+#define CRSF_TRK_FRAMETYPE_TEMPERATURE 8
+#define CRSF_TRK_FRAMETYPE_VOLTAGES 9
+#define CRSF_TRK_FRAMETYPE_VTX 10
+#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS 11
+#define CRSF_TRK_FRAMETYPE_RC_CHANNELS_PACKED 12
+#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS_RX 13
+#define CRSF_TRK_FRAMETYPE_LINK_STATISTICS_TX 14
+#define CRSF_TRK_FRAMETYPE_ATTITUDE 15
+#define CRSF_TRK_FRAMETYPE_MAVLINK_FC 0xFF
+#define CRSF_TRK_FRAMETYPE_FLIGHT_MODE 0xFF
+#define CRSF_TRK_FRAMETYPE_ESP_NOW_MESSAGES 0xFF
+#define CRSF_TRK_FRAMETYPE_DEVICE_PING 0xFF
+#define CRSF_TRK_FRAMETYPE_DEVICE_INFO 0xFF
 #define CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY 0xFF
-#define CRSF_TRK_FRAMETYPE_PARAMETER_READ           0xFF
-#define CRSF_TRK_FRAMETYPE_PARAMETER_WRITE          0xFF
-#define CRSF_TRK_FRAMETYPE_COMMAND                  0xFF
-#define CRSF_TRK_FRAMETYPE_MAVLINK_ENVELOPE         0xFF
-#define CRSF_TRK_FRAMETYPE_MAVLINK_STATUS           0xFF
+#define CRSF_TRK_FRAMETYPE_PARAMETER_READ 0xFF
+#define CRSF_TRK_FRAMETYPE_PARAMETER_WRITE 0xFF
+#define CRSF_TRK_FRAMETYPE_COMMAND 0xFF
+#define CRSF_TRK_FRAMETYPE_MAVLINK_ENVELOPE 0xFF
+#define CRSF_TRK_FRAMETYPE_MAVLINK_STATUS 0xFF
 
-/* Statistics -----------------------------------------------------------------*/
+/* Statistics
+ * -----------------------------------------------------------------*/
 typedef struct {
-    uint32_t frames_total;       /**< Total frames parsed. */
-    uint32_t frames_bad_crc;     /**< CRC errors. */
-    uint32_t frames_bad_addr;    /**< Address validation errors. */
-    uint32_t frames_bad_len;     /**< Length errors. */
-    uint32_t frames_unsupported; /**< Unsupported types. */
-    uint32_t commands_rx;        /**< Commands received. */
+  uint32_t frames_total;       /**< Total frames parsed. */
+  uint32_t frames_bad_crc;     /**< CRC errors. */
+  uint32_t frames_bad_addr;    /**< Address validation errors. */
+  uint32_t frames_bad_len;     /**< Length errors. */
+  uint32_t frames_unsupported; /**< Unsupported types. */
+  uint32_t commands_rx;        /**< Commands received. */
 } CRSF_Stats_t;
 
-/* Core instance --------------------------------------------------------------*/
+/* Core instance
+ * --------------------------------------------------------------*/
 typedef struct {
 #if CRSF_TEL_ENABLE_GPS
-    CRSF_GPS_t GPS;
+  CRSF_GPS_t GPS;
 #endif
 #if CRSF_TEL_ENABLE_GPS_TIME
-    CRSF_GPS_Time_t GPS_Time;
+  CRSF_GPS_Time_t GPS_Time;
 #endif
 #if CRSF_TEL_ENABLE_GPS_EXTENDED
-    CRSF_GPS_Ext_t GPS_Ext;
+  CRSF_GPS_Ext_t GPS_Ext;
 #endif
 #if CRSF_TEL_ENABLE_VARIO
-    CRSF_Vario_t Vario;
+  CRSF_Vario_t Vario;
 #endif
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR
-    CRSF_Battery_t Battery;
+  CRSF_Battery_t Battery;
 #endif
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED
-    CRSF_BaroAlt_VS_t BaroAlt_VS;
+  CRSF_BaroAlt_VS_t BaroAlt_VS;
 #endif
 #if CRSF_TEL_ENABLE_AIRSPEED
-    CRSF_Airspeed_t Airspeed;
+  CRSF_Airspeed_t Airspeed;
 #endif
 #if CRSF_TEL_ENABLE_HEARTBEAT
-    CRSF_Heartbeat_t Heartbeat;
+  CRSF_Heartbeat_t Heartbeat;
 #endif
 #if CRSF_TEL_ENABLE_RPM
-    CRSF_RPM_t RPM;
+  CRSF_RPM_t RPM;
 #endif
 #if CRSF_TEL_ENABLE_TEMPERATURE
-    CRSF_Temperature_t Temperature;
+  CRSF_Temperature_t Temperature;
 #endif
 #if CRSF_TEL_ENABLE_VOLTAGES
-    CRSF_Voltages_t Voltages;
+  CRSF_Voltages_t Voltages;
 #endif
 #if CRSF_TEL_ENABLE_VTX
-    CRSF_VTX_t VTX;
+  CRSF_VTX_t VTX;
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS
-    CRSF_LinkStatistics_t LinkStatistics;
+  CRSF_LinkStatistics_t LinkStatistics;
 #endif
 #if CRSF_ENABLE_RC_CHANNELS
-    CRSF_RC_Channels_t RC;
+  CRSF_RC_Channels_t RC;
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_RX
-    CRSF_LinkStatisticsRX_t LinkStatisticsRX;
+  CRSF_LinkStatisticsRX_t LinkStatisticsRX;
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_TX
-    CRSF_LinkStatisticsTX_t LinkStatisticsTX;
+  CRSF_LinkStatisticsTX_t LinkStatisticsTX;
 #endif
 #if CRSF_TEL_ENABLE_ATTITUDE
-    CRSF_Attitude_t Attitude;
+  CRSF_Attitude_t Attitude;
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_FC
-    CRSF_MAVLinkFC_t MAVLinkFC;
+  CRSF_MAVLinkFC_t MAVLinkFC;
 #endif
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
-    CRSF_FlightMode_t FlightMode;
+  CRSF_FlightMode_t FlightMode;
 #endif
 #if CRSF_TEL_ENABLE_ESP_NOW_MESSAGES
-    CRSF_ESPNowMessages_t ESPNowMessages;
+  CRSF_ESPNowMessages_t ESPNowMessages;
 #endif
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
-    CRSF_Ping_t Ping;
-    CRSF_DeviceInfo_t DeviceInfo;
-    CRSF_ParamSettingsEntry_t ParamSettingsEntry;
-    CRSF_ParamRead_t ParamRead;
-    CRSF_ParamWrite_t ParamWrite;
+  CRSF_Ping_t Ping;
+  CRSF_DeviceInfo_t DeviceInfo;
+  CRSF_ParamSettingsEntry_t ParamSettingsEntry;
+  CRSF_ParamRead_t ParamRead;
+  CRSF_ParamWrite_t ParamWrite;
 #endif
 #if CRSF_ENABLE_COMMAND
-    CRSF_Command_t Command;
+  CRSF_Command_t Command;
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-    CRSF_MAVLinkEnv_t MAVLinkEnv;
+  CRSF_MAVLinkEnv_t MAVLinkEnv;
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
-    CRSF_MAVLinkStat_t MAVLinkStat;
+  CRSF_MAVLinkStat_t MAVLinkStat;
 #endif
 
 #if CRSF_ENABLE_STATS
-    CRSF_Stats_t Stats; /**< Statistics. */
+  CRSF_Stats_t Stats; /**< Statistics. */
 #endif
 #if CRSF_ENABLE_FRESHNESS_CHECK
-    uint32_t (*getTimestamp_ms)(void);                /**< Timestamp callback [ms]. */
-    uint32_t _packet_times[CRSF_TRACKED_FRAME_TYPES]; /**< Touch stamps. */
+  uint32_t (*getTimestamp_ms)(void); /**< Timestamp callback [ms]. */
+  uint32_t _packet_times[CRSF_TRACKED_FRAME_TYPES]; /**< Touch stamps. */
 #endif
 } CRSF_t;
 
-/* Public API -----------------------------------------------------------------*/
+/* Public API
+ * -----------------------------------------------------------------*/
 
 /**
  * \brief           Initialize CRSF decoder
- * 
+ *
  * \param[in]       crsf: CRSF decoder
  */
-void CRSF_init(CRSF_t* crsf);
+void CRSF_init(CRSF_t *crsf);
 
 #if CRSF_ENABLE_FRESHNESS_CHECK
 /**
  * \brief           Set timestamp callback for packet timestamping
- * 
+ *
  * \param[in]       crsf: CRSF decoder
- * \param[in]       getTimestamp_ms: Function pointer to get current timestamp in milliseconds
+ * \param[in]       getTimestamp_ms: Function pointer to get current timestamp
+ * in milliseconds
  */
-void CRSF_setTimestampCallback(CRSF_t* crsf, uint32_t (*get_ms)(void));
+void CRSF_setTimestampCallback(CRSF_t *crsf, uint32_t (*get_ms)(void));
 #endif
 
 /**
@@ -315,53 +322,58 @@ void CRSF_setTimestampCallback(CRSF_t* crsf, uint32_t (*get_ms)(void));
  * @param[in]       crsf: CRSF decoder
  * @param[in]       bus_addr: first header byte (bus address)
  * @param[in]       type: frame type to be encoded
- * @param[in]       values: optional number of values (for variable length payloads)
+ * @param[in]       values: optional number of values (for variable length
+ * payloads)
  * @param[out]      frame: output buffer with full frame
  * @param[out]      frameLength: written frame length
- * 
+ *
  * @return          CRSF_OK on success, error otherwise.
  */
-CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t type, uint8_t values, uint8_t* frame, uint8_t* frameLength);
+CRSF_Status_t CRSF_buildFrame(CRSF_t *crsf, uint8_t bus_addr,
+                              CRSF_FrameType_t type, uint8_t values,
+                              uint8_t *frame, uint8_t *frameLength);
 
 /**
  * \brief           Process received frame
- * 
+ *
  * \param[in]       crsf: CRSF decoder
  * \param[in]       frame: RF frame data
  * \param[out]      recType: type of frame received
  *
  * \return          CRSF_OK on success, error otherwise.
  */
-CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameType_t* recType);
+CRSF_Status_t CRSF_processFrame(CRSF_t *crsf, const uint8_t *frame,
+                                CRSF_FrameType_t *recType);
 
 #if CRSF_ENABLE_STATS
 /**
  * \brief           Get statistics about the decoder
- * 
+ *
  * \param[in]       crsf: CRSF decoder
  * \param[out]      stats: Output statistics structure
  */
-void CRSF_getStats(const CRSF_t* crsf, CRSF_Stats_t* stats);
+void CRSF_getStats(const CRSF_t *crsf, CRSF_Stats_t *stats);
 
 /**
  * \brief           Reset statistics counters
- * 
+ *
  * \param[out]      crsf: CRSF decoder
  */
-void CRSF_resetStats(CRSF_t* crsf);
+void CRSF_resetStats(CRSF_t *crsf);
 #endif
 
 #if CRSF_ENABLE_FRESHNESS_CHECK
 /**
  * \brief           Check if a frame type was received recently
- * 
+ *
  * \param[in]       crsf: CRSF decoder
- * \param[in]       frame_type: Frame type to check (CRSF_FRAME_TYPE_RC, CRSF_FRAME_TYPE_TEL)
- * \param[in]       max_age_ms: Maximum age in milliseconds
- * 
+ * \param[in]       frame_type: Frame type to check (CRSF_FRAME_TYPE_RC,
+ * CRSF_FRAME_TYPE_TEL) \param[in]       max_age_ms: Maximum age in milliseconds
+ *
  * \return          1 if frame is fresh, 0 if stale or never received
  */
-uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_age_ms);
+uint8_t CRSF_isFrameFresh(const CRSF_t *CRSF, uint8_t frame_type,
+                          uint32_t max_age_ms);
 #endif
 
 #if CRSF_ENABLE_COMMAND
@@ -374,14 +386,18 @@ uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_a
  * @param[in]  dest_addr   Destination address (extended header).
  * @param[in]  origin_addr Origin address (extended header).
  * @param[in]  cmd_id      Command ID.
- * @param[in]  cmd_payload Pointer to command payload bytes (may be NULL if none).
+ * @param[in]  cmd_payload Pointer to command payload bytes (may be NULL if
+ * none).
  * @param[in]  cmd_len     Command payload length in bytes.
  * @param[out] out_payload Output buffer for command payload (+1 for inner CRC).
- * @param[out] out_len     Written payload length (cmd_len + 2 incl. cmd_id + inner CRC).
+ * @param[out] out_len     Written payload length (cmd_len + 2 incl. cmd_id +
+ * inner CRC).
  * @return     CRSF_OK on success, error otherwise.
  */
-// CRSF_Status_t CRSF_encodeDirectCommand(uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload, uint8_t cmd_len,
-//                                        uint8_t* out_payload, uint8_t* out_len);
+// CRSF_Status_t CRSF_encodeDirectCommand(uint8_t dest_addr, uint8_t
+// origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload, uint8_t cmd_len,
+//                                        uint8_t* out_payload, uint8_t*
+//                                        out_len);
 
 /**
  * @brief   Build a complete Direct Command frame (0x32) into @p out.
@@ -395,8 +411,10 @@ uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_a
  * @param[out] out_len     Written frame length.
  * @return     CRSF_OK on success, error otherwise.
  */
-// CRSF_Status_t CRSF_buildDirectCommandFrame(uint8_t bus_addr, uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload,
-//                                            uint8_t cmd_len, uint8_t* out, uint8_t* out_len);
+// CRSF_Status_t CRSF_buildDirectCommandFrame(uint8_t bus_addr, uint8_t
+// dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload,
+//                                            uint8_t cmd_len, uint8_t* out,
+//                                            uint8_t* out_len);
 #endif /* CRSF_ENABLE_COMMAND */
 
 #ifdef __cplusplus
