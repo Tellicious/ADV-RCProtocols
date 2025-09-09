@@ -46,13 +46,13 @@
 #define SIGN(x)                (((x) > 0) - ((x) < 0))
 
 #define BUILD_FRAME(TYPE, VAR)                                                                                                                                                                         \
-    case CRSF_FRAMETYPE_##TYPE: memcpy(payload, &crsf->VAR, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->VAR, sizeof(CRSF_##VAR##_t))
 #define UPDATE_LENGTH(VAR)                                                                                                                                                                             \
     *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                                                            \
     break
 
 #define PROCESS_FRAME(TYPE, VAR)                                                                                                                                                                       \
-    case CRSF_FRAMETYPE_##TYPE: memcpy(&crsf->VAR, payload, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy_s(&crsf->VAR, sizeof(CRSF_##VAR##_t), payload, sizeof(CRSF_##VAR##_t))
 #define UPDATE_FRESHNESS(TYPE)                                                                                                                                                                         \
     if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                                                           \
         CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                                                         \
@@ -98,7 +98,7 @@ void CRSF_init(CRSF_t* crsf) {
     if (!crsf) {
         return;
     }
-    memset(crsf, 0, sizeof(*crsf));
+    memset(crsf, 0x00, sizeof(*crsf));
 }
 
 #if CRSF_ENABLE_FRESHNESS_CHECK
@@ -302,7 +302,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE:
-            strcpy((char*)payload, crsf->FlightMode.flight_mode);
+            strncpy_s((char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN);
             *frameLength += strlen(crsf->FlightMode.flight_mode) + 1U; // Adding also null termination
             break;
 #endif
@@ -320,7 +320,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name) + 1U; //Adding also null termination
             payload[0] = crsf->DeviceInfo.dest_address;
             payload[1] = crsf->DeviceInfo.origin_address;
-            strcpy((char*)(payload + 2U), crsf->DeviceInfo.Device_name);
+            strncpy_s((char*)(payload + 2U), CRSF_MAX_DEVICE_NAME_LEN, crsf->DeviceInfo.Device_name, nameLen);
             CRSF_packBE32(payload + nameLen + 2U, crsf->DeviceInfo.Serial_number);
             CRSF_packBE32(payload + nameLen + 6U, crsf->DeviceInfo.Hardware_ID);
             CRSF_packBE32(payload + nameLen + 10U, crsf->DeviceInfo.Firmware_ID);
@@ -332,7 +332,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: {
             uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
-            memcpy(payload, &crsf->ParamSettingsEntry, paramLen);
+            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->ParamSettingsEntry, paramLen);
             *frameLength += paramLen;
             if (paramLen == 4U) {
                 payload[4] = 0;
@@ -346,7 +346,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE: {
             uint8_t paramLen = (values > CRSF_MAX_PARAM_DATA_LEN ? CRSF_MAX_PARAM_DATA_LEN : values) + 3U;
-            memcpy(payload, &crsf->ParamWrite, paramLen);
+            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->ParamWrite, paramLen);
             *frameLength += paramLen;
             if (paramLen == 3U) {
                 payload[3] = 0;
@@ -359,7 +359,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_COMMAND: {
             uint8_t cmdLen = (values > CRSF_MAX_COMMAND_PAYLOAD ? CRSF_MAX_COMMAND_PAYLOAD : values) + 3U;
-            memcpy(payload, &crsf->Command, cmdLen);
+            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 3U, &crsf->Command, cmdLen);
             payload[cmdLen] = CRSF_calcChecksumCMD(frame + 2U, cmdLen + 1U);
             *frameLength += cmdLen + 1U; //including also inner CRC
             break;
@@ -369,7 +369,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
         case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
             crsf->MAVLinkEnv.data_size = crsf->MAVLinkEnv.data_size > CRSF_MAX_MAVLINK_PAYLOAD ? CRSF_MAX_MAVLINK_PAYLOAD : crsf->MAVLinkEnv.data_size;
-            memcpy(payload, &crsf->MAVLinkEnv, crsf->MAVLinkEnv.data_size + 2U);
+            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->MAVLinkEnv, crsf->MAVLinkEnv.data_size + 2U);
             *frameLength += crsf->MAVLinkEnv.data_size + 2U;
             break;
 #endif
@@ -575,8 +575,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE: {
-            strncpy(crsf->FlightMode.flight_mode, (char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1); // Last charachter is always \0
-            crsf->FlightMode.flight_mode[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1] = '\0';
+            strncpy_s(crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, (char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN); // Last charachter is always \0
             UPDATE_FRESHNESS(FLIGHT_MODE);
         }
 #endif
@@ -594,8 +593,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             uint16_t nameLen = strlen((char*)(payload + 2U)) + 1U; // Including null termination
             crsf->DeviceInfo.dest_address = payload[0];
             crsf->DeviceInfo.origin_address = payload[1];
-            strncpy(crsf->DeviceInfo.Device_name, (char*)(payload + 2U), CRSF_MAX_DEVICE_NAME_LEN - 1U); // Last charachter is always \0
-            crsf->DeviceInfo.Device_name[CRSF_MAX_DEVICE_NAME_LEN - 1U] = '\0';
+            strncpy_s(crsf->DeviceInfo.Device_name, CRSF_MAX_DEVICE_NAME_LEN, (char*)(payload + 2U), nameLen); // Last charachter is always \0
             crsf->DeviceInfo.Serial_number = CRSF_unpackBE32(payload + nameLen + 2U);
             crsf->DeviceInfo.Hardware_ID = CRSF_unpackBE32(payload + nameLen + 6U);
             crsf->DeviceInfo.Firmware_ID = CRSF_unpackBE32(payload + nameLen + 10U);
@@ -604,14 +602,15 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(DEVICE_INFO);
         }
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
-            memcpy(&crsf->ParamSettingsEntry, payload, payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
+            memcpy_s(&crsf->ParamSettingsEntry, sizeof(CRSF_ParamSettingsEntry_t), payload,
+                     payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
             UPDATE_FRESHNESS(PARAMETER_SETTINGS_ENTRY);
 
             PROCESS_FRAME(PARAMETER_READ, ParamRead);
             UPDATE_FRESHNESS(PARAMETER_READ);
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE:
-            memcpy(&crsf->ParamWrite, payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
+            memcpy_s(&crsf->ParamWrite, sizeof(CRSF_ParamWrite_t), payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
             UPDATE_FRESHNESS(PARAMETER_WRITE);
 #endif
 
@@ -620,7 +619,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             if (payload[payloadLength - 1U] != CRSF_calcChecksumCMD(payload - 1U, payloadLength)) {
                 return CRSF_ERROR_CMD_CHECKSUM_FAIL;
             }
-            memcpy(&crsf->Command, payload, (payloadLength - 1U) < (CRSF_MAX_COMMAND_PAYLOAD + 3U) ? (payloadLength - 1U) : (CRSF_MAX_COMMAND_PAYLOAD + 3U));
+            memcpy_s(&crsf->Command, sizeof(CRSF_Command_t), payload, (payloadLength - 1U) < (CRSF_MAX_COMMAND_PAYLOAD + 3U) ? (payloadLength - 1U) : (CRSF_MAX_COMMAND_PAYLOAD + 3U));
 #if CRSF_ENABLE_STATS
             crsf->Stats.commands_rx++;
 #endif
@@ -630,7 +629,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy(&crsf->MAVLinkEnv, payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy_s(&crsf->MAVLinkEnv, sizeof(CRSF_MAVLinkEnv_t), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
@@ -661,7 +660,7 @@ void CRSF_resetStats(CRSF_t* crsf) {
     if (!crsf) {
         return;
     }
-    memset(&crsf->Stats, 0, sizeof(crsf->Stats));
+    memset(&crsf->Stats, 0x00, sizeof(crsf->Stats));
 }
 #endif
 
@@ -806,7 +805,7 @@ static void CRSF_packBaroAltVSpeed(uint8_t* payload, const CRSF_BaroAlt_VS_t* ba
     if (baroAltVS->vertical_speed == 0) {
         vsPacked = 0;
     } else {
-        vsPacked = (int8_t)roundf(logf(fabsf(baroAltVS->vertical_speed) / Kl + 1) / Kr) * SIGN(baroAltVS->vertical_speed);
+        vsPacked = (int8_t)roundf(logf((float)abs(baroAltVS->vertical_speed) / Kl + 1) / Kr) * SIGN(baroAltVS->vertical_speed);
     }
 
     payload[0] = (uint8_t)((altPacked >> 8U) & 0xFFU);
@@ -824,7 +823,7 @@ static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* 
     uint16_t altPacked = (uint16_t)(payload[1] | (payload[0] << 8U));
     int8_t vsPacked = (int8_t)payload[2];
     baroAltVS->altitude = (altPacked & 0x8000) ? (altPacked & 0x7FFF) * 10 : (altPacked - 10000);
-    baroAltVS->vertical_speed = (expf(fabsf((float)vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
+    baroAltVS->vertical_speed = (expf((float)abs(vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
 }
 
 #endif
@@ -884,22 +883,22 @@ static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type) {
 
 static inline void CRSF_packBE16(uint8_t* dest, const uint16_t value) {
     uint16_t be_value = HTOBE16(value);
-    memcpy(dest, &be_value, sizeof(uint16_t));
+    memcpy_s(dest, sizeof(uint16_t), &be_value, sizeof(uint16_t));
 }
 
 static inline void CRSF_packBE32(uint8_t* dest, const uint32_t value) {
     uint32_t be_value = HTOBE32(value);
-    memcpy(dest, &be_value, sizeof(uint32_t));
+    memcpy_s(dest, sizeof(uint32_t), &be_value, sizeof(uint32_t));
 }
 
 static inline uint16_t CRSF_unpackBE16(const uint8_t* src) {
     uint16_t value;
-    memcpy(&value, src, sizeof(uint16_t));
+    memcpy_s(&value, sizeof(uint16_t), src, sizeof(uint16_t));
     return BE16TOH(value);
 }
 
 static inline uint32_t CRSF_unpackBE32(const uint8_t* src) {
     uint32_t value;
-    memcpy(&value, src, sizeof(uint32_t));
+    memcpy_s(&value, sizeof(uint32_t), src, sizeof(uint32_t));
     return BE32TOH(value);
 }

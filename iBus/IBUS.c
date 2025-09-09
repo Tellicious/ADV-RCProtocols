@@ -50,7 +50,7 @@ void iBus_init(iBus_t* iBus) {
     if (!iBus) {
         return;
     }
-    memset(iBus, 0, sizeof(*iBus));
+    memset(iBus, 0x00, sizeof(*iBus));
 #if IBUS_ENABLE_TELEMETRY
     iBus->sensorCount = 1; // Reserve slot 0 for internal voltage
     iBus->sensors[0].type = IBUS_MEAS_TYPE_INTERNAL_VOLTAGE;
@@ -112,8 +112,7 @@ iBus_Status_t iBus_processFrame(iBus_t* iBus, const uint8_t* frame) {
         return IBUS_ERROR_INVALID_FRAME;
     }
 
-    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2))
-        != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
+    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2)) != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
 #if IBUS_ENABLE_STATS
         iBus->stats.frames_bad_crc++;
 #endif
@@ -177,7 +176,7 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
 #if IBUS_ENABLE_FRESHNESS_CHECK
             iBus_updateTimestamp(iBus, IBUS_FRAME_TYPE_TEL);
 #endif
-            memcpy(p, rx, 4);
+            memcpy_s(p, 4, rx, 4);
             *tx_len = 4; // Discovery reply is always 4 bytes
             return IBUS_TEL_REPLY_READY;
             break;
@@ -237,7 +236,7 @@ void iBus_resetStats(iBus_t* iBus) {
     if (!iBus) {
         return;
     }
-    memset(&iBus->stats, 0, sizeof(iBus->stats));
+    memset(&iBus->stats, 0x00, sizeof(iBus->stats));
 }
 #endif
 
