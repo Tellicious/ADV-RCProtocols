@@ -1,0 +1,66 @@
+name: Unit tests
+
+on:
+    pull_request:
+        types: [opened, reopened, edited]
+    push:
+        # Sequence of patterns matched against refs/tags
+        tags:
+        - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    workflow_dispatch:
+
+env:
+ BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+
+jobs:
+  unitTests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Dependencies
+      run: |
+        sudo apt install -y \
+            build-essential \
+            cmake ninja-build
+    
+    - name: Wait for code formatting to succeed
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: lewagon/wait-on-check-action@v1.4.0
+      with:
+        ref: ${{ env.BRANCH_NAME }}
+        check-name: 'formatCode'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        wait-interval: 10
+        allowed-conclusions: success
+
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ env.BRANCH_NAME }}
+        fetch-depth: 0
+
+    - name: Configure CMake
+      run: cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -S ${{github.workspace}} -B ${{github.workspace}}/build -G Ninja
+    
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build -j 10
+    
+    - name: Test (output to XML)
+      run: CMOCKA_MESSAGE_OUTPUT=XML CMOCKA_XML_FILE=./%g.junit.xml ctest --test-dir ${{github.workspace}}/build --output-on-failure -VV
+
+    - name: Test (output to stdout)
+      run: CMOCKA_MESSAGE_OUTPUT=stdout ctest --test-dir ${{github.workspace}}/build --output-on-failure -VV
+
+    - name: Upload coverage results to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          plugin: gcov
+          flags: unitTests
+    
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unitTests

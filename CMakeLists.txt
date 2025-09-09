@@ -10,24 +10,23 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set(CMAKE_C_STANDARD_REQUIRED ON)
     set(CMAKE_C_EXTENSIONS ON)
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 
     include(FetchContent)
 
     # Fetch and build CMocka
     SET(CMAKE_TLS_VERIFY FALSE)
 
-    FetchContent_Declare(
-    cmocka
-    GIT_REPOSITORY https://git.cryptomilk.org/projects/cmocka.git
-    GIT_TAG        master
-    GIT_SHALLOW    1
-    )
-
-    set(WITH_STATIC_LIB ON CACHE BOOL "CMocka: Build with a static library" FORCE)
-    set(WITH_CMOCKERY_SUPPORT OFF CACHE BOOL "CMocka: Install a cmockery header" FORCE)
     set(WITH_EXAMPLES OFF CACHE BOOL "CMocka: Build examples" FORCE)
     set(UNIT_TESTING OFF CACHE BOOL "CMocka: Build with unit testing" FORCE)
     set(PICKY_DEVELOPER OFF CACHE BOOL "CMocka: Build with picky developer flags" FORCE)
+
+    FetchContent_Declare(
+        cmocka
+        GIT_REPOSITORY https://git.cryptomilk.org/projects/cmocka.git
+        GIT_TAG        master
+        GIT_SHALLOW    1
+    )
 
     FetchContent_MakeAvailable(cmocka)
 
