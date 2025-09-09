@@ -1,5 +1,7 @@
+
+cmake_minimum_required(VERSION 3.22)
+
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-    cmake_minimum_required(VERSION 3.22)
 
     project(RCProtocolsTest C)
 
@@ -28,6 +30,13 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set(PICKY_DEVELOPER OFF CACHE BOOL "CMocka: Build with picky developer flags" FORCE)
 
     FetchContent_MakeAvailable(cmocka)
+
+    # Find math library (needed for compilation under Ubuntu)
+    if (NOT WIN32)
+        find_library(MATH_LIBRARY m)
+    else()
+        set(MATH_LIBRARY "")
+    endif()
 
     # Set user definitions
     set(user_DEFS
@@ -63,7 +72,7 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
         )
         target_compile_definitions(${TARGET_NAME} PRIVATE ${USER_DEFS} ${DEFS})
         target_compile_options(${TARGET_NAME} PRIVATE ${compiler_OPTS})
-        target_link_libraries(${TARGET_NAME} PRIVATE cmocka)
+        target_link_libraries(${TARGET_NAME} PRIVATE cmocka ${MATH_LIBRARY})
         target_link_options(${TARGET_NAME} PRIVATE --coverage)
         add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
     endfunction()
@@ -103,4 +112,52 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # Mixed TX+RX (round-trips and broadest coverage)
     add_protocol_test(CRSF test_CRSF_mixed "CRSF_CONFIG_TX;CRSF_CONFIG_RX;CRSF_ENABLE_STATS=1;CRSF_ENABLE_FRESHNESS_CHECK=1;CRSF_ENABLE_ADDRESS_VALIDATION=1;CRSF_USE_CRC_CALCULATION=0;CRSF_TEL_ENABLE_GPS=1;CRSF_TEL_ENABLE_GPS_TIME=1;CRSF_TEL_ENABLE_GPS_EXTENDED=1;CRSF_TEL_ENABLE_VARIO=1;CRSF_TEL_ENABLE_BATTERY_SENSOR=1;CRSF_TEL_ENABLE_BAROALT_VSPEED=1;CRSF_TEL_ENABLE_AIRSPEED=1;CRSF_TEL_ENABLE_HEARTBEAT=1;CRSF_TEL_ENABLE_RPM=1;CRSF_TEL_ENABLE_TEMPERATURE=1;CRSF_TEL_ENABLE_VOLTAGES=1;CRSF_TEL_ENABLE_VTX=1;CRSF_TEL_ENABLE_LINK_STATISTICS=1;CRSF_ENABLE_RC_CHANNELS=1;CRSF_TEL_ENABLE_LINK_STATISTICS_RX=1;CRSF_TEL_ENABLE_LINK_STATISTICS_TX=1;CRSF_TEL_ENABLE_ATTITUDE=1;CRSF_TEL_ENABLE_MAVLINK_FC=1;CRSF_TEL_ENABLE_FLIGHT_MODE=1;CRSF_TEL_ENABLE_ESP_NOW_MESSAGES=1;CRSF_TEL_ENABLE_PARAMETER_GROUP=1;CRSF_ENABLE_COMMAND=1;CRSF_TEL_ENABLE_MAVLINK_ENVELOPE=1;CRSF_TEL_ENABLE_MAVLINK_STATUS=1")
 
+else()
+    # 
+    # This file provides set of variables for end user
+    # and also generates one (or more) libraries, that can be added to the project using target_link_libraries(...)
+    #
+    # Before this file is included to the root CMakeLists file (using add_subdirectory() function), user can set some variables:
+    #
+    # libName_COMPILE_OPTS: If defined, it provide compiler options for generated library.
+    # libName_COMPILE_DEFS: If defined, it provides "-D" definitions to the library build
+    #
+    set (libName RCProtocols)
+
+    option(BUILD_SYMAX "Build the SymaX library" ON)
+    option(BUILD_IBUS "Build the iBus library" ON)
+    option(BUILD_CRSF "Build the CRSF library" ON)
+
+    # Setup include directories
+    set(${libName}_inc
+        if(BUILD_SYMAX)
+            ${CMAKE_CURRENT_LIST_DIR}/SymaX/
+        endif()
+        if(BUILD_IBUS)
+            ${CMAKE_CURRENT_LIST_DIR}/iBus/
+        endif()
+        if(BUILD_CRSF)
+            ${CMAKE_CURRENT_LIST_DIR}/CRSF/
+        endif()
+    )
+
+    set(${libName}_src
+        if(BUILD_SYMAX)
+            ${CMAKE_CURRENT_LIST_DIR}/SymaX/SymaX.c
+        endif()
+        if(BUILD_IBUS)
+            ${CMAKE_CURRENT_LIST_DIR}/iBus/iBUS.c
+        endif()
+        if(BUILD_CRSF)
+            ${CMAKE_CURRENT_LIST_DIR}/CRSF/CRSF.c
+        endif()
+    )
+
+    # Register library to the system
+    add_library(${libName} STATIC)
+    target_sources(${libName} PRIVATE ${${libName}_src})
+    target_include_directories(${libName} PUBLIC ${${libName}_inc})
+    target_compile_options(${libName} PRIVATE ${${libName}_COMPILE_OPTS})
+    target_compile_definitions(${libName} PUBLIC ${${libName}_COMPILE_DEFS})
+    
 endif()
