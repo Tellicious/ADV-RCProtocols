@@ -55,7 +55,7 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          plugin: gcov
+          plugins: gcov
           flags: unitTests
     
     - name: Upload test results to Codecov

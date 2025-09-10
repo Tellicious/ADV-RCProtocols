@@ -4,6 +4,7 @@
         "__config": "c",
         "locale": "c",
         "type_traits": "c",
-        "complex": "c"
+        "complex": "c",
+        "cstdint": "c"
     }
 }
