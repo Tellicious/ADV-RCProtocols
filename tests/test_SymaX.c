@@ -44,7 +44,8 @@
 #include "SymaX.h"
 
 /* Test Constants and Helpers */
-#define SYMAX_PREBIND_PACKET_EXPECTED {0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF}
+#define SYMAX_PREBIND_PACKET_EXPECTED                                                                                                                          \
+    { 0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF }
 
 #if SYMAX_ENABLE_FRESHNESS_CHECK
 static uint32_t mock_timestamp = 12345;
@@ -1736,7 +1737,8 @@ static void test_bind_packet_address_extraction_edge_cases(void** state) {
     st.link.phase = SYMAX_BIND_IN_PROGRESS;
 
     // Test with all possible byte values in address
-    uint8_t test_addresses[][5] = {{0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
+    uint8_t test_addresses[][5] = {
+        {0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
 
     for (size_t i = 0; i < sizeof(test_addresses) / sizeof(test_addresses[0]); i++) {
         uint8_t bind_packet[SYMAX_PACKET_SIZE];
@@ -1764,10 +1766,12 @@ static void test_data_packet_channel_extraction_comprehensive(void** state) {
     struct {
         uint8_t raw_bytes[4];
         int16_t expected[4];
-    } test_cases[] = {
-        {{0x00, 0x00, 0x00, 0x00}, {0, 0, 0, 0}},      {{0x7F, 0x7F, 0x7F, 0x7F}, {127, 127, 127, 127}}, {{0xFF, 0xFF, 0xFF, 0xFF}, {255, -127, -127, -127}}, // thr is uint8_t, others are signed
-        {{0x80, 0x80, 0x80, 0x80}, {128, 0, 0, 0}},                                                                                                           // Sign bit with zero value
-        {{0x81, 0x81, 0x81, 0x81}, {129, -1, -1, -1}}, {{0x55, 0xAA, 0x33, 0xCC}, {85, -42, 51, -76}}};
+    } test_cases[] = {{{0x00, 0x00, 0x00, 0x00}, {0, 0, 0, 0}},
+                      {{0x7F, 0x7F, 0x7F, 0x7F}, {127, 127, 127, 127}},
+                      {{0xFF, 0xFF, 0xFF, 0xFF}, {255, -127, -127, -127}}, // thr is uint8_t, others are signed
+                      {{0x80, 0x80, 0x80, 0x80}, {128, 0, 0, 0}},          // Sign bit with zero value
+                      {{0x81, 0x81, 0x81, 0x81}, {129, -1, -1, -1}},
+                      {{0x55, 0xAA, 0x33, 0xCC}, {85, -42, 51, -76}}};
 
     for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
         uint8_t packet[SYMAX_PACKET_SIZE] = {0};

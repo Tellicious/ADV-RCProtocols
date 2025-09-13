@@ -45,18 +45,18 @@
 
 #define SIGN(x)                (((x) > 0) - ((x) < 0))
 
-#define BUILD_FRAME(TYPE, VAR)                                                                                                                                                                         \
+#define BUILD_FRAME(TYPE, VAR)                                                                                                                                 \
     case CRSF_FRAMETYPE_##TYPE: memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->VAR, sizeof(CRSF_##VAR##_t))
-#define UPDATE_LENGTH(VAR)                                                                                                                                                                             \
-    *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                                                            \
+#define UPDATE_LENGTH(VAR)                                                                                                                                     \
+    *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                    \
     break
 
-#define PROCESS_FRAME(TYPE, VAR)                                                                                                                                                                       \
+#define PROCESS_FRAME(TYPE, VAR)                                                                                                                               \
     case CRSF_FRAMETYPE_##TYPE: memcpy_s(&crsf->VAR, sizeof(CRSF_##VAR##_t), payload, sizeof(CRSF_##VAR##_t))
-#define UPDATE_FRESHNESS(TYPE)                                                                                                                                                                         \
-    if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                                                           \
-        CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                                                         \
-    }                                                                                                                                                                                                  \
+#define UPDATE_FRESHNESS(TYPE)                                                                                                                                 \
+    if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                   \
+        CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                 \
+    }                                                                                                                                                          \
     break
 
 #define CHECK_LENGTH(LEN, TYPE, VAR) ((LEN) >= sizeof(CRSF_##VAR##_t))
@@ -629,7 +629,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE: {
-            strncpy_s(crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, (char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN); // Last charachter is always \0
+            strncpy_s(crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, (char*)payload,
+                      CRSF_MAX_FLIGHT_MODE_NAME_LEN); // Last charachter is always \0
             UPDATE_FRESHNESS(FLIGHT_MODE);
         }
 #endif
@@ -668,7 +669,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(PARAMETER_READ);
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE:
-            memcpy_s(&crsf->ParamWrite, sizeof(CRSF_ParamWrite_t), payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
+            memcpy_s(&crsf->ParamWrite, sizeof(CRSF_ParamWrite_t), payload,
+                     payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
             UPDATE_FRESHNESS(PARAMETER_WRITE);
 #endif
 
@@ -677,7 +679,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             if (payload[payloadLength - 1U] != CRSF_calcChecksumCMD(payload - 1U, payloadLength)) {
                 return CRSF_ERROR_CMD_CHECKSUM_FAIL;
             }
-            memcpy_s(&crsf->Command, sizeof(CRSF_Command_t), payload, (payloadLength - 1U) < (CRSF_MAX_COMMAND_PAYLOAD + 3U) ? (payloadLength - 1U) : (CRSF_MAX_COMMAND_PAYLOAD + 3U));
+            memcpy_s(&crsf->Command, sizeof(CRSF_Command_t), payload,
+                     (payloadLength - 1U) < (CRSF_MAX_COMMAND_PAYLOAD + 3U) ? (payloadLength - 1U) : (CRSF_MAX_COMMAND_PAYLOAD + 3U));
 #if CRSF_ENABLE_STATS
             crsf->Stats.commands_rx++;
 #endif
@@ -687,7 +690,9 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy_s(&crsf->MAVLinkEnv, sizeof(CRSF_MAVLinkEnv_t), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
+            memcpy_s(&crsf->MAVLinkEnv, sizeof(CRSF_MAVLinkEnv_t), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U);
+            UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS

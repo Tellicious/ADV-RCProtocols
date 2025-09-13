@@ -37,7 +37,13 @@ typedef enum {
 } vtx_command_t;
 
 // LED Commands (0x32.0x09)
-typedef enum { LED_CMD_SET_DEFAULT = 0x01, LED_CMD_OVERRIDE_COLOR = 0x02, LED_CMD_OVERRIDE_PULSE = 0x03, LED_CMD_OVERRIDE_BLINK = 0x04, LED_CMD_OVERRIDE_SHIFT = 0x05 } led_command_t;
+typedef enum {
+    LED_CMD_SET_DEFAULT = 0x01,
+    LED_CMD_OVERRIDE_COLOR = 0x02,
+    LED_CMD_OVERRIDE_PULSE = 0x03,
+    LED_CMD_OVERRIDE_BLINK = 0x04,
+    LED_CMD_OVERRIDE_SHIFT = 0x05
+} led_command_t;
 
 // General Commands (0x32.0x0A)
 typedef enum { GENERAL_CMD_PROTOCOL_SPEED_PROPOSAL = 0x70, GENERAL_CMD_PROTOCOL_SPEED_RESPONSE = 0x71 } general_command_t;

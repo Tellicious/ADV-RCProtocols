@@ -986,7 +986,8 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                         return CRSF32_ERR_SHORT;
                     }
                     {
-                        uint8_t b = (uint8_t)(((in->v.vtx_enable_pitmode_on_pup.cfg.PitMode & 1) << 7) | ((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control & 3) << 5)
+                        uint8_t b = (uint8_t)(((in->v.vtx_enable_pitmode_on_pup.cfg.PitMode & 1) << 7)
+                                              | ((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_control & 3) << 5)
                                               | ((in->v.vtx_enable_pitmode_on_pup.cfg.pitmode_switch & 0x0F) << 1));
                         out[off++] = b;
                     }
@@ -1207,7 +1208,8 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     out[off++] = in->v.screen_popup_message_start.Max_timeout_interval;
                     out[off++] = (uint8_t)(in->v.screen_popup_message_start.Close_button_option ? 1 : 0);
                     if (in->v.screen_popup_message_start.add_data.present) {
-                        const char* sel = in->v.screen_popup_message_start.add_data.selectionText ? in->v.screen_popup_message_start.add_data.selectionText : "";
+                        const char* sel =
+                            in->v.screen_popup_message_start.add_data.selectionText ? in->v.screen_popup_message_start.add_data.selectionText : "";
                         for (s = sel; *s; ++s) {
                             if (off >= cap) {
                                 return CRSF32_ERR_SHORT;

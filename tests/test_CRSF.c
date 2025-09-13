@@ -123,7 +123,8 @@ const uint8_t test_linkstats_packet[] = {0xC8, 0x0C, 0x14, 0x41, 0x42, 0x62, 0xF
 /* 0x16 RC Channels Packed (16ch @ 1500)
  * ch0..15 = 1500 (11-bit, LSB-first across 22 bytes)
  */
-const uint8_t test_rc_channels_packet[] = {0xC8, 0x18, 0x16, 0xE0, 0x03, 0x1F, 0xF8, 0xC0, 0x07, 0x3E, 0xF0, 0x81, 0x0F, 0x7C, 0xE0, 0x03, 0x1F, 0xF8, 0xC0, 0x07, 0x3E, 0xF0, 0x81, 0x0F, 0x7C, 0xAD};
+const uint8_t test_rc_channels_packet[] = {0xC8, 0x18, 0x16, 0xE0, 0x03, 0x1F, 0xF8, 0xC0, 0x07, 0x3E, 0xF0, 0x81, 0x0F,
+                                           0x7C, 0xE0, 0x03, 0x1F, 0xF8, 0xC0, 0x07, 0x3E, 0xF0, 0x81, 0x0F, 0x7C, 0xAD};
 
 /* 0x1C Link Statistics RX
  * rssi = 86
@@ -2788,7 +2789,8 @@ static void test_roundtrip_parameter_settings_entry_oversized(void** state) {
     memcpy(tx.ParamSettingsEntry.Payload, testPattern, sizeof(testPattern));
 
     /* Test Build with oversized payload */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, sizeof(testPattern), frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, sizeof(testPattern), frame, &frameLength)
+                == CRSF_OK);
     assert_int_equal(frameLength, 60U + 3U + 1U);
 
     /* Test Process */

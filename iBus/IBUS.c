@@ -112,7 +112,8 @@ iBus_Status_t iBus_processFrame(iBus_t* iBus, const uint8_t* frame) {
         return IBUS_ERROR_INVALID_FRAME;
     }
 
-    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2)) != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
+    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2))
+        != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
 #if IBUS_ENABLE_STATS
         iBus->stats.frames_bad_crc++;
 #endif

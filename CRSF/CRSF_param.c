@@ -193,7 +193,8 @@ static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload
             }
             const uint8_t* p = payload + off;
             int64_t cur = 0, min = 0, max = 0;
-            bool is_signed = (out->type == CRSF_PARAM_T_INT8 || out->type == CRSF_PARAM_T_INT16 || out->type == CRSF_PARAM_T_INT32 || out->type == CRSF_PARAM_T_INT64);
+            bool is_signed =
+                (out->type == CRSF_PARAM_T_INT8 || out->type == CRSF_PARAM_T_INT16 || out->type == CRSF_PARAM_T_INT32 || out->type == CRSF_PARAM_T_INT64);
             switch (w) {
                 case 1:
                     cur = is_signed ? (int8_t)p[0] : (uint8_t)p[0];
