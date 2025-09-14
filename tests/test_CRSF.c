@@ -177,7 +177,7 @@ const uint8_t test_param_read_packet[] = {0xC8, 0x06, 0x2C, 0xC8, 0xEA, 0x01, 0x
 /* 0x2D Parameter Write request (DEST=FC, ORIGIN=RADIO_TX) field id 0x0001, value=0x2A */
 const uint8_t test_param_write_packet[] = {0xC8, 0x06, 0x2D, 0xC8, 0xEA, 0x01, 0x2A, 0x00};
 
-/* 0x32 Command (DEST=CRSF_RX, ORIGIN=RADIO_TX) command_ID=RX(0x10), Payload=BIND(0x01) */
+/* 0x32 Command (DEST=CRSF_RX, ORIGIN=RADIO_TX) command_ID=Crossfire(0x10), Payload=BIND(0x01) */
 const uint8_t test_command_packet[] = {0xC8, 0x07, 0x32, 0xEC, 0xEA, 0x10, 0x01, 0x34, 0xF6};
 
 /* Test Constants and Helpers */
@@ -1030,8 +1030,8 @@ static void test_build_command(void** state) {
     CRSF_init(&crsf);
     crsf.Command.dest_address = CRSF_ADDRESS_CRSF_RECEIVER;
     crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    crsf.Command.Command_ID = 0x10; // RX
-    crsf.Command.Payload[0] = 0x01; // BIND
+    crsf.Command.Command_ID = CRSF_CMDID_CROSSFIRE;                           // FC
+    crsf.Command.payload.crossfire.subCommand = CRSF_CMD_CF_SET_RX_BIND_MODE; // Force Disarm
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 1, frame, &frameLength) == CRSF_OK);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_command_packet[ii]);
@@ -1311,8 +1311,8 @@ static void test_process_command(void** state) {
     assert_int_equal(frameType, CRSF_FRAMETYPE_COMMAND);
     assert_int_equal(crsf.Command.dest_address, CRSF_ADDRESS_CRSF_RECEIVER);
     assert_int_equal(crsf.Command.origin_address, CRSF_ADDRESS_RADIO_TRANSMITTER);
-    assert_int_equal(crsf.Command.Command_ID, 0x10);
-    assert_int_equal(crsf.Command.Payload[0], 0x01);
+    assert_int_equal(crsf.Command.Command_ID, CRSF_CMDID_CROSSFIRE);
+    assert_int_equal(crsf.Command.payload.crossfire.subCommand, CRSF_CMD_CF_SET_RX_BIND_MODE);
 }
 #endif
 
@@ -3062,15 +3062,25 @@ static void test_roundtrip_command(void** state) {
     /* Edge case command packet */
     tx.Command.dest_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.Command.Command_ID = 0x42;
-    // Fill payload with test data
-    for (uint8_t ii = 0; ii < 20; ii++) {
-        tx.Command.Payload[ii] = 0x10 + ii;
-    }
+    tx.Command.Command_ID = CRSF_CMDID_SCREEN;
+    tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "What");
+    tx.Command.payload.screen.popupMessageStart.Max_timeout_interval = 3;
+    tx.Command.payload.screen.popupMessageStart.Close_button_option = 1;
+    tx.Command.payload.screen.popupMessageStart.add_data.present = 1;
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
+    tx.Command.payload.screen.popupMessageStart.add_data.value = 5;
+    tx.Command.payload.screen.popupMessageStart.add_data.minValue = 2;
+    tx.Command.payload.screen.popupMessageStart.add_data.maxValue = 7;
+    tx.Command.payload.screen.popupMessageStart.add_data.defaultValue = 4;
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
+    tx.Command.payload.screen.popupMessageStart.has_possible_values = 1;
+    strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3");
 
-    /* Test Build with 20 payload bytes */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 20, frame, &frameLength) == CRSF_OK);
-    assert_int_equal(frameLength, 23U + 1U + 3U + 1U);
+    /* Test Build with 32 payload bytes */
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
+    assert_int_equal(frameLength, 32U + 1U + 3U + 1U);
 
     /* Test Process */
     assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
@@ -3079,10 +3089,21 @@ static void test_roundtrip_command(void** state) {
     /* Check received frame */
     assert_int_equal(rx.Command.dest_address, CRSF_ADDRESS_FLIGHT_CONTROLLER);
     assert_int_equal(rx.Command.origin_address, CRSF_ADDRESS_RADIO_TRANSMITTER);
-    assert_int_equal(rx.Command.Command_ID, 0x42);
-    for (uint8_t ii = 0; ii < 20; ii++) {
-        assert_int_equal(rx.Command.Payload[ii], 0x10 + ii);
-    }
+    assert_int_equal(rx.Command.Command_ID, CRSF_CMDID_SCREEN);
+    assert_int_equal(rx.Command.payload.screen.subCommand, CRSF_CMD_SCREEN_POPUP_MESSAGE_START);
+    assert_string_equal(rx.Command.payload.screen.popupMessageStart.Header, "TestHH");
+    assert_string_equal(rx.Command.payload.screen.popupMessageStart.Info_message, "What");
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.Max_timeout_interval, 3);
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.Close_button_option, 1);
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.present, 1);
+    assert_string_equal(rx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.value, 5);
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.minValue, 2);
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.maxValue, 7);
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.defaultValue, 4);
+    assert_string_equal(rx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
+    assert_int_equal(rx.Command.payload.screen.popupMessageStart.has_possible_values, 1);
+    assert_string_equal(rx.Command.payload.screen.popupMessageStart.possible_values, "2;3");
 
 #if CRSF_ENABLE_STATS
     assert_int_equal(rx.Stats.commands_rx, 1);
@@ -3106,36 +3127,34 @@ static void test_roundtrip_command_oversized(void** state) {
     uint8_t frame[CRSF_MAX_FRAME_LEN + 2U];
     uint8_t frameLength = 0;
     CRSF_FrameType_t frameType;
-    uint8_t testPattern[CRSF_MAX_COMMAND_PAYLOAD + 10];
 
     CRSF_init(&tx);
     CRSF_init(&rx);
 
-    // Create test pattern
-    for (uint8_t ii = 0; ii < sizeof(testPattern); ii++) {
-        testPattern[ii] = ii;
-    }
-
     // Setup oversized payload
     tx.Command.dest_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
     tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.Command.Command_ID = 0x42;
-    memcpy(tx.Command.Payload, testPattern, sizeof(testPattern));
+    tx.Command.Command_ID = CRSF_CMDID_SCREEN;
+    tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "What");
+    tx.Command.payload.screen.popupMessageStart.Max_timeout_interval = 3;
+    tx.Command.payload.screen.popupMessageStart.Close_button_option = 1;
+    tx.Command.payload.screen.popupMessageStart.add_data.present = 1;
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
+    tx.Command.payload.screen.popupMessageStart.add_data.value = 5;
+    tx.Command.payload.screen.popupMessageStart.add_data.minValue = 2;
+    tx.Command.payload.screen.popupMessageStart.add_data.maxValue = 7;
+    tx.Command.payload.screen.popupMessageStart.add_data.defaultValue = 4;
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
+    tx.Command.payload.screen.popupMessageStart.has_possible_values = 1;
+    strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3;4;5;6;7");
 
     /* Test Build with oversized payload */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, sizeof(testPattern), frame, &frameLength) == CRSF_OK);
-    assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 3U + 1U + 3U + 1U);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
 
-    /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
-    assert_true(frameType == CRSF_FRAMETYPE_COMMAND);
-
-    /* Verify payload was truncated to max size */
-    for (uint8_t ii = 0; ii < CRSF_MAX_COMMAND_PAYLOAD; ii++) {
-        assert_int_equal(rx.Command.Payload[ii], testPattern[ii]);
-    }
 #if CRSF_ENABLE_STATS
-    assert_int_equal(rx.Stats.commands_rx, 1);
+    assert_int_equal(rx.Stats.commands_rx, 0);
 #endif
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_COMMAND < 0xFF) {

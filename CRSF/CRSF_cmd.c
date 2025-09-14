@@ -56,7 +56,7 @@ typedef enum {
     CRSF32_CMDID_RESERVED_12 = 0x12, // 0x32.0x12 Reserved
     CRSF32_CMDID_FLOW_CTRL = 0x20,   // 0x32.0x20 Flow Control Frame
     CRSF32_CMDID_SCREEN = 0x22       // 0x32.0x22 Screen Command
-} crsf32_command_id_t;
+} CRSF_CommandID_t;
 
 // ---------------------------------------------------------------------------
 // Subcommand enums (per Command_ID)
@@ -65,17 +65,17 @@ typedef enum {
 typedef enum {                     // 0x32.0x01 FC Commands
     CRSF32_FC_FORCE_DISARM = 0x01, // Force Disarm
     CRSF32_FC_SCALE_CHANNEL = 0x02 // Scale Channel (payload unspecified in spec)
-} crsf32_fc_subcmd_t;
+} CRSF_CommandFC_subCMD_t;
 
 typedef enum {               // 0x32.0x03 Bluetooth Command
     CRSF32_BT_RESET = 0x01,  // Reset
     CRSF32_BT_ENABLE = 0x02, // Enable (uint8 Enable: 0/1)
     CRSF32_BT_ECHO = 0x64    // Echo
-} crsf32_bt_subcmd_t;
+} CRSF_CommandBT_subCMD_t;
 
 typedef enum {                     // 0x32.0x05 OSD Commands
     CRSF32_OSD_SEND_BUTTONS = 0x01 // Send Buttons (uint8 Buttons bitwise)
-} crsf32_osd_subcmd_t;
+} CRSF_CommandOSD_subCMD_t;
 
 typedef enum {                               // 0x32.0x08 VTX Commands
     CRSF32_VTX_CHANGE_CHANNEL = 0x01,        // DISCONTINUED
@@ -85,7 +85,7 @@ typedef enum {                               // 0x32.0x08 VTX Commands
     CRSF32_VTX_POWER_UP_FROM_PITMODE = 0x05, // bare command
     CRSF32_VTX_SET_DYNAMIC_POWER = 0x06,     // uint8 Power (dBm)
     CRSF32_VTX_SET_POWER = 0x08              // uint8 Power (dBm)
-} crsf32_vtx_subcmd_t;
+} CRSF_CommandVTX_subCMD_t;
 
 typedef enum { // 0x32.0x09 LED
     CRSF32_LED_SET_TO_DEFAULT = 0x01,
@@ -93,13 +93,13 @@ typedef enum { // 0x32.0x09 LED
     CRSF32_LED_OVERRIDE_PULSE = 0x03, // uint16 duration + HSV(start) + HSV(stop)
     CRSF32_LED_OVERRIDE_BLINK = 0x04, // uint16 interval + HSV(start) + HSV(stop)
     CRSF32_LED_OVERRIDE_SHIFT = 0x05  // uint16 interval + HSV
-} crsf32_led_subcmd_t;
+} CRSF_CommandLED_subCMD_t;
 
 typedef enum { // 0x32.0x0A General
     // 0x04 and 0x61 are reserved in the spec
     CRSF32_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL = 0x70,         // uint8 port_id + uint32 proposed_baudrate
     CRSF32_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE = 0x71 // uint8 port_id + bool response
-} crsf32_general_subcmd_t;
+} CRSF_CommandGen_subCMD_t;
 
 typedef enum { // 0x32.0x10 Crossfire
     CRSF32_CF_SET_RX_BIND_MODE = 0x01,
@@ -109,18 +109,18 @@ typedef enum { // 0x32.0x10 Crossfire
     CRSF32_CF_CURRENT_MODEL_QUERY = 0x06, // query
     CRSF32_CF_CURRENT_MODEL_REPLY = 0x07  // uint8 Model Number
     // 0x08, 0x09 reserved
-} crsf32_cf_subcmd_t;
+} CRSF_CommandCF_subCMD_t;
 
 typedef enum {                     // 0x32.0x20 Flow Control Frame
     CRSF32_FLOW_SUBSCRIBE = 0x01,  // uint8 Frame type + uint16 Max interval time (ms)
     CRSF32_FLOW_UNSUBSCRIBE = 0x02 // uint8 Frame type
-} crsf32_flow_subcmd_t;
+} CRSF_CommandFlow_subCMD_t;
 
 typedef enum { // 0x32.0x22 Screen Command
     CRSF32_SCREEN_POPUP_MESSAGE_START = 0x01,
     CRSF32_SCREEN_SELECTION_RETURN = 0x02
     // 0x03, 0x04 reserved
-} crsf32_screen_subcmd_t;
+} CRSF_CommandScreen_subCMD_t;
 
 // ---------------------------------------------------------------------------
 // Data structures for decoded packets
@@ -173,14 +173,14 @@ typedef enum {
 // 24-bit packed HSV helper: H(9), S(7), V(8) — sequential big-endian bits
 // Implementation: value = (H & 0x1FF)<<15 | (S & 0x7F)<<8 | (V);
 // Bytes: out[0]=value>>16, out[1]=value>>8, out[2]=value.
-static inline void crsf32_pack_hsv24(uint16_t H, uint8_t S, uint8_t V, uint8_t out[3]) {
+static inline void CRSF_packHSV(uint16_t H, uint8_t S, uint8_t V, uint8_t out[3]) {
     uint32_t v = ((uint32_t)(H & 0x1FF) << 15) | ((uint32_t)(S & 0x7F) << 8) | (uint32_t)V;
     out[0] = (uint8_t)(v >> 16);
     out[1] = (uint8_t)(v >> 8);
     out[2] = (uint8_t)v;
 }
 
-static inline void crsf32_unpack_hsv24(const uint8_t in[3], uint16_t* H, uint8_t* S, uint8_t* V) {
+static inline void CRSF_unpackHSV(const uint8_t in[3], uint16_t* H, uint8_t* S, uint8_t* V) {
     uint32_t v = ((uint32_t)in[0] << 16) | ((uint32_t)in[1] << 8) | in[2];
     if (H) {
         *H = (uint16_t)((v >> 15) & 0x1FF);
@@ -226,7 +226,7 @@ typedef struct {
     uint8_t SubCommand_ID;   // echoed subcommand
     uint8_t Action;          // 1=already took action; 0=no function/invalid
     const char* Information; // optional NUL-terminated string (may be empty)
-} crsf32_command_ack_t;
+} CRSF_CommandACK_t;
 
 // Screen Command: 0x32.0x22.0x01 Pop-up Message Start
 typedef struct {
@@ -247,13 +247,13 @@ typedef struct {
 
     bool has_possible_values;
     const char* possible_values; // semicolon-separated NUL-terminated
-} crsf32_screen_popup_start_t;
+} CRSF_CommandScreen_PopupStart_t;
 
 // Screen Command: 0x32.0x22.0x02 Selection Return Value
 typedef struct {
     uint8_t value; // selected value
     bool response; // true(Process) / false(Cancel)
-} crsf32_screen_selection_return_t;
+} CRSF_CommandScreen_SelectionReturn_t;
 
 // VTX pitmode control byte (0x32.0x08 subcmd 0x04)
 typedef struct {
@@ -269,7 +269,7 @@ typedef struct {
     crsf32_kind_t kind; // normalized tag
 
     union {
-        crsf32_command_ack_t command_ack; // 0xFF
+        CRSF_CommandACK_t ACK; // 0xFF
 
         // FC
         struct { /* empty */
@@ -294,7 +294,7 @@ typedef struct {
         // OSD
         struct {
             uint8_t Buttons;
-        } osd_send_buttons;
+        } OSD;
 
         // VTX
         struct {              /* empty */
@@ -404,8 +404,8 @@ typedef struct {
         } flow_unsubscribe;
 
         // Screen
-        crsf32_screen_popup_start_t screen_popup_message_start;
-        crsf32_screen_selection_return_t screen_selection_return;
+        CRSF_CommandScreen_PopupStart_t screen_popup_message_start;
+        CRSF_CommandScreen_SelectionReturn_t screen_selection_return;
 
         // Fallback
         struct {
@@ -465,9 +465,9 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
             }
             out->subcommand = 0x00; // N/A
             out->kind = CRSF32_KIND_COMMAND_ACK;
-            out->v.command_ack.Command_ID = q[0];
-            out->v.command_ack.SubCommand_ID = q[1];
-            out->v.command_ack.Action = q[2];
+            out->v.ACK.Command_ID = q[0];
+            out->v.ACK.SubCommand_ID = q[1];
+            out->v.ACK.Action = q[2];
             q += 3;
             rem -= 3;
             if (rem) {
@@ -476,9 +476,9 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                 if (rc != CRSF32_OK) {
                     return rc;
                 }
-                out->v.command_ack.Information = s;
+                out->v.ACK.Information = s;
             } else {
-                out->v.command_ack.Information = ""; // empty allowed
+                out->v.ACK.Information = ""; // empty allowed
             }
             return CRSF32_OK;
         }
@@ -546,7 +546,7 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     return CRSF32_ERR_SHORT;
                 }
                 out->kind = CRSF32_KIND_OSD_SEND_BUTTONS;
-                out->v.osd_send_buttons.Buttons = q[0];
+                out->v.OSD.buttons = q[0];
                 return CRSF32_OK;
             }
             out->v.raw.bytes = q - 1;
@@ -630,7 +630,7 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                         uint16_t H;
                         uint8_t S;
                         uint8_t V;
-                        crsf32_unpack_hsv24(q, &H, &S, &V);
+                        CRSF_unpackHSV(q, &H, &S, &V);
                         out->v.led_override_color.H = H;
                         out->v.led_override_color.S = S;
                         out->v.led_override_color.V = V;
@@ -643,9 +643,9 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->kind = CRSF32_KIND_LED_OVERRIDE_PULSE;
                     out->v.led_override_pulse.duration_ms = crsf32_be16(q);
                     q += 2;
-                    crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_start, &out->v.led_override_pulse.S_start, &out->v.led_override_pulse.V_start);
+                    CRSF_unpackHSV(q, &out->v.led_override_pulse.H_start, &out->v.led_override_pulse.S_start, &out->v.led_override_pulse.V_start);
                     q += 3;
-                    crsf32_unpack_hsv24(q, &out->v.led_override_pulse.H_stop, &out->v.led_override_pulse.S_stop, &out->v.led_override_pulse.V_stop);
+                    CRSF_unpackHSV(q, &out->v.led_override_pulse.H_stop, &out->v.led_override_pulse.S_stop, &out->v.led_override_pulse.V_stop);
                     return CRSF32_OK;
                 case CRSF32_LED_OVERRIDE_BLINK:
                     if (rem < (size_t)(2 + 3 + 3)) {
@@ -654,9 +654,9 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->kind = CRSF32_KIND_LED_OVERRIDE_BLINK;
                     out->v.led_override_blink.interval_ms = crsf32_be16(q);
                     q += 2;
-                    crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_start, &out->v.led_override_blink.S_start, &out->v.led_override_blink.V_start);
+                    CRSF_unpackHSV(q, &out->v.led_override_blink.H_start, &out->v.led_override_blink.S_start, &out->v.led_override_blink.V_start);
                     q += 3;
-                    crsf32_unpack_hsv24(q, &out->v.led_override_blink.H_stop, &out->v.led_override_blink.S_stop, &out->v.led_override_blink.V_stop);
+                    CRSF_unpackHSV(q, &out->v.led_override_blink.H_stop, &out->v.led_override_blink.S_stop, &out->v.led_override_blink.V_stop);
                     return CRSF32_OK;
                 case CRSF32_LED_OVERRIDE_SHIFT:
                     if (rem < (size_t)(2 + 3)) {
@@ -665,7 +665,7 @@ static inline crsf32_rc crsf32_decode_payload(uint8_t command_id, const uint8_t*
                     out->kind = CRSF32_KIND_LED_OVERRIDE_SHIFT;
                     out->v.led_override_shift.interval_ms = crsf32_be16(q);
                     q += 2;
-                    crsf32_unpack_hsv24(q, &out->v.led_override_shift.H, &out->v.led_override_shift.S, &out->v.led_override_shift.V);
+                    CRSF_unpackHSV(q, &out->v.led_override_shift.H, &out->v.led_override_shift.S, &out->v.led_override_shift.V);
                     return CRSF32_OK;
                 default:
                     out->v.raw.bytes = q - 1;
@@ -893,10 +893,10 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
             if (cap < 3) {
                 return CRSF32_ERR_SHORT;
             }
-            out[off++] = in->v.command_ack.Command_ID;
-            out[off++] = in->v.command_ack.SubCommand_ID;
-            out[off++] = in->v.command_ack.Action;
-            info = in->v.command_ack.Information ? in->v.command_ack.Information : "";
+            out[off++] = in->v.ACK.Command_ID;
+            out[off++] = in->v.ACK.SubCommand_ID;
+            out[off++] = in->v.ACK.Action;
+            info = in->v.ACK.Information ? in->v.ACK.Information : "";
             for (s = info; *s; ++s) {
                 if (off >= cap) {
                     return CRSF32_ERR_SHORT;
@@ -961,7 +961,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                 if (off + 1 > cap) {
                     return CRSF32_ERR_SHORT;
                 }
-                out[off++] = in->v.osd_send_buttons.Buttons;
+                out[off++] = in->v.OSD.buttons;
             }
             break;
         }
@@ -1023,7 +1023,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     }
                     {
                         uint8_t b[3];
-                        crsf32_pack_hsv24(in->v.led_override_color.H, in->v.led_override_color.S, in->v.led_override_color.V, b);
+                        CRSF_packHSV(in->v.led_override_color.H, in->v.led_override_color.S, in->v.led_override_color.V, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];
@@ -1037,11 +1037,11 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     off += 2;
                     {
                         uint8_t b[3];
-                        crsf32_pack_hsv24(in->v.led_override_pulse.H_start, in->v.led_override_pulse.S_start, in->v.led_override_pulse.V_start, b);
+                        CRSF_packHSV(in->v.led_override_pulse.H_start, in->v.led_override_pulse.S_start, in->v.led_override_pulse.V_start, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];
-                        crsf32_pack_hsv24(in->v.led_override_pulse.H_stop, in->v.led_override_pulse.S_stop, in->v.led_override_pulse.V_stop, b);
+                        CRSF_packHSV(in->v.led_override_pulse.H_stop, in->v.led_override_pulse.S_stop, in->v.led_override_pulse.V_stop, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];
@@ -1055,11 +1055,11 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     off += 2;
                     {
                         uint8_t b[3];
-                        crsf32_pack_hsv24(in->v.led_override_blink.H_start, in->v.led_override_blink.S_start, in->v.led_override_blink.V_start, b);
+                        CRSF_packHSV(in->v.led_override_blink.H_start, in->v.led_override_blink.S_start, in->v.led_override_blink.V_start, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];
-                        crsf32_pack_hsv24(in->v.led_override_blink.H_stop, in->v.led_override_blink.S_stop, in->v.led_override_blink.V_stop, b);
+                        CRSF_packHSV(in->v.led_override_blink.H_stop, in->v.led_override_blink.S_stop, in->v.led_override_blink.V_stop, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];
@@ -1073,7 +1073,7 @@ static inline int crsf32_encode_payload(uint8_t* out, size_t cap, const crsf32_p
                     off += 2;
                     {
                         uint8_t b[3];
-                        crsf32_pack_hsv24(in->v.led_override_shift.H, in->v.led_override_shift.S, in->v.led_override_shift.V, b);
+                        CRSF_packHSV(in->v.led_override_shift.H, in->v.led_override_shift.S, in->v.led_override_shift.V, b);
                         out[off++] = b[0];
                         out[off++] = b[1];
                         out[off++] = b[2];

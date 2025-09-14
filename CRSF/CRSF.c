@@ -43,16 +43,17 @@
 #define CRSF_RC_TICKS_TO_US(x) (((x) - 992) * 5 / 8 + 1500)
 #define CRSF_RC_US_TO_TICKS(x) (((x) - 1500) * 8 / 5 + 992)
 
-#define SIGN(x)                (((x) > 0) - ((x) < 0))
+#define ABS(value)             (((value) >= 0) ? (value) : (-value))
+#define SIGN(value)            (((value) > 0) - ((value) < 0))
 
 #define BUILD_FRAME(TYPE, VAR)                                                                                                                                 \
-    case CRSF_FRAMETYPE_##TYPE: memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->VAR, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy(payload, &crsf->VAR, sizeof(CRSF_##VAR##_t))
 #define UPDATE_LENGTH(VAR)                                                                                                                                     \
     *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                    \
     break
 
 #define PROCESS_FRAME(TYPE, VAR)                                                                                                                               \
-    case CRSF_FRAMETYPE_##TYPE: memcpy_s(&crsf->VAR, sizeof(CRSF_##VAR##_t), payload, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy(&crsf->VAR, payload, sizeof(CRSF_##VAR##_t))
 #define UPDATE_FRESHNESS(TYPE)                                                                                                                                 \
     if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                   \
         CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                 \
@@ -84,13 +85,23 @@ static void CRSF_packRC(uint8_t* payload, const uint16_t* channels);
 static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels);
 #endif
 
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
+static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const CRSF_CommandPayload_t* in, uint8_t* payload, uint8_t* length);
+#endif
+
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_RX)
+static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_CommandPayload_t* out, const uint8_t* payload, uint8_t length);
+#endif
+
 static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type);
 
 // Helpers
 static inline void CRSF_packBE16(uint8_t* dest, const uint16_t value);
 static inline void CRSF_packBE32(uint8_t* dest, const uint32_t value);
+static inline void CRSF_packHSV(uint8_t* dest, uint16_t H, uint8_t S, uint8_t V);
 static inline uint16_t CRSF_unpackBE16(const uint8_t* src);
 static inline uint32_t CRSF_unpackBE32(const uint8_t* src);
+static inline void CRSF_unpackHSV(const uint8_t* src, uint16_t* H, uint8_t* S, uint8_t* V);
 
 /* Functions -----------------------------------------------------------------*/
 
@@ -323,8 +334,9 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE:
-            strncpy_s((char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN);
-            *frameLength += strlen(crsf->FlightMode.flight_mode) + 1U; // Adding also null termination
+            strncpy((char*)payload, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U);
+            payload[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U] = '\0'; // Ensure null termination
+            *frameLength += strlen((char*)payload) + 1U;        // Adding also null termination
             break;
 #endif
 
@@ -338,11 +350,12 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             UPDATE_LENGTH(Ping);
 
         case CRSF_FRAMETYPE_DEVICE_INFO: {
-            uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name) + 1U; //Adding also null termination
+            uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name);
             payload[off++] = crsf->DeviceInfo.dest_address;
             payload[off++] = crsf->DeviceInfo.origin_address;
-            strncpy_s((char*)(payload + off), CRSF_MAX_DEVICE_NAME_LEN, crsf->DeviceInfo.Device_name, nameLen);
+            strncpy((char*)(payload + off), crsf->DeviceInfo.Device_name, nameLen);
             off += nameLen;
+            payload[off++] = '\0'; //Ensure null termination
             CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
             off += sizeof(uint32_t);
             CRSF_packBE32(payload + off, crsf->DeviceInfo.Hardware_ID);
@@ -357,7 +370,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: {
             uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
-            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->ParamSettingsEntry, paramLen);
+            memcpy(payload, &crsf->ParamSettingsEntry, paramLen);
             *frameLength += paramLen;
             if (paramLen == 4U) {
                 payload[4] = 0;
@@ -371,7 +384,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE: {
             uint8_t paramLen = (values > CRSF_MAX_PARAM_DATA_LEN ? CRSF_MAX_PARAM_DATA_LEN : values) + 3U;
-            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->ParamWrite, paramLen);
+            memcpy(payload, &crsf->ParamWrite, paramLen);
             *frameLength += paramLen;
             if (paramLen == 3U) {
                 payload[3] = 0;
@@ -383,10 +396,14 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_COMMAND: {
-            uint8_t cmdLen = (values > CRSF_MAX_COMMAND_PAYLOAD ? CRSF_MAX_COMMAND_PAYLOAD : values) + 3U;
-            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 3U, &crsf->Command, cmdLen);
-            payload[cmdLen] = CRSF_calcChecksumCMD(frame + 2U, cmdLen + sizeof(uint8_t));
-            *frameLength += cmdLen + sizeof(uint8_t); //including also inner CRC
+            payload[off++] = crsf->Command.dest_address;
+            payload[off++] = crsf->Command.origin_address;
+            payload[off++] = (uint8_t)crsf->Command.Command_ID;
+            if (CRSF_encodeCommandPayload(crsf->Command.Command_ID, &crsf->Command.payload, payload + off, &off) != CRSF_OK) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            payload[off] = CRSF_calcChecksumCMD(frame + 2U, off + sizeof(uint8_t));
+            *frameLength += off + sizeof(uint8_t); //including also inner CRC
             break;
         }
 #endif
@@ -394,7 +411,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
         case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
             crsf->MAVLinkEnv.data_size = crsf->MAVLinkEnv.data_size > CRSF_MAX_MAVLINK_PAYLOAD ? CRSF_MAX_MAVLINK_PAYLOAD : crsf->MAVLinkEnv.data_size;
-            memcpy_s(payload, CRSF_MAX_FRAME_LEN - 2U, &crsf->MAVLinkEnv, crsf->MAVLinkEnv.data_size + 2U);
+            memcpy(payload, &crsf->MAVLinkEnv, crsf->MAVLinkEnv.data_size + 2U);
             *frameLength += crsf->MAVLinkEnv.data_size + 2U;
             break;
 #endif
@@ -629,8 +646,8 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE: {
-            strncpy_s(crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, (char*)payload,
-                      CRSF_MAX_FLIGHT_MODE_NAME_LEN); // Last charachter is always \0
+            strncpy(crsf->FlightMode.flight_mode, (char*)payload, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U); // Last charachter is always \0
+            crsf->FlightMode.flight_mode[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U] = '\0';
             UPDATE_FRESHNESS(FLIGHT_MODE);
         }
 #endif
@@ -645,10 +662,11 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(DEVICE_PING);
 
         case CRSF_FRAMETYPE_DEVICE_INFO: {
-            uint16_t nameLen = strlen((char*)(payload + 2U * sizeof(uint8_t))) + 1U; // Including null termination
             crsf->DeviceInfo.dest_address = payload[off++];
             crsf->DeviceInfo.origin_address = payload[off++];
-            strncpy_s(crsf->DeviceInfo.Device_name, CRSF_MAX_DEVICE_NAME_LEN, (char*)(payload + off), nameLen); // Last charachter is always \0
+            uint16_t nameLen = strlen((char*)(payload + off)) + 1U;                                       // Including null termination
+            strncpy(crsf->DeviceInfo.Device_name, (char*)(payload + off), CRSF_MAX_DEVICE_NAME_LEN - 1U); // Last charachter is always \0
+            crsf->DeviceInfo.Device_name[CRSF_MAX_DEVICE_NAME_LEN - 1U] = '\0';
             off += nameLen;
             crsf->DeviceInfo.Serial_number = CRSF_unpackBE32(payload + off);
             off += sizeof(uint32_t);
@@ -661,16 +679,15 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(DEVICE_INFO);
         }
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
-            memcpy_s(&crsf->ParamSettingsEntry, sizeof(CRSF_ParamSettingsEntry_t), payload,
-                     payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
+            memcpy(&crsf->ParamSettingsEntry, payload,
+                   payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
             UPDATE_FRESHNESS(PARAMETER_SETTINGS_ENTRY);
 
             PROCESS_FRAME(PARAMETER_READ, ParamRead);
             UPDATE_FRESHNESS(PARAMETER_READ);
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE:
-            memcpy_s(&crsf->ParamWrite, sizeof(CRSF_ParamWrite_t), payload,
-                     payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
+            memcpy(&crsf->ParamWrite, payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
             UPDATE_FRESHNESS(PARAMETER_WRITE);
 #endif
 
@@ -679,8 +696,13 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             if (payload[payloadLength - 1U] != CRSF_calcChecksumCMD(payload - 1U, payloadLength)) {
                 return CRSF_ERROR_CMD_CHECKSUM_FAIL;
             }
-            memcpy_s(&crsf->Command, sizeof(CRSF_Command_t), payload,
-                     (payloadLength - 1U) < (CRSF_MAX_COMMAND_PAYLOAD + 3U) ? (payloadLength - 1U) : (CRSF_MAX_COMMAND_PAYLOAD + 3U));
+            crsf->Command.dest_address = payload[off++];
+            crsf->Command.origin_address = payload[off++];
+            crsf->Command.Command_ID = (CRSF_CommandID_t)payload[off++];
+            if (CRSF_decodeCommandPayload(crsf->Command.Command_ID, &crsf->Command.payload, payload + off, payloadLength - 1U) != CRSF_OK) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            };
+
 #if CRSF_ENABLE_STATS
             crsf->Stats.commands_rx++;
 #endif
@@ -690,9 +712,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
-            memcpy_s(&crsf->MAVLinkEnv, sizeof(CRSF_MAVLinkEnv_t), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U);
-            UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy(&crsf->MAVLinkEnv, payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
@@ -870,7 +890,7 @@ static void CRSF_packBaroAltVSpeed(uint8_t* payload, const CRSF_BaroAlt_VS_t* ba
     if (baroAltVS->vertical_speed == 0) {
         vsPacked = 0;
     } else {
-        vsPacked = (int8_t)roundf(logf((float)abs(baroAltVS->vertical_speed) / Kl + 1) / Kr) * SIGN(baroAltVS->vertical_speed);
+        vsPacked = (int8_t)roundf(logf((float)ABS(baroAltVS->vertical_speed) / Kl + 1) / Kr) * SIGN(baroAltVS->vertical_speed);
     }
 
     payload[0] = (uint8_t)((altPacked >> 8U) & 0xFFU);
@@ -888,7 +908,7 @@ static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* 
     uint16_t altPacked = (uint16_t)(payload[1] | (payload[0] << 8U));
     int8_t vsPacked = (int8_t)payload[2];
     baroAltVS->altitude = (altPacked & 0x8000) ? (altPacked & 0x7FFF) * 10 : (altPacked - 10000);
-    baroAltVS->vertical_speed = (expf((float)abs(vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
+    baroAltVS->vertical_speed = (expf((float)ABS(vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
 }
 
 #endif
@@ -933,6 +953,461 @@ static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
 }
 #endif
 
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
+static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const CRSF_CommandPayload_t* in, uint8_t* payload, uint8_t* length) {
+    uint8_t off = 0;
+
+    switch (commandID) {
+        case CRSF_CMDID_COMMAND_ACK:
+            payload[off++] = in->ACK.Command_ID;
+            payload[off++] = in->ACK.SubCommand_ID;
+            payload[off++] = in->ACK.Action;
+
+            // Add information string if present and space available
+            if (in->ACK.Information[0] != '\0' && (CRSF_MAX_COMMAND_PAYLOAD - off) > 0) {
+                uint8_t strLen = strlen(in->ACK.Information);
+                strncpy((char*)(payload + off), in->ACK.Information, strLen);
+                off += strLen;
+                payload[off++] = '\0'; // Add null terminator
+            }
+            break;
+
+        case CRSF_CMDID_FC: payload[off++] = (uint8_t)in->FC.subCommand; break;
+
+        case CRSF_CMDID_BLUETOOTH:
+            payload[off++] = (uint8_t)in->Bluetooth.subCommand;
+            if (in->Bluetooth.subCommand == CRSF_CMD_BT_ENABLE) {
+                payload[off++] = in->Bluetooth.Enable;
+            }
+            break;
+
+        case CRSF_CMDID_OSD:
+            payload[off++] = (uint8_t)in->OSD.subCommand;
+            if (in->OSD.subCommand == CRSF_CMD_OSD_SEND_BUTTONS) {
+                payload[off++] = in->OSD.buttons;
+            }
+            break;
+
+        case CRSF_CMDID_VTX:
+            payload[off++] = (uint8_t)in->VTX.subCommand;
+            switch (in->VTX.subCommand) {
+                case CRSF_CMD_VTX_SET_FREQUENCY:
+                    CRSF_packBE16(payload + off, in->VTX.FrequencyMHz);
+                    off += 2;
+                    break;
+                case CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP: payload[off++] = in->VTX.pitModeCfg; break;
+                case CRSF_CMD_VTX_SET_DYNAMIC_POWER:
+                case CRSF_CMD_VTX_SET_POWER: payload[off++] = in->VTX.Power_dBm; break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_LED:
+            payload[off++] = (uint8_t)in->LED.subCommand;
+            switch (in->LED.subCommand) {
+                case CRSF_CMD_LED_OVERRIDE_COLOR:
+                    CRSF_packHSV(payload + off, in->LED.overrideColor.H, in->LED.overrideColor.S, in->LED.overrideColor.V);
+                    off += 3;
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_PULSE:
+                    CRSF_packBE16(payload + off, in->LED.overridePulse.duration_ms);
+                    off += 2;
+                    CRSF_packHSV(payload + off, in->LED.overridePulse.H_start, in->LED.overridePulse.S_start, in->LED.overridePulse.V_start);
+                    off += 3;
+                    CRSF_packHSV(payload + off, in->LED.overridePulse.H_stop, in->LED.overridePulse.S_stop, in->LED.overridePulse.V_stop);
+                    off += 3;
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_BLINK:
+                    CRSF_packBE16(payload + off, in->LED.overrideBlink.interval_ms);
+                    off += 2;
+                    CRSF_packHSV(payload + off, in->LED.overrideBlink.H_start, in->LED.overrideBlink.S_start, in->LED.overrideBlink.V_start);
+                    off += 3;
+                    CRSF_packHSV(payload + off, in->LED.overrideBlink.H_stop, in->LED.overrideBlink.S_stop, in->LED.overrideBlink.V_stop);
+                    off += 3;
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_SHIFT:
+                    CRSF_packBE16(payload + off, in->LED.overrideShift.interval_ms);
+                    off += 2;
+                    CRSF_packHSV(payload + off, in->LED.overrideShift.H, in->LED.overrideShift.S, in->LED.overrideShift.V);
+                    off += 3;
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_GENERAL:
+            payload[off++] = (uint8_t)in->general.subCommand;
+            switch (in->general.subCommand) {
+                case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL:
+                    payload[off++] = in->general.protocolSpeedProposal.port_id;
+                    CRSF_packBE32(payload + off, in->general.protocolSpeedProposal.proposed_baudrate);
+                    off += 4;
+                    break;
+                case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE:
+                    payload[off++] = in->general.protocolSpeedResponse.port_id;
+                    payload[off++] = in->general.protocolSpeedResponse.response ? 1 : 0;
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_CROSSFIRE:
+            payload[off++] = (uint8_t)in->crossfire.subCommand;
+            switch (in->crossfire.subCommand) {
+                case CRSF_CMD_CF_SET_BIND_ID:
+                    memcpy(payload + off, in->crossfire.setBindId.bytes, in->crossfire.setBindId.len);
+                    off += in->crossfire.setBindId.len;
+                    break;
+                case CRSF_CMD_CF_MODEL_SELECTION:
+                case CRSF_CMD_CF_CURRENT_MODEL_REPLY: payload[off++] = in->crossfire.Model_Number; break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_FLOW_CTRL:
+            payload[off++] = (uint8_t)in->flow.subCommand;
+            switch (in->flow.subCommand) {
+                case CRSF_CMD_FLOW_SUBSCRIBE:
+                    payload[off++] = in->flow.Frame_type;
+                    CRSF_packBE16(payload + off, in->flow.Max_interval_time_ms);
+                    off += 2;
+                    break;
+                case CRSF_CMD_FLOW_UNSUBSCRIBE: payload[off++] = in->flow.Frame_type; break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_SCREEN:
+            payload[off++] = (uint8_t)in->screen.subCommand;
+            switch (in->screen.subCommand) {
+                case CRSF_CMD_SCREEN_POPUP_MESSAGE_START: {
+                    // Pack header string
+                    uint8_t strLen = strlen(in->screen.popupMessageStart.Header);
+                    if ((off + strLen + 1U) >= CRSF_MAX_COMMAND_PAYLOAD) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    memcpy(payload + off, in->screen.popupMessageStart.Header, strLen);
+                    off += strLen;
+                    payload[off++] = '\0';
+
+                    // Pack info message string
+                    strLen = strlen(in->screen.popupMessageStart.Info_message);
+                    if ((off + strLen + 1U + 2U) >= CRSF_MAX_COMMAND_PAYLOAD) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    memcpy(payload + off, in->screen.popupMessageStart.Info_message, strLen);
+                    off += strLen;
+                    payload[off++] = '\0';
+
+                    // Pack timeout and close button option
+                    payload[off++] = in->screen.popupMessageStart.Max_timeout_interval;
+                    payload[off++] = in->screen.popupMessageStart.Close_button_option ? 1U : 0U;
+
+                    // Pack additional data if present
+                    if (in->screen.popupMessageStart.add_data.present) {
+                        strLen = strlen(in->screen.popupMessageStart.add_data.selectionText);
+                        if ((off + strLen + 1 + 4 + strlen(in->screen.popupMessageStart.add_data.unit) + 1) >= CRSF_MAX_COMMAND_PAYLOAD) {
+                            return CRSF_ERROR_TYPE_LENGTH;
+                        }
+                        memcpy(payload + off, in->screen.popupMessageStart.add_data.selectionText, strLen);
+                        off += strLen;
+                        payload[off++] = '\0';
+
+                        payload[off++] = in->screen.popupMessageStart.add_data.value;
+                        payload[off++] = in->screen.popupMessageStart.add_data.minValue;
+                        payload[off++] = in->screen.popupMessageStart.add_data.maxValue;
+                        payload[off++] = in->screen.popupMessageStart.add_data.defaultValue;
+
+                        strLen = strlen(in->screen.popupMessageStart.add_data.unit);
+                        memcpy(payload + off, in->screen.popupMessageStart.add_data.unit, strLen);
+                        off += strLen;
+                        payload[off++] = '\0';
+                    }
+
+                    // Pack possible values if present
+                    if (in->screen.popupMessageStart.has_possible_values) {
+                        strLen = strlen(in->screen.popupMessageStart.possible_values);
+                        if ((off + strLen + 1) >= CRSF_MAX_COMMAND_PAYLOAD) {
+                            return CRSF_ERROR_TYPE_LENGTH;
+                        }
+                        memcpy(payload + off, in->screen.popupMessageStart.possible_values, strLen);
+                        off += strLen;
+                        payload[off++] = '\0';
+                    }
+                    break;
+                }
+                case CRSF_CMD_SCREEN_SELECTION_RETURN:
+                    payload[off++] = in->screen.selectionReturn.value;
+                    payload[off++] = in->screen.selectionReturn.response ? 1U : 0U;
+                    break;
+                default: break;
+            }
+            break;
+
+        default: return CRSF_ERROR_INVALID_FRAME;
+    }
+    *length += off;
+    return CRSF_OK;
+}
+#endif /* CRSF_ENABLE_COMMAND && && defined(CRSF_CONFIG_TX) */
+
+#if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_RX)
+static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_CommandPayload_t* out, const uint8_t* payload, uint8_t length) {
+    uint8_t off = 0;
+
+    switch (commandID) {
+        case CRSF_CMDID_COMMAND_ACK:
+            if (length < 3U) {
+                return CRSF_ERROR_TYPE_LENGTH; // Command_ID, SubCommand_ID, Action
+            }
+            out->ACK.Command_ID = payload[off++];
+            out->ACK.SubCommand_ID = payload[off++];
+            out->ACK.Action = payload[off++];
+            if ((length - off) > 1) {
+                strncpy(out->ACK.Information, (char*)(payload + off), CRSF_MAX_COMMAND_PAYLOAD - 4U);
+                out->ACK.Information[CRSF_MAX_COMMAND_PAYLOAD - 4U] = '\0';
+            } else {
+                out->ACK.Information[0] = '\0';
+            }
+            break;
+
+        case CRSF_CMDID_FC:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->FC.subCommand = (CRSF_CommandFC_subCMD_t)payload[off];
+            break;
+
+        case CRSF_CMDID_BLUETOOTH:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->Bluetooth.subCommand = (CRSF_CommandBT_subCMD_t)payload[off++];
+            if (out->Bluetooth.subCommand == CRSF_CMD_BT_ENABLE) {
+                out->Bluetooth.Enable = payload[off];
+            }
+            break;
+
+        case CRSF_CMDID_OSD:
+            if (length < 2U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->OSD.subCommand = (CRSF_CommandOSD_subCMD_t)payload[off++];
+            if (out->OSD.subCommand == CRSF_CMD_OSD_SEND_BUTTONS) {
+                out->OSD.buttons = payload[off];
+            }
+            break;
+
+        case CRSF_CMDID_VTX:
+            if (length < 1) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->VTX.subCommand = (CRSF_CommandVTX_subCMD_t)payload[off++];
+            switch (out->VTX.subCommand) {
+                case CRSF_CMD_VTX_SET_FREQUENCY:
+                    if ((length - off) < 2U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->VTX.FrequencyMHz = CRSF_unpackBE16(payload + off);
+                    break;
+                case CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP:
+                    if ((length - off) < 1U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->VTX.pitModeCfg = payload[off];
+                    break;
+                case CRSF_CMD_VTX_SET_DYNAMIC_POWER:
+                case CRSF_CMD_VTX_SET_POWER:
+                    if ((length - off) < 1U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->VTX.Power_dBm = payload[off];
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_LED:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->LED.subCommand = (CRSF_CommandLED_subCMD_t)payload[off++];
+            switch (out->LED.subCommand) {
+                case CRSF_CMD_LED_OVERRIDE_COLOR:
+                    if ((length - off) < 3U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    CRSF_unpackHSV(payload + off, &out->LED.overrideColor.H, &out->LED.overrideColor.S, &out->LED.overrideColor.V);
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_PULSE:
+                    if ((length - off) < 8U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->LED.overridePulse.duration_ms = CRSF_unpackBE16(payload + off);
+                    off += sizeof(uint16_t);
+                    CRSF_unpackHSV(payload + off, &out->LED.overridePulse.H_start, &out->LED.overridePulse.S_start, &out->LED.overridePulse.V_start);
+                    off += 3U;
+                    CRSF_unpackHSV(payload + off, &out->LED.overridePulse.H_stop, &out->LED.overridePulse.S_stop, &out->LED.overridePulse.V_stop);
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_BLINK:
+                    if ((length - off) < 8U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->LED.overrideBlink.interval_ms = CRSF_unpackBE16(payload + off);
+                    off += sizeof(uint16_t);
+                    CRSF_unpackHSV(payload + off, &out->LED.overrideBlink.H_start, &out->LED.overrideBlink.S_start, &out->LED.overrideBlink.V_start);
+                    off += 3U;
+                    CRSF_unpackHSV(payload + off, &out->LED.overrideBlink.H_stop, &out->LED.overrideBlink.S_stop, &out->LED.overrideBlink.V_stop);
+                    break;
+                case CRSF_CMD_LED_OVERRIDE_SHIFT:
+                    if ((length - off) < 5U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->LED.overrideShift.interval_ms = CRSF_unpackBE16(payload + off);
+                    off += sizeof(uint16_t);
+                    CRSF_unpackHSV(payload + off, &out->LED.overrideShift.H, &out->LED.overrideShift.S, &out->LED.overrideShift.V);
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_GENERAL:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->general.subCommand = (CRSF_CommandGen_subCMD_t)payload[off++];
+            switch (out->general.subCommand) {
+                case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL:
+                    if ((length - off) < 5U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->general.protocolSpeedProposal.port_id = payload[off++];
+                    out->general.protocolSpeedProposal.proposed_baudrate = CRSF_unpackBE32(payload + off);
+                    break;
+                case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE:
+                    if ((length - off) < 2U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->general.protocolSpeedResponse.port_id = payload[off++];
+                    out->general.protocolSpeedResponse.response = (payload[off] != 0);
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_CROSSFIRE:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->crossfire.subCommand = (CRSF_CommandCF_subCMD_t)payload[off++];
+            switch (out->crossfire.subCommand) {
+                case CRSF_CMD_CF_SET_BIND_ID:
+                    memcpy(out->crossfire.setBindId.bytes, payload + off, length - off);
+                    out->crossfire.setBindId.len = length - off;
+                    break;
+                case CRSF_CMD_CF_MODEL_SELECTION:
+                case CRSF_CMD_CF_CURRENT_MODEL_REPLY:
+                    if ((length - off) < 1U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->crossfire.Model_Number = payload[off];
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_FLOW_CTRL:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->flow.subCommand = (CRSF_CommandFlow_subCMD_t)payload[off++];
+            switch (out->flow.subCommand) {
+                case CRSF_CMD_FLOW_SUBSCRIBE:
+                    if ((length - off) < 3U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->flow.Frame_type = payload[off++];
+                    out->flow.Max_interval_time_ms = CRSF_unpackBE16(payload + off);
+                    break;
+                case CRSF_CMD_FLOW_UNSUBSCRIBE:
+                    if ((length - off) < 1U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->flow.Frame_type = payload[off++];
+                    break;
+                default: break;
+            }
+            break;
+
+        case CRSF_CMDID_SCREEN:
+            if (length < 1U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->screen.subCommand = (CRSF_CommandScreen_subCMD_t)payload[off++];
+            switch (out->screen.subCommand) {
+                case CRSF_CMD_SCREEN_POPUP_MESSAGE_START: {
+                    uint8_t strLen = 0;
+                    strLen = strlen((char*)(payload + off)) + 1U;
+                    strncpy(out->screen.popupMessageStart.Header, (char*)(payload + off),
+                            ((strLen > CRSF_MAX_COMMAND_PAYLOAD_STRINGS) ? CRSF_MAX_COMMAND_PAYLOAD_STRINGS : strLen) - 1U);
+                    out->screen.popupMessageStart.Header[CRSF_MAX_COMMAND_PAYLOAD_STRINGS - 1U] = '\0';
+                    off += strLen;
+                    strLen = strlen((char*)(payload + off)) + 1U;
+                    strncpy(out->screen.popupMessageStart.Info_message, (char*)(payload + off),
+                            ((strLen > CRSF_MAX_COMMAND_PAYLOAD_STRINGS) ? CRSF_MAX_COMMAND_PAYLOAD_STRINGS : strLen) - 1U);
+                    out->screen.popupMessageStart.Info_message[CRSF_MAX_COMMAND_PAYLOAD_STRINGS - 1U] = '\0';
+                    off += strLen;
+                    out->screen.popupMessageStart.Max_timeout_interval = payload[off++];
+                    out->screen.popupMessageStart.Close_button_option = (payload[off++] != 0);
+
+                    // Additional data
+                    strLen = strlen((char*)(payload + off)) + 1U;
+                    out->screen.popupMessageStart.add_data.present = 0;
+                    if (strLen > 1U) {
+                        out->screen.popupMessageStart.add_data.present = 1U;
+                        strncpy(out->screen.popupMessageStart.add_data.selectionText, (char*)(payload + off),
+                                ((strLen > CRSF_MAX_COMMAND_PAYLOAD_STRINGS) ? CRSF_MAX_COMMAND_PAYLOAD_STRINGS : strLen) - 1U);
+                        out->screen.popupMessageStart.add_data.selectionText[CRSF_MAX_COMMAND_PAYLOAD_STRINGS - 1U] = '\0';
+                        off += strLen;
+                        out->screen.popupMessageStart.add_data.value = payload[off++];
+                        out->screen.popupMessageStart.add_data.minValue = payload[off++];
+                        out->screen.popupMessageStart.add_data.maxValue = payload[off++];
+                        out->screen.popupMessageStart.add_data.defaultValue = payload[off++];
+                        strLen = strlen((char*)(payload + off)) + 1U;
+                        strncpy(out->screen.popupMessageStart.add_data.unit, (char*)(payload + off), ((strLen > 5U) ? 5U : strLen) - 1U);
+                        out->screen.popupMessageStart.add_data.unit[4] = '\0';
+                        off += strLen;
+                    }
+
+                    // Possible values
+                    out->screen.popupMessageStart.has_possible_values = 0;
+                    if ((length - off) > 0U) {
+                        out->screen.popupMessageStart.has_possible_values = 1;
+                        strLen = strlen((char*)(payload + off)) + 1U;
+                        strncpy(out->screen.popupMessageStart.possible_values, (char*)(payload + off),
+                                ((strLen > CRSF_MAX_COMMAND_PAYLOAD_STRINGS) ? CRSF_MAX_COMMAND_PAYLOAD_STRINGS : strLen) - 1U);
+                        out->screen.popupMessageStart.possible_values[CRSF_MAX_COMMAND_PAYLOAD_STRINGS - 1U] = '\0';
+                    }
+
+                    break;
+                }
+                case CRSF_CMD_SCREEN_SELECTION_RETURN:
+                    if ((length - off) < 2U) {
+                        return CRSF_ERROR_TYPE_LENGTH;
+                    }
+                    out->screen.selectionReturn.value = payload[off++];
+                    out->screen.selectionReturn.response = (payload[off] != 0);
+                    break;
+                default: break;
+            }
+            break;
+
+        default: break;
+    }
+    return CRSF_OK;
+}
+#endif /* CRSF_ENABLE_COMMAND && && defined(CRSF_CONFIG_RX) */
+
 static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (crsf && crsf->getTimestamp_ms && frame_type < CRSF_TRACKED_FRAME_TYPES) {
@@ -948,22 +1423,36 @@ static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type) {
 
 static inline void CRSF_packBE16(uint8_t* dest, const uint16_t value) {
     uint16_t be_value = HTOBE16(value);
-    memcpy_s(dest, sizeof(uint16_t), &be_value, sizeof(uint16_t));
+    memcpy(dest, &be_value, sizeof(uint16_t));
 }
 
 static inline void CRSF_packBE32(uint8_t* dest, const uint32_t value) {
     uint32_t be_value = HTOBE32(value);
-    memcpy_s(dest, sizeof(uint32_t), &be_value, sizeof(uint32_t));
+    memcpy(dest, &be_value, sizeof(uint32_t));
+}
+
+static inline void CRSF_packHSV(uint8_t* dest, uint16_t H, uint8_t S, uint8_t V) {
+    uint32_t v = ((uint32_t)(H & 0x1FF) << 15) | ((uint32_t)(S & 0x7F) << 8) | (uint32_t)V;
+    *dest++ = (uint8_t)(v >> 16);
+    *dest++ = (uint8_t)(v >> 8);
+    *dest++ = (uint8_t)v;
 }
 
 static inline uint16_t CRSF_unpackBE16(const uint8_t* src) {
     uint16_t value;
-    memcpy_s(&value, sizeof(uint16_t), src, sizeof(uint16_t));
+    memcpy(&value, src, sizeof(uint16_t));
     return BE16TOH(value);
 }
 
 static inline uint32_t CRSF_unpackBE32(const uint8_t* src) {
     uint32_t value;
-    memcpy_s(&value, sizeof(uint32_t), src, sizeof(uint32_t));
+    memcpy(&value, src, sizeof(uint32_t));
     return BE32TOH(value);
+}
+
+static inline void CRSF_unpackHSV(const uint8_t* src, uint16_t* H, uint8_t* S, uint8_t* V) {
+    uint32_t v = ((uint32_t)src[0] << 16) | ((uint32_t)src[1] << 8) | src[2];
+    *H = (uint16_t)((v >> 15) & 0x1FF);
+    *S = (uint8_t)((v >> 8) & 0x7F);
+    *V = (uint8_t)(v & 0xFF);
 }

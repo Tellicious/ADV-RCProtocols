@@ -177,7 +177,7 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
 #if IBUS_ENABLE_FRESHNESS_CHECK
             iBus_updateTimestamp(iBus, IBUS_FRAME_TYPE_TEL);
 #endif
-            memcpy_s(p, 4, rx, 4);
+            memcpy(p, rx, 4);
             *tx_len = 4; // Discovery reply is always 4 bytes
             return IBUS_TEL_REPLY_READY;
             break;

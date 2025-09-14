@@ -78,8 +78,8 @@ void SymaX_init(SymaX_t* SymaX) {
 
     // Initialize with bind channels
     SymaX->link.current_channel_idx = 0;
-    memcpy_s(SymaX->link.rf_channels, 4, SymaX_BindChannels, 4);
-    memcpy_s(SymaX->link.rf_address, 5, SymaX_BindAddress, 5);
+    memcpy(SymaX->link.rf_channels, SymaX_BindChannels, 4);
+    memcpy(SymaX->link.rf_address, SymaX_BindAddress, 5);
 }
 
 #if SYMAX_ENABLE_FRESHNESS_CHECK
@@ -103,7 +103,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet) {
     switch (SymaX->link.phase) {
 #if !SYMAX_SKIP_PREBIND
         case SYMAX_PREBIND:
-            memcpy_s(packet, SYMAX_PACKET_SIZE, _SymaX_PrebindPacket, SYMAX_PACKET_SIZE);
+            memcpy(packet, _SymaX_PrebindPacket, SYMAX_PACKET_SIZE);
 
             // Send a finite number of bind packets
             if (++SymaX->link.packet_count >= SYMAX_PREBIND_PACKETS) {

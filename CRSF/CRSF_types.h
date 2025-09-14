@@ -40,6 +40,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
+#include "CRSF_cmd.h"
 
 /* Configuration -------------------------------------------------------------*/
 
@@ -64,6 +65,10 @@ extern "C" {
 
 #ifndef CRSF_MAX_COMMAND_PAYLOAD
 #define CRSF_MAX_COMMAND_PAYLOAD 32 /* Max command payload */
+#endif
+
+#ifndef CRSF_MAX_COMMAND_PAYLOAD_STRINGS
+#define CRSF_MAX_COMMAND_PAYLOAD_STRINGS 20 /* Max size of command payload strings */
 #endif
 
 #ifndef CRSF_MAX_MAVLINK_PAYLOAD
@@ -138,6 +143,7 @@ typedef enum {
     CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY = 0x2B,
     CRSF_FRAMETYPE_PARAMETER_READ = 0x2C,
     CRSF_FRAMETYPE_PARAMETER_WRITE = 0x2D,
+
     /* Direct Command */
     CRSF_FRAMETYPE_COMMAND = 0x32,
 
@@ -170,6 +176,23 @@ typedef enum {
 } CRSF_FrameType_t;
 
 /**
+ * Command types
+ */
+typedef enum {
+    CRSF_CMDID_COMMAND_ACK = 0xFF, // 0x32.0xFF Command ACK
+    CRSF_CMDID_FC = 0x01,          // 0x32.0x01 FC Commands
+    CRSF_CMDID_BLUETOOTH = 0x03,   // 0x32.0x03 Bluetooth Command
+    CRSF_CMDID_OSD = 0x05,         // 0x32.0x05 OSD Commands
+    CRSF_CMDID_VTX = 0x08,         // 0x32.0x08 VTX Commands
+    CRSF_CMDID_LED = 0x09,         // 0x32.0x09 LED
+    CRSF_CMDID_GENERAL = 0x0A,     // 0x32.0x0A General
+    CRSF_CMDID_CROSSFIRE = 0x10,   // 0x32.0x10 Crossfire
+    CRSF_CMDID_RESERVED_12 = 0x12, // 0x32.0x12 Reserved
+    CRSF_CMDID_FLOW_CTRL = 0x20,   // 0x32.0x20 Flow Control Frame
+    CRSF_CMDID_SCREEN = 0x22       // 0x32.0x22 Screen Command
+} CRSF_CommandID_t;
+
+/**
  * Parameter types for device configuration
  */
 typedef enum {
@@ -187,6 +210,93 @@ typedef enum {
     CRSF_COMMAND = 13,
     CRSF_OUT_OF_RANGE = 127
 } CRSF_ParamType_t;
+
+/**
+ * 0x32.0x01 FC Commands
+ */
+typedef enum {
+    CRSF_CMD_FC_FORCE_DISARM = 0x01, // Force Disarm
+    CRSF_CMD_FC_SCALE_CHANNEL = 0x02 // Scale Channel (payload unspecified in spec)
+} CRSF_CommandFC_subCMD_t;
+
+/**
+ * 0x32.0x03 Bluetooth Command
+ */
+typedef enum {
+    CRSF_CMD_BT_RESET = 0x01,  // Reset
+    CRSF_CMD_BT_ENABLE = 0x02, // Enable (uint8 Enable: 0/1)
+    CRSF_CMD_BT_ECHO = 0x64    // Echo
+} CRSF_CommandBT_subCMD_t;
+
+/**
+ * 0x32.0x05 OSD Commands
+ */
+typedef enum {
+    CRSF_CMD_OSD_SEND_BUTTONS = 0x01 // Send Buttons (uint8 Buttons bitwise)
+} CRSF_CommandOSD_subCMD_t;
+
+/**
+ * 0x32.0x08 VTX Commands
+ */
+typedef enum {
+    CRSF_CMD_VTX_CHANGE_CHANNEL = 0x01,        // DISCONTINUED
+    CRSF_CMD_VTX_SET_FREQUENCY = 0x02,         // uint16 Frequency (MHz in range 5000–6000)
+    CRSF_CMD_VTX_CHANGE_POWER = 0x03,          // DISCONTINUED (moved to 0x08)
+    CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP = 0x04, // packed pitmode byte
+    CRSF_CMD_VTX_POWER_UP_FROM_PITMODE = 0x05, // bare command
+    CRSF_CMD_VTX_SET_DYNAMIC_POWER = 0x06,     // uint8 Power (dBm)
+    CRSF_CMD_VTX_SET_POWER = 0x08              // uint8 Power (dBm)
+} CRSF_CommandVTX_subCMD_t;
+
+/**
+ * 0x32.0x09 LED
+ */
+typedef enum {
+    CRSF_CMD_LED_SET_TO_DEFAULT = 0x01,
+    CRSF_CMD_LED_OVERRIDE_COLOR = 0x02, // packed HSV
+    CRSF_CMD_LED_OVERRIDE_PULSE = 0x03, // uint16 duration + HSV(start) + HSV(stop)
+    CRSF_CMD_LED_OVERRIDE_BLINK = 0x04, // uint16 interval + HSV(start) + HSV(stop)
+    CRSF_CMD_LED_OVERRIDE_SHIFT = 0x05  // uint16 interval + HSV
+} CRSF_CommandLED_subCMD_t;
+
+/**
+ * 0x32.0x0A General
+ */
+typedef enum {
+    // 0x04 and 0x61 are reserved in the spec
+    CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL = 0x70,         // uint8 port_id + uint32 proposed_baudrate
+    CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE = 0x71 // uint8 port_id + uint8_t response
+} CRSF_CommandGen_subCMD_t;
+
+/**
+ * 0x32.0x10 Crossfire
+ */
+typedef enum {
+    CRSF_CMD_CF_SET_RX_BIND_MODE = 0x01,
+    CRSF_CMD_CF_CANCEL_BIND_MODE = 0x02,
+    CRSF_CMD_CF_SET_BIND_ID = 0x03,         // payload not detailed by spec
+    CRSF_CMD_CF_MODEL_SELECTION = 0x05,     // uint8 Model Number
+    CRSF_CMD_CF_CURRENT_MODEL_QUERY = 0x06, // query
+    CRSF_CMD_CF_CURRENT_MODEL_REPLY = 0x07  // uint8 Model Number
+    // 0x08, 0x09 reserved
+} CRSF_CommandCF_subCMD_t;
+
+/**
+ * 0x32.0x20 Flow Control Frame
+ */
+typedef enum {
+    CRSF_CMD_FLOW_SUBSCRIBE = 0x01,  // uint8 Frame type + uint16 Max interval time (ms)
+    CRSF_CMD_FLOW_UNSUBSCRIBE = 0x02 // uint8 Frame type
+} CRSF_CommandFlow_subCMD_t;
+
+/**
+ * 0x32.0x22 Screen Command
+ */
+typedef enum {
+    CRSF_CMD_SCREEN_POPUP_MESSAGE_START = 0x01,
+    CRSF_CMD_SCREEN_SELECTION_RETURN = 0x02
+    // 0x03, 0x04 reserved
+} CRSF_CommandScreen_subCMD_t;
 
 /* Payloads ------------------------------------------------------------------*/
 
@@ -498,15 +608,203 @@ typedef struct {
     uint8_t Data[CRSF_MAX_PARAM_DATA_LEN];
 } CRSF_ParamWrite_t;
 
+/* 
+ * Command ACK payload
+ */
+typedef struct {
+    uint8_t Command_ID;                              // echoed realm
+    uint8_t SubCommand_ID;                           // echoed subcommand
+    uint8_t Action;                                  // 1=already took action; 0=no function/invalid
+    char Information[CRSF_MAX_COMMAND_PAYLOAD - 3U]; // optional NULL-terminated string (may be empty)
+} CRSF_CommandACK_t;
+
+/* 
+ * Command Screen payload: 0x32.0x22.0x01 Pop-up Message Start
+ */
+typedef struct {
+    char Header[CRSF_MAX_COMMAND_PAYLOAD_STRINGS];       // NULL-terminated
+    char Info_message[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated
+    uint8_t Max_timeout_interval;                        // seconds
+    uint8_t Close_button_option;                         // 0/1
+
+    struct {
+        uint8_t present;                                      // true if selectionText not empty
+        char selectionText[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated; if empty, this whole struct is absent
+        uint8_t value;
+        uint8_t minValue;
+        uint8_t maxValue;
+        uint8_t defaultValue;
+        char unit[5]; // NULL-terminated
+    } add_data;
+
+    uint8_t has_possible_values;
+    char possible_values[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // semicolon-separated NULL-terminated
+} CRSF_CommandScreen_PopupStart_t;
+
+/* 
+ * Command Screen payload: 0x32.0x22.0x02 Selection Return Value
+ */
+typedef struct {
+    uint8_t value;    // selected value
+    uint8_t response; // true(Process) / false(Cancel)
+} CRSF_CommandScreen_SelectionReturn_t;
+
+/**
+ * Command inner payload
+ */
+// Unified decoded packet
+typedef union {
+    CRSF_CommandACK_t ACK; // 0xFF
+
+    // FC
+    struct {
+        CRSF_CommandFC_subCMD_t subCommand;
+    } FC;
+
+    // Bluetooth
+    struct {
+        CRSF_CommandBT_subCMD_t subCommand;
+        uint8_t Enable;
+    } Bluetooth;
+
+    // OSD
+    struct {
+        CRSF_CommandOSD_subCMD_t subCommand;
+
+        union {
+            struct {
+                uint8_t enter    : 1;
+                uint8_t up       : 1;
+                uint8_t down     : 1;
+                uint8_t left     : 1;
+                uint8_t right    : 1;
+                uint8_t _padding : 3;
+            };
+
+            uint8_t buttons;
+        };
+    } OSD;
+
+    // VTX
+    struct {
+        CRSF_CommandVTX_subCMD_t subCommand;
+
+        union {
+            uint16_t FrequencyMHz;
+
+            union {
+                struct {
+                    uint8_t PitMode         : 1; //(0 = OFF, 1 = ON)
+                    uint8_t pitmode_control : 2; //(0=Off, 1=On, 2=Arm, 3=Failsafe)
+                    uint8_t pitmode_switch  : 4; //(0=Ch5, 1=Ch5 Inv, … , 15=Ch12 Inv)
+                };
+
+                uint8_t pitModeCfg;
+            };
+
+            uint8_t Power_dBm;
+        };
+    } VTX;
+
+    // LED
+    struct {
+        CRSF_CommandLED_subCMD_t subCommand;
+
+        union {
+
+            struct {
+                uint16_t H;
+                uint8_t S;
+                uint8_t V;
+            } overrideColor;
+
+            struct {
+                uint16_t duration_ms;
+                uint16_t H_start;
+                uint8_t S_start;
+                uint8_t V_start;
+                uint16_t H_stop;
+                uint8_t S_stop;
+                uint8_t V_stop;
+            } overridePulse;
+
+            struct {
+                uint16_t interval_ms;
+                uint16_t H_start;
+                uint8_t S_start;
+                uint8_t V_start;
+                uint16_t H_stop;
+                uint8_t S_stop;
+                uint8_t V_stop;
+            } overrideBlink;
+
+            struct {
+                uint16_t interval_ms;
+                uint16_t H;
+                uint8_t S;
+                uint8_t V;
+            } overrideShift;
+        };
+    } LED;
+
+    // General
+    struct {
+        CRSF_CommandGen_subCMD_t subCommand;
+
+        union {
+            struct {
+
+                uint8_t port_id;
+                uint32_t proposed_baudrate;
+            } protocolSpeedProposal;
+
+            struct {
+                uint8_t port_id;
+                uint8_t response;
+            } protocolSpeedResponse;
+        };
+    } general;
+
+    // Crossfire
+    struct {
+        CRSF_CommandCF_subCMD_t subCommand;
+
+        union {
+            struct {
+                uint8_t bytes[CRSF_MAX_COMMAND_PAYLOAD - 1U];
+                uint8_t len;
+            } setBindId; // unspecified
+
+            uint8_t Model_Number;
+        };
+    } crossfire;
+
+    // Flow control
+    struct {
+        CRSF_CommandFlow_subCMD_t subCommand;
+        uint8_t Frame_type;
+        uint16_t Max_interval_time_ms;
+    } flow;
+
+    // Screen
+    struct {
+        CRSF_CommandScreen_subCMD_t subCommand;
+
+        union {
+            CRSF_CommandScreen_PopupStart_t popupMessageStart;
+            CRSF_CommandScreen_SelectionReturn_t selectionReturn;
+        };
+    } screen;
+} CRSF_CommandPayload_t;
+
 /**
  * CRSF_FRAMETYPE_COMMAND payload
  */
-
 typedef struct {
     uint8_t dest_address;
     uint8_t origin_address;
-    uint8_t Command_ID;
-    uint8_t Payload[CRSF_MAX_COMMAND_PAYLOAD]; // Depending on Command ID
+    CRSF_CommandID_t Command_ID;
+    CRSF_CommandPayload_t payload; // Depending on Command ID
     // uint8_t Command_CRC8;                      // 8 bit CRC POLYNOM = 0xBA
 } CRSF_Command_t;
 

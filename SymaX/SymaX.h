@@ -49,7 +49,7 @@ extern "C" {
 #define SYMAX_CONFIG_RX
 #endif
 
-#ifdef SYMAX_CONFIG_TX
+#if defined(SYMAX_CONFIG_TX) & !defined(SYMAX_CONFIG_RX)
 #undef SYMAX_ENABLE_FRESHNESS_CHECK
 #define SYMAX_ENABLE_FRESHNESS_CHECK 0
 #endif

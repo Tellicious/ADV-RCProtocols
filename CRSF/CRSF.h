@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 #ifndef CRSF_ENABLE_FRESHNESS_CHECK
-#define CRSF_ENABLE_FRESHNESS_CHECK 1
+#define CRSF_ENABLE_FRESHNESS_CHECK 0
 #endif
 
 #ifndef CRSF_ENABLE_ADDRESS_VALIDATION
@@ -69,10 +69,6 @@ extern "C" {
 
 #ifndef CRSF_USE_CRC_CALCULATION
 #define CRSF_USE_CRC_CALCULATION 0 /* Use CRC calculation instead of lookup tables (saves flash). */
-#endif
-
-#ifndef CRSF_USE_RC_DIRECT_CONVERSION
-#define CRSF_USE_RC_DIRECT_CONVERSION 0
 #endif
 
 #ifndef CRSF_TEL_ENABLE_GPS
