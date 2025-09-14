@@ -3126,7 +3126,6 @@ static void test_roundtrip_command_oversized(void** state) {
     CRSF_t tx, rx;
     uint8_t frame[CRSF_MAX_FRAME_LEN + 2U];
     uint8_t frameLength = 0;
-    CRSF_FrameType_t frameType;
 
     CRSF_init(&tx);
     CRSF_init(&rx);
@@ -3151,6 +3150,24 @@ static void test_roundtrip_command_oversized(void** state) {
     strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3;4;5;6;7");
 
     /* Test Build with oversized payload */
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
+
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABABABABABABABABA");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
+    strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2");
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
+
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "WhatABABABABABABABA");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
+
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHHABABABABABABA");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "What");
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
+
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABA");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mVAB");
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
 
 #if CRSF_ENABLE_STATS
