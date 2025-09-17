@@ -5152,23 +5152,68 @@ static void test_parse_cmd_screen_invalid_len(void** state) {
 #endif
 
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX)
-static void test_roundtrip_cmd_screen_selection_return(void** state) {
+static void test_roundtrip_cmd_screen(void** state) {
     (void)state;
-    CRSF_t tx, rx;
-    uint8_t b[48], bl = 0;
-    CRSF_FrameType_t t = 0;
-    CRSF_init(&tx);
-    tx.Command.dest_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.Command.Command_ID = CRSF_CMDID_SCREEN;
-    tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_SELECTION_RETURN;
-    tx.Command.payload.screen.selectionReturn.value = 5;
-    tx.Command.payload.screen.selectionReturn.response = 1;
-    assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, b, &bl), CRSF_OK);
-    CRSF_init(&rx);
-    assert_int_equal(CRSF_processFrame(&rx, b, &t), CRSF_OK);
-    assert_int_equal(rx.Command.payload.screen.selectionReturn.value, 5);
-    assert_int_equal(rx.Command.payload.screen.selectionReturn.response, 1);
+    /* popup message */
+    {
+        CRSF_t tx, rx;
+        uint8_t b[48], bl = 0;
+        CRSF_FrameType_t t = 0;
+        CRSF_init(&tx);
+        tx.Command.dest_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        tx.Command.Command_ID = CRSF_CMDID_SCREEN;
+        tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
+        strcpy(tx.Command.payload.screen.popupMessageStart.Header, "Head");
+        strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "Info");
+        tx.Command.payload.screen.popupMessageStart.Max_timeout_interval = 10;
+        tx.Command.payload.screen.popupMessageStart.Close_button_option = 1;
+        tx.Command.payload.screen.popupMessageStart.add_data.present = 1;
+        tx.Command.payload.screen.popupMessageStart.add_data.value = 5;
+        tx.Command.payload.screen.popupMessageStart.add_data.maxValue = 7;
+        tx.Command.payload.screen.popupMessageStart.add_data.minValue = 2;
+        tx.Command.payload.screen.popupMessageStart.add_data.defaultValue = 3;
+        strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "Pow");
+        strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "W");
+        tx.Command.payload.screen.popupMessageStart.has_possible_values = 1;
+        strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "3;5");
+        assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, b, &bl), CRSF_OK);
+        CRSF_init(&rx);
+        assert_int_equal(CRSF_processFrame(&rx, b, &t), CRSF_OK);
+        assert_int_equal(rx.Command.payload.screen.subCommand, CRSF_CMD_SCREEN_POPUP_MESSAGE_START);
+        assert_string_equal(rx.Command.payload.screen.popupMessageStart.Header, "Head");
+        assert_string_equal(rx.Command.payload.screen.popupMessageStart.Info_message, "Info");
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.Max_timeout_interval, 10);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.Close_button_option, 1);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.present, 1);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.value, 5);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.maxValue, 7);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.minValue, 2);
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.add_data.defaultValue, 3);
+        assert_string_equal(rx.Command.payload.screen.popupMessageStart.add_data.selectionText, "Pow");
+        assert_string_equal(rx.Command.payload.screen.popupMessageStart.add_data.unit, "W");
+        assert_int_equal(rx.Command.payload.screen.popupMessageStart.has_possible_values, 1);
+        assert_string_equal(rx.Command.payload.screen.popupMessageStart.possible_values, "3;5");
+    }
+    /* selection return */
+    {
+        CRSF_t tx, rx;
+        uint8_t b[48], bl = 0;
+        CRSF_FrameType_t t = 0;
+        CRSF_init(&tx);
+        tx.Command.dest_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        tx.Command.Command_ID = CRSF_CMDID_SCREEN;
+        tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_SELECTION_RETURN;
+        tx.Command.payload.screen.selectionReturn.value = 5;
+        tx.Command.payload.screen.selectionReturn.response = 1;
+        assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, b, &bl), CRSF_OK);
+        CRSF_init(&rx);
+        assert_int_equal(CRSF_processFrame(&rx, b, &t), CRSF_OK);
+        assert_int_equal(rx.Command.payload.screen.subCommand, CRSF_CMD_SCREEN_SELECTION_RETURN);
+        assert_int_equal(rx.Command.payload.screen.selectionReturn.value, 5);
+        assert_int_equal(rx.Command.payload.screen.selectionReturn.response, 1);
+    }
 }
 #endif
 
@@ -5562,8 +5607,7 @@ int main(void) {
         cmocka_unit_test(test_parse_cmd_screen_invalid_len),
 #endif
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX)
-        //TODO Add roundtrip
-        cmocka_unit_test(test_roundtrip_cmd_screen_selection_return),
+        cmocka_unit_test(test_roundtrip_cmd_screen),
 #endif
 /* ----------------------------- INVALID CMD ID ---------------------------- */
 #if defined(CRSF_CONFIG_TX)
