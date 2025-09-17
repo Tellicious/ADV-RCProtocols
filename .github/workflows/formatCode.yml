@@ -2,7 +2,7 @@ name: Format code
 
 on:
     pull_request:
-        types: [opened, reopened, edited]
+        types: [opened, reopened, edited, synchronize]
     workflow_dispatch:
     push:
       branches:
