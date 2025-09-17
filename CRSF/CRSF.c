@@ -1163,7 +1163,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
             out->ACK.Command_ID = payload[off++];
             out->ACK.SubCommand_ID = payload[off++];
             out->ACK.Action = payload[off++];
-            if ((uint8_t)(length - off) > 1) {
+            if (length > off + 1) {
                 strncpy(out->ACK.Information, (char*)(payload + off), CRSF_MAX_COMMAND_PAYLOAD - 4U);
                 out->ACK.Information[CRSF_MAX_COMMAND_PAYLOAD - 4U] = '\0';
             } else {
@@ -1205,20 +1205,20 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
             out->VTX.subCommand = (CRSF_CommandVTX_subCMD_t)payload[off++];
             switch (out->VTX.subCommand) {
                 case CRSF_CMD_VTX_SET_FREQUENCY:
-                    if ((uint8_t)(length - off) < 2U) {
+                    if (length < off + 2U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->VTX.FrequencyMHz = CRSF_unpackBE16(payload + off);
                     break;
                 case CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP:
-                    if ((uint8_t)(length - off) < 1U) {
+                    if (length < off + 1U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->VTX.pitModeCfg = payload[off];
                     break;
                 case CRSF_CMD_VTX_SET_DYNAMIC_POWER:
                 case CRSF_CMD_VTX_SET_POWER:
-                    if ((uint8_t)(length - off) < 1U) {
+                    if (length < off + 1U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->VTX.Power_dBm = payload[off];
@@ -1234,13 +1234,13 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
             out->LED.subCommand = (CRSF_CommandLED_subCMD_t)payload[off++];
             switch (out->LED.subCommand) {
                 case CRSF_CMD_LED_OVERRIDE_COLOR:
-                    if ((uint8_t)(length - off) < 3U) {
+                    if (length < off + 3U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     CRSF_unpackHSV(payload + off, &out->LED.overrideColor.H, &out->LED.overrideColor.S, &out->LED.overrideColor.V);
                     break;
                 case CRSF_CMD_LED_OVERRIDE_PULSE:
-                    if ((uint8_t)(length - off) < 8U) {
+                    if (length < off + 8U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->LED.overridePulse.duration_ms = CRSF_unpackBE16(payload + off);
@@ -1250,7 +1250,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     CRSF_unpackHSV(payload + off, &out->LED.overridePulse.H_stop, &out->LED.overridePulse.S_stop, &out->LED.overridePulse.V_stop);
                     break;
                 case CRSF_CMD_LED_OVERRIDE_BLINK:
-                    if ((uint8_t)(length - off) < 8U) {
+                    if (length < off + 8U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->LED.overrideBlink.interval_ms = CRSF_unpackBE16(payload + off);
@@ -1260,7 +1260,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     CRSF_unpackHSV(payload + off, &out->LED.overrideBlink.H_stop, &out->LED.overrideBlink.S_stop, &out->LED.overrideBlink.V_stop);
                     break;
                 case CRSF_CMD_LED_OVERRIDE_SHIFT:
-                    if ((uint8_t)(length - off) < 5U) {
+                    if (length < off + 5U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->LED.overrideShift.interval_ms = CRSF_unpackBE16(payload + off);
@@ -1278,14 +1278,14 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
             out->general.subCommand = (CRSF_CommandGen_subCMD_t)payload[off++];
             switch (out->general.subCommand) {
                 case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL:
-                    if ((uint8_t)(length - off) < 5U) {
+                    if (length < off + 5U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->general.protocolSpeedProposal.port_id = payload[off++];
                     out->general.protocolSpeedProposal.proposed_baudrate = CRSF_unpackBE32(payload + off);
                     break;
                 case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE:
-                    if ((uint8_t)(length - off) < 2U) {
+                    if (length < off + 2U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->general.protocolSpeedResponse.port_id = payload[off++];
@@ -1307,7 +1307,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     break;
                 case CRSF_CMD_CF_MODEL_SELECTION:
                 case CRSF_CMD_CF_CURRENT_MODEL_REPLY:
-                    if ((uint8_t)(length - off) < 1U) {
+                    if (length < off + 1U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->crossfire.Model_Number = payload[off];
@@ -1323,14 +1323,14 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
             out->flow.subCommand = (CRSF_CommandFlow_subCMD_t)payload[off++];
             switch (out->flow.subCommand) {
                 case CRSF_CMD_FLOW_SUBSCRIBE:
-                    if ((uint8_t)(length - off) < 3U) {
+                    if (length < off + 3U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->flow.Frame_type = payload[off++];
                     out->flow.Max_interval_time_ms = CRSF_unpackBE16(payload + off);
                     break;
                 case CRSF_CMD_FLOW_UNSUBSCRIBE:
-                    if ((uint8_t)(length - off) < 1U) {
+                    if (length < off + 1U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->flow.Frame_type = payload[off++];
@@ -1381,7 +1381,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
 
                     // Possible values
                     out->screen.popupMessageStart.has_possible_values = 0;
-                    if ((uint8_t)(length - off) > 0U) {
+                    if (length > off + 0U) {
                         out->screen.popupMessageStart.has_possible_values = 1;
                         strLen = strlen((char*)(payload + off)) + 1U;
                         strncpy(out->screen.popupMessageStart.possible_values, (char*)(payload + off),
@@ -1392,7 +1392,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     break;
                 }
                 case CRSF_CMD_SCREEN_SELECTION_RETURN:
-                    if ((uint8_t)(length - off) < 2U) {
+                    if (length < off + 2U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->screen.selectionReturn.value = payload[off++];

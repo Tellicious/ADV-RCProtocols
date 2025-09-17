@@ -200,19 +200,19 @@ typedef enum {
  * Parameter types for device configuration
  */
 typedef enum {
-    CRSF_UINT8 = 0,  // Deprecated, use CRSF_FLOAT
-    CRSF_INT8 = 1,   // Deprecated, use CRSF_FLOAT
-    CRSF_UINT16 = 2, // Deprecated, use CRSF_FLOAT
-    CRSF_INT16 = 3,  // Deprecated, use CRSF_FLOAT
-    CRSF_UINT32 = 4, // Deprecated, use CRSF_FLOAT
-    CRSF_INT32 = 5,  // Deprecated, use CRSF_FLOAT
-    CRSF_FLOAT = 8,
-    CRSF_TEXT_SELECTION = 9,
-    CRSF_STRING = 10,
-    CRSF_FOLDER = 11,
-    CRSF_INFO = 12,
-    CRSF_COMMAND = 13,
-    CRSF_OUT_OF_RANGE = 127
+    CRSF_PARAM_UINT8 = 0,  // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_INT8 = 1,   // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_UINT16 = 2, // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_INT16 = 3,  // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_UINT32 = 4, // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_INT32 = 5,  // Deprecated, use CRSF_FLOAT
+    CRSF_PARAM_FLOAT = 8,
+    CRSF_PARAM_TEXT_SELECTION = 9,
+    CRSF_PARAM_STRING = 10,
+    CRSF_PARAM_FOLDER = 11,
+    CRSF_PARAM_INFO = 12,
+    CRSF_PARAM_COMMAND = 13,
+    CRSF_PARAM_OUT_OF_RANGE = 127
 } CRSF_ParamType_t;
 
 /**
@@ -612,53 +612,16 @@ typedef struct {
     uint8_t Data[CRSF_MAX_PARAM_DATA_LEN];
 } CRSF_ParamWrite_t;
 
-/* 
- * Command ACK payload
- */
-typedef struct {
-    uint8_t Command_ID;                              // echoed realm
-    uint8_t SubCommand_ID;                           // echoed subcommand
-    uint8_t Action;                                  // 1=already took action; 0=no function/invalid
-    char Information[CRSF_MAX_COMMAND_PAYLOAD - 3U]; // optional NULL-terminated string (may be empty)
-} CRSF_CommandACK_t;
-
-/* 
- * Command Screen payload: 0x32.0x22.0x01 Pop-up Message Start
- */
-typedef struct {
-    char Header[CRSF_MAX_COMMAND_PAYLOAD_STRINGS];       // NULL-terminated
-    char Info_message[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated
-    uint8_t Max_timeout_interval;                        // seconds
-    uint8_t Close_button_option;                         // 0/1
-
-    struct {
-        uint8_t present;                                      // true if selectionText not empty
-        char selectionText[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated; if empty, this whole struct is absent
-        uint8_t value;
-        uint8_t minValue;
-        uint8_t maxValue;
-        uint8_t defaultValue;
-        char unit[5]; // NULL-terminated
-    } add_data;
-
-    uint8_t has_possible_values;
-    char possible_values[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // semicolon-separated NULL-terminated
-} CRSF_CommandScreen_PopupStart_t;
-
-/* 
- * Command Screen payload: 0x32.0x22.0x02 Selection Return Value
- */
-typedef struct {
-    uint8_t value;    // selected value
-    uint8_t response; // true(Process) / false(Cancel)
-} CRSF_CommandScreen_SelectionReturn_t;
-
 /**
  * Command inner payload
  */
-// Unified decoded packet
 typedef union {
-    CRSF_CommandACK_t ACK; // 0xFF
+    struct {
+        uint8_t Command_ID;                              // echoed realm
+        uint8_t SubCommand_ID;                           // echoed subcommand
+        uint8_t Action;                                  // 1=already took action; 0=no function/invalid
+        char Information[CRSF_MAX_COMMAND_PAYLOAD - 3U]; // optional NULL-terminated string (may be empty)
+    } ACK;                                               // 0xFF
 
     // FC
     struct {
@@ -795,8 +758,30 @@ typedef union {
         CRSF_CommandScreen_subCMD_t subCommand;
 
         union {
-            CRSF_CommandScreen_PopupStart_t popupMessageStart;
-            CRSF_CommandScreen_SelectionReturn_t selectionReturn;
+            struct {
+                char Header[CRSF_MAX_COMMAND_PAYLOAD_STRINGS];       // NULL-terminated
+                char Info_message[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated
+                uint8_t Max_timeout_interval;                        // seconds
+                uint8_t Close_button_option;                         // 0/1
+
+                struct {
+                    uint8_t present;                                      // true if selectionText not empty
+                    char selectionText[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // NULL-terminated; if empty, this whole struct is absent
+                    uint8_t value;
+                    uint8_t minValue;
+                    uint8_t maxValue;
+                    uint8_t defaultValue;
+                    char unit[5]; // NULL-terminated
+                } add_data;
+
+                uint8_t has_possible_values;
+                char possible_values[CRSF_MAX_COMMAND_PAYLOAD_STRINGS]; // semicolon-separated NULL-terminated
+            } popupMessageStart;
+
+            struct {
+                uint8_t value;    // selected value
+                uint8_t response; // true(Process) / false(Cancel)
+            } selectionReturn;
         };
     } screen;
 } CRSF_CommandPayload_t;
