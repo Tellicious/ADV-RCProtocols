@@ -38,6 +38,7 @@
 #include "CRSF_CRC.h"
 #include "CRSF_types.h"
 
+//TODO add remaining length check
 /* Macros --------------------------------------------------------------------*/
 
 // Helper macros
@@ -48,13 +49,13 @@
 #define SIGN(value)            (((value) > 0) - ((value) < 0))
 
 #define BUILD_FRAME(TYPE, VAR)                                                                                                                                 \
-    case CRSF_FRAMETYPE_##TYPE: memcpy(payload, &crsf->VAR, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy(payload, &(crsf->VAR), sizeof(CRSF_##VAR##_t))
 #define UPDATE_LENGTH(VAR)                                                                                                                                     \
     *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                    \
     break
 
 #define PROCESS_FRAME(TYPE, VAR)                                                                                                                               \
-    case CRSF_FRAMETYPE_##TYPE: memcpy(&crsf->VAR, payload, sizeof(CRSF_##VAR##_t))
+    case CRSF_FRAMETYPE_##TYPE: memcpy(&(crsf->VAR), payload, sizeof(CRSF_##VAR##_t))
 #define UPDATE_FRESHNESS(TYPE)                                                                                                                                 \
     if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                   \
         CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                 \
@@ -97,11 +98,13 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
 static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type);
 
 // Helpers
-static inline void CRSF_packBE16(uint8_t* dest, const uint16_t value);
-static inline void CRSF_packBE32(uint8_t* dest, const uint32_t value);
+static inline uint8_t CRSF_packBE16(uint8_t* dest, const uint16_t value);
+static inline uint8_t CRSF_packBE32(uint8_t* dest, const uint32_t value);
+static inline uint8_t CRSF_packString(uint8_t* payload, const char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength);
 static inline void CRSF_packHSV(uint8_t* dest, uint16_t H, uint8_t S, uint8_t V);
-static inline uint16_t CRSF_unpackBE16(const uint8_t* src);
-static inline uint32_t CRSF_unpackBE32(const uint8_t* src);
+static inline uint8_t CRSF_unpackBE16(const uint8_t* src, void* value);
+static inline uint8_t CRSF_unpackBE32(const uint8_t* src, void* value);
+static inline uint8_t CRSF_unpackString(const uint8_t* payload, char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength);
 static inline void CRSF_unpackHSV(const uint8_t* src, uint16_t* H, uint8_t* S, uint8_t* V);
 
 /* Functions -----------------------------------------------------------------*/
@@ -146,47 +149,34 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
     switch (type) {
 #if CRSF_TEL_ENABLE_GPS && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_GPS:
-            CRSF_packBE32(payload, crsf->GPS.latitude);
-            off += sizeof(uint32_t);
-            CRSF_packBE32(payload + off, crsf->GPS.longitude);
-            off += sizeof(uint32_t);
-            CRSF_packBE16(payload + off, crsf->GPS.groundspeed);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS.heading);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS.altitude);
-            off += sizeof(uint16_t);
-            payload[off] = crsf->GPS.satellites;
+            off += CRSF_packBE32(payload + off, crsf->GPS.latitude);
+            off += CRSF_packBE32(payload + off, crsf->GPS.longitude);
+            off += CRSF_packBE16(payload + off, crsf->GPS.groundspeed);
+            off += CRSF_packBE16(payload + off, crsf->GPS.heading);
+            off += CRSF_packBE16(payload + off, crsf->GPS.altitude);
+            payload[off++] = crsf->GPS.satellites;
             UPDATE_LENGTH(GPS);
 #endif
 
 #if CRSF_TEL_ENABLE_GPS_TIME && defined(CRSF_CONFIG_RX)
             BUILD_FRAME(GPS_TIME, GPS_Time);
-            CRSF_packBE16(payload, crsf->GPS_Time.year);
-            off += sizeof(uint16_t) + 5U * sizeof(uint8_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Time.millisecond);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Time.year);
+            off += 5U * sizeof(uint8_t);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Time.millisecond);
             UPDATE_LENGTH(GPS_Time);
 #endif
 
 #if CRSF_TEL_ENABLE_GPS_EXTENDED && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_GPS_EXTENDED:
             payload[off++] = crsf->GPS_Ext.fix_type;
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.n_speed);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.e_speed);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.v_speed);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.h_speed_acc);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.track_acc);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.alt_ellipsoid);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.h_acc);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->GPS_Ext.v_acc);
-            off += sizeof(uint16_t);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.n_speed);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.e_speed);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.v_speed);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.h_speed_acc);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.track_acc);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.alt_ellipsoid);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.h_acc);
+            off += CRSF_packBE16(payload + off, crsf->GPS_Ext.v_acc);
             payload[off++] = crsf->GPS_Ext.reserved;
             payload[off++] = crsf->GPS_Ext.hDOP;
             payload[off] = crsf->GPS_Ext.vDOP;
@@ -200,10 +190,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_BATTERY_SENSOR:
-            CRSF_packBE16(payload, crsf->Battery.voltage);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->Battery.current);
-            off += sizeof(uint16_t);
+            off += CRSF_packBE16(payload + off, crsf->Battery.voltage);
+            off += CRSF_packBE16(payload + off, crsf->Battery.current);
             payload[off++] = (uint8_t)(crsf->Battery.capacity_used >> 16);
             payload[off++] = (uint8_t)((crsf->Battery.capacity_used >> 8) & 0xFFU);
             payload[off++] = (uint8_t)((crsf->Battery.capacity_used) & 0xFFU);
@@ -214,7 +202,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_BAROALT_VSPEED:
-            CRSF_packBaroAltVSpeed(payload, &crsf->BaroAlt_VS);
+            CRSF_packBaroAltVSpeed(payload, &(crsf->BaroAlt_VS));
             *frameLength += sizeof(uint16_t) + sizeof(uint8_t);
             break;
 #endif
@@ -254,8 +242,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->Temperature.temp_source_id;
 
             for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
-                CRSF_packBE16(payload + off, crsf->Temperature.temperature[ii]);
-                off += sizeof(uint16_t);
+                off += CRSF_packBE16(payload + off, crsf->Temperature.temperature[ii]);
             }
 
             if (off < 3U) {
@@ -272,8 +259,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->Voltages.Voltage_source_id;
 
             for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
-                CRSF_packBE16(payload + off, crsf->Voltages.Voltage_values[ii]);
-                off += sizeof(uint16_t);
+                off += CRSF_packBE16(payload + off, crsf->Voltages.Voltage_values[ii]);
             }
 
             if (off < 3U) {
@@ -288,7 +274,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_VTX && defined(CRSF_CONFIG_RX)
             BUILD_FRAME(VTX, VTX);
             off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->VTX.frequency_MHz);
+            off += CRSF_packBE16(payload + off, crsf->VTX.frequency_MHz);
             UPDATE_LENGTH(VTX);
 #endif
 
@@ -317,27 +303,27 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_ATTITUDE:
-            CRSF_packBE16(payload, crsf->Attitude.pitch);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->Attitude.roll);
-            off += sizeof(uint16_t);
-            CRSF_packBE16(payload + off, crsf->Attitude.yaw);
+            off += CRSF_packBE16(payload, crsf->Attitude.pitch);
+            off += CRSF_packBE16(payload + off, crsf->Attitude.roll);
+            off += CRSF_packBE16(payload + off, crsf->Attitude.yaw);
             UPDATE_LENGTH(Attitude);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_FC
             BUILD_FRAME(MAVLINK_FC, MAVLinkFC);
-            CRSF_packBE16(payload, crsf->MAVLinkFC.airspeed);
-            off += sizeof(uint16_t) + sizeof(uint8_t);
+            off += CRSF_packBE16(payload + off, crsf->MAVLinkFC.airspeed);
+            off += sizeof(uint8_t);
             CRSF_packBE32(payload + off, crsf->MAVLinkFC.custom_mode);
             UPDATE_LENGTH(MAVLinkFC);
 #endif
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE:
-            strncpy((char*)payload, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U);
-            payload[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U] = '\0'; // Ensure null termination
-            *frameLength += strlen((char*)payload) + 1U;        // Adding also null termination
+            *frameLength += CRSF_packString(payload + off, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN);
+            //TODO remove
+            //strncpy((char*)payload, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U);
+            //payload[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U] = '\0'; // Ensure null termination
+            //*frameLength += strlen((char*)payload) + 1U;        // Adding also null termination
             break;
 #endif
 
@@ -351,18 +337,17 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             UPDATE_LENGTH(Ping);
 
         case CRSF_FRAMETYPE_DEVICE_INFO: {
-            uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name);
+            //uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name);
             payload[off++] = crsf->DeviceInfo.dest_address;
             payload[off++] = crsf->DeviceInfo.origin_address;
-            strncpy((char*)(payload + off), crsf->DeviceInfo.Device_name, nameLen);
-            off += nameLen;
-            payload[off++] = '\0'; //Ensure null termination
-            CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
-            off += sizeof(uint32_t);
-            CRSF_packBE32(payload + off, crsf->DeviceInfo.Hardware_ID);
-            off += sizeof(uint32_t);
-            CRSF_packBE32(payload + off, crsf->DeviceInfo.Firmware_ID);
-            off += sizeof(uint32_t);
+            off += CRSF_packString(payload + off, crsf->DeviceInfo.Device_name, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN - off - 14U);
+            //TODO remove
+            //strncpy((char*)(payload + off), crsf->DeviceInfo.Device_name, nameLen);
+            //off += nameLen;
+            //payload[off++] = '\0'; //Ensure null termination
+            off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
+            off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Hardware_ID);
+            off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Firmware_ID);
             payload[off++] = crsf->DeviceInfo.Parameters_total;
             payload[off++] = crsf->DeviceInfo.Parameter_version_number;
             *frameLength += off;
@@ -370,8 +355,10 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         }
 
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: {
+            memcpy(payload, &(crsf->ParamSettingsEntry), 4U);
+
             uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
-            memcpy(payload, &crsf->ParamSettingsEntry, paramLen);
+            memcpy(payload, &(crsf->ParamSettingsEntry), paramLen);
             *frameLength += paramLen;
             if (paramLen == 4U) {
                 payload[4] = 0;
@@ -385,7 +372,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE: {
             uint8_t paramLen = (values > CRSF_MAX_PARAM_DATA_LEN ? CRSF_MAX_PARAM_DATA_LEN : values) + 3U;
-            memcpy(payload, &crsf->ParamWrite, paramLen);
+            memcpy(payload, &(crsf->ParamWrite), paramLen);
             *frameLength += paramLen;
             if (paramLen == 3U) {
                 payload[3] = 0;
@@ -400,7 +387,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->Command.dest_address;
             payload[off++] = crsf->Command.origin_address;
             payload[off++] = (uint8_t)crsf->Command.Command_ID;
-            CRSF_Status_t retStatus = CRSF_encodeCommandPayload(crsf->Command.Command_ID, &crsf->Command.payload, payload + off, &off);
+            CRSF_Status_t retStatus = CRSF_encodeCommandPayload(crsf->Command.Command_ID, &(crsf->Command.payload), payload + off, &off);
             if (retStatus != CRSF_OK) {
                 return retStatus;
             }
@@ -413,17 +400,15 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
         case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
             crsf->MAVLinkEnv.data_size = crsf->MAVLinkEnv.data_size > CRSF_MAX_MAVLINK_PAYLOAD ? CRSF_MAX_MAVLINK_PAYLOAD : crsf->MAVLinkEnv.data_size;
-            memcpy(payload, &crsf->MAVLinkEnv, crsf->MAVLinkEnv.data_size + 2U);
+            memcpy(payload, &(crsf->MAVLinkEnv), crsf->MAVLinkEnv.data_size + 2U);
             *frameLength += crsf->MAVLinkEnv.data_size + 2U;
             break;
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
         case CRSF_FRAMETYPE_MAVLINK_STATUS:
-            CRSF_packBE32(payload, crsf->MAVLinkStat.sensor_present);
-            off += sizeof(uint32_t);
-            CRSF_packBE32(payload + off, crsf->MAVLinkStat.sensor_enabled);
-            off += sizeof(uint32_t);
+            off += CRSF_packBE32(payload, crsf->MAVLinkStat.sensor_present);
+            off += CRSF_packBE32(payload + off, crsf->MAVLinkStat.sensor_enabled);
             CRSF_packBE32(payload + off, crsf->MAVLinkStat.sensor_health);
             UPDATE_LENGTH(MAVLinkStat);
 #endif
@@ -492,77 +477,61 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_GPS && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_GPS:
-            crsf->GPS.latitude = CRSF_unpackBE32(payload);
-            off += sizeof(uint32_t);
-            crsf->GPS.longitude = CRSF_unpackBE32(payload + off);
-            off += sizeof(uint32_t);
-            crsf->GPS.groundspeed = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS.heading = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS.altitude = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS.satellites = payload[off];
+            off += CRSF_unpackBE32(payload + off, &(crsf->GPS.latitude));
+            off += CRSF_unpackBE32(payload + off, &(crsf->GPS.longitude));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS.groundspeed));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS.heading));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS.altitude));
+            crsf->GPS.satellites = payload[off++];
             UPDATE_FRESHNESS(GPS);
 #endif
 
 #if CRSF_TEL_ENABLE_GPS_TIME && defined(CRSF_CONFIG_TX)
             PROCESS_FRAME(GPS_TIME, GPS_Time);
-            crsf->GPS_Time.year = CRSF_unpackBE16(payload);
-            off += sizeof(uint16_t) + 5U * sizeof(uint8_t);
-            crsf->GPS_Time.millisecond = CRSF_unpackBE16(payload + 7U);
+            off += CRSF_unpackBE16(payload, &(crsf->GPS_Time.year));
+            off += CRSF_unpackBE16(payload + 7U, &(crsf->GPS_Time.millisecond));
             UPDATE_FRESHNESS(GPS_TIME);
 #endif
 
 #if CRSF_TEL_ENABLE_GPS_EXTENDED && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_GPS_EXTENDED:
             crsf->GPS_Ext.fix_type = payload[off++];
-            crsf->GPS_Ext.n_speed = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.e_speed = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.v_speed = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.h_speed_acc = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.track_acc = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.alt_ellipsoid = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.h_acc = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->GPS_Ext.v_acc = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.n_speed));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.e_speed));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.v_speed));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.h_speed_acc));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.track_acc));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.alt_ellipsoid));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.h_acc));
+            off += CRSF_unpackBE16(payload + off, &(crsf->GPS_Ext.v_acc));
             crsf->GPS_Ext.reserved = payload[off++];
             crsf->GPS_Ext.hDOP = payload[off++];
-            crsf->GPS_Ext.vDOP = payload[off];
+            crsf->GPS_Ext.vDOP = payload[off++];
             UPDATE_FRESHNESS(GPS_EXTENDED);
 #endif
 
 #if CRSF_TEL_ENABLE_VARIO && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_VARIO: crsf->Vario.v_speed = CRSF_unpackBE16(payload); UPDATE_FRESHNESS(VARIO);
+        case CRSF_FRAMETYPE_VARIO: off += CRSF_unpackBE16(payload + off, &(crsf->Vario.v_speed)); UPDATE_FRESHNESS(VARIO);
 #endif
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_BATTERY_SENSOR:
-            crsf->Battery.voltage = CRSF_unpackBE16(payload);
-            off += sizeof(uint16_t);
-            crsf->Battery.current = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
+            off += CRSF_unpackBE16(payload + off, &(crsf->Battery.voltage));
+            off += CRSF_unpackBE16(payload + off, &(crsf->Battery.current));
             crsf->Battery.capacity_used = ((uint32_t)payload[off] << 16) | ((uint32_t)payload[off + 1U] << 8) | ((uint32_t)payload[off + 2U]);
             off += 3U; //sizeof uint24_t
-            crsf->Battery.remaining = payload[off];
+            crsf->Battery.remaining = payload[off++];
             UPDATE_FRESHNESS(BATTERY_SENSOR);
 #endif
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_BAROALT_VSPEED: CRSF_unpackBaroAltVSpeed(payload, &crsf->BaroAlt_VS); UPDATE_FRESHNESS(BAROALT_VSPEED);
+        case CRSF_FRAMETYPE_BAROALT_VSPEED: CRSF_unpackBaroAltVSpeed(payload, &(crsf->BaroAlt_VS)); UPDATE_FRESHNESS(BAROALT_VSPEED);
 #endif
 
 #if CRSF_TEL_ENABLE_AIRSPEED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_AIRSPEED: crsf->Airspeed.speed = CRSF_unpackBE16(payload); UPDATE_FRESHNESS(AIRSPEED);
+        case CRSF_FRAMETYPE_AIRSPEED: off += CRSF_unpackBE16(payload + off, &(crsf->Airspeed.speed)); UPDATE_FRESHNESS(AIRSPEED);
 #endif
 
 #if CRSF_TEL_ENABLE_HEARTBEAT
-        case CRSF_FRAMETYPE_HEARTBEAT: crsf->Heartbeat.origin_address = CRSF_unpackBE16(payload); UPDATE_FRESHNESS(HEARTBEAT);
+        case CRSF_FRAMETYPE_HEARTBEAT: off += CRSF_unpackBE16(payload + off, &(crsf->Heartbeat.origin_address)); UPDATE_FRESHNESS(HEARTBEAT);
 #endif
 
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_TX)
@@ -583,8 +552,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             uint8_t tempCount = (payloadLength - sizeof(crsf->Temperature.temp_source_id)) / sizeof(uint16_t);
             crsf->Temperature.temp_source_id = payload[off++];
             for (uint8_t ii = 0; ii < tempCount && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
-                crsf->Temperature.temperature[ii] = CRSF_unpackBE16(payload + off);
-                off += sizeof(uint16_t);
+                off += CRSF_unpackBE16(payload + off, &(crsf->Temperature.temperature)[ii]);
             }
             UPDATE_FRESHNESS(TEMPERATURE);
         }
@@ -595,8 +563,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             uint8_t voltCount = (payloadLength - sizeof(crsf->Voltages.Voltage_source_id)) / 2;
             crsf->Voltages.Voltage_source_id = payload[off++];
             for (uint8_t ii = 0; ii < voltCount && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
-                crsf->Voltages.Voltage_values[ii] = CRSF_unpackBE16(payload + off);
-                off += sizeof(uint16_t);
+                off += CRSF_unpackBE16(payload + off, &(crsf->Voltages.Voltage_values)[ii]);
             }
             UPDATE_FRESHNESS(VOLTAGES);
         }
@@ -605,7 +572,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #if CRSF_TEL_ENABLE_VTX && defined(CRSF_CONFIG_TX)
             PROCESS_FRAME(VTX, VTX);
             off += sizeof(uint16_t);
-            crsf->VTX.frequency_MHz = CRSF_unpackBE16(payload + off);
+            off += CRSF_unpackBE16(payload + off, &(crsf->VTX.frequency_MHz));
             UPDATE_FRESHNESS(VTX);
 #endif
 
@@ -630,19 +597,17 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_ATTITUDE:
-            crsf->Attitude.pitch = CRSF_unpackBE16(payload);
-            off += sizeof(uint16_t);
-            crsf->Attitude.roll = CRSF_unpackBE16(payload + off);
-            off += sizeof(uint16_t);
-            crsf->Attitude.yaw = CRSF_unpackBE16(payload + off);
+            off += CRSF_unpackBE16(payload, &(crsf->Attitude.pitch));
+            off += CRSF_unpackBE16(payload + off, &(crsf->Attitude.roll));
+            off += CRSF_unpackBE16(payload + off, &(crsf->Attitude.yaw));
             UPDATE_FRESHNESS(ATTITUDE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_FC
             PROCESS_FRAME(MAVLINK_FC, MAVLinkFC);
-            crsf->MAVLinkFC.airspeed = CRSF_unpackBE16(payload);
-            off += sizeof(uint16_t) + sizeof(uint8_t);
-            crsf->MAVLinkFC.custom_mode = CRSF_unpackBE32(payload + off);
+            off += CRSF_unpackBE16(payload, &(crsf->MAVLinkFC.airspeed));
+            off += sizeof(uint8_t);
+            off += CRSF_unpackBE32(payload + off, &(crsf->MAVLinkFC.custom_mode));
             UPDATE_FRESHNESS(MAVLINK_FC);
 #endif
 
@@ -666,22 +631,20 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
         case CRSF_FRAMETYPE_DEVICE_INFO: {
             crsf->DeviceInfo.dest_address = payload[off++];
             crsf->DeviceInfo.origin_address = payload[off++];
+            //TODO change string on all process
             uint16_t nameLen = strlen((char*)(payload + off)) + 1U;                                       // Including null termination
             strncpy(crsf->DeviceInfo.Device_name, (char*)(payload + off), CRSF_MAX_DEVICE_NAME_LEN - 1U); // Last charachter is always \0
             crsf->DeviceInfo.Device_name[CRSF_MAX_DEVICE_NAME_LEN - 1U] = '\0';
             off += nameLen;
-            crsf->DeviceInfo.Serial_number = CRSF_unpackBE32(payload + off);
-            off += sizeof(uint32_t);
-            crsf->DeviceInfo.Hardware_ID = CRSF_unpackBE32(payload + off);
-            off += sizeof(uint32_t);
-            crsf->DeviceInfo.Firmware_ID = CRSF_unpackBE32(payload + off);
-            off += sizeof(uint32_t);
+            off += CRSF_unpackBE32(payload + off, &(crsf->DeviceInfo.Serial_number));
+            off += CRSF_unpackBE32(payload + off, &(crsf->DeviceInfo.Hardware_ID));
+            off += CRSF_unpackBE32(payload + off, &(crsf->DeviceInfo.Firmware_ID));
             crsf->DeviceInfo.Parameters_total = payload[off++];
             crsf->DeviceInfo.Parameter_version_number = payload[off];
             UPDATE_FRESHNESS(DEVICE_INFO);
         }
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
-            memcpy(&crsf->ParamSettingsEntry, payload,
+            memcpy(&(crsf->ParamSettingsEntry), payload,
                    payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
             UPDATE_FRESHNESS(PARAMETER_SETTINGS_ENTRY);
 
@@ -689,7 +652,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(PARAMETER_READ);
 
         case CRSF_FRAMETYPE_PARAMETER_WRITE:
-            memcpy(&crsf->ParamWrite, payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
+            memcpy(&(crsf->ParamWrite), payload, payloadLength < (CRSF_MAX_PARAM_DATA_LEN + 3U) ? payloadLength : (CRSF_MAX_PARAM_DATA_LEN + 3U));
             UPDATE_FRESHNESS(PARAMETER_WRITE);
 #endif
 
@@ -701,7 +664,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             crsf->Command.dest_address = payload[off++];
             crsf->Command.origin_address = payload[off++];
             crsf->Command.Command_ID = (CRSF_CommandID_t)payload[off++];
-            if (CRSF_decodeCommandPayload(crsf->Command.Command_ID, &crsf->Command.payload, payload + off, payloadLength - 4U) != CRSF_OK) {
+            if (CRSF_decodeCommandPayload(crsf->Command.Command_ID, &(crsf->Command.payload), payload + off, payloadLength - 4U) != CRSF_OK) {
                 return CRSF_ERROR_TYPE_LENGTH;
             };
 
@@ -714,16 +677,16 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy(&crsf->MAVLinkEnv, payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
+            memcpy(&(crsf->MAVLinkEnv), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U);
+            UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
         case CRSF_FRAMETYPE_MAVLINK_STATUS:
-            crsf->MAVLinkStat.sensor_present = CRSF_unpackBE32(payload);
-            off += sizeof(uint32_t);
-            crsf->MAVLinkStat.sensor_enabled = CRSF_unpackBE32(payload + off);
-            off += sizeof(uint32_t);
-            crsf->MAVLinkStat.sensor_health = CRSF_unpackBE32(payload + off);
+            off += CRSF_unpackBE32(payload + off, &(crsf->MAVLinkStat.sensor_present));
+            off += CRSF_unpackBE32(payload + off, &(crsf->MAVLinkStat.sensor_enabled));
+            off += CRSF_unpackBE32(payload + off, &(crsf->MAVLinkStat.sensor_health));
             UPDATE_FRESHNESS(MAVLINK_STATUS);
 #endif
         default: (void)payload;
@@ -747,7 +710,7 @@ void CRSF_resetStats(CRSF_t* crsf) {
     if (!crsf) {
         return;
     }
-    memset(&crsf->Stats, 0x00, sizeof(crsf->Stats));
+    memset(&(crsf->Stats), 0x00, sizeof(crsf->Stats));
 }
 #endif
 
@@ -823,7 +786,7 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
         case CRSF_FRAMETYPE_MAVLINK_FC: return CHECK_LENGTH(payloadLength, type, MAVLinkFC);
 #endif
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
-        case CRSF_FRAMETYPE_FLIGHT_MODE: return (payloadLength >= 1U && payloadLength <= CRSF_MAX_FLIGHT_MODE_NAME_LEN);
+        case CRSF_FRAMETYPE_FLIGHT_MODE: return (payloadLength >= 1U);
 #endif
 #if CRSF_TEL_ENABLE_ESP_NOW_MESSAGES
         case CRSF_FRAMETYPE_ESP_NOW_MESSAGES: return CHECK_LENGTH(payloadLength, type, ESPNowMessages);
@@ -839,14 +802,14 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
         case CRSF_FRAMETYPE_COMMAND: return (payloadLength >= 3U);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= CRSF_MIN_FRAME_LEN && payloadLength <= (CRSF_MAX_FRAME_LEN - 2U));
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= CRSF_MIN_FRAME_LEN && payloadLength <= CRSF_MAX_PAYLOAD_LEN);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
         case CRSF_FRAMETYPE_MAVLINK_STATUS: return CHECK_LENGTH(payloadLength, type, MAVLinkStat);
 #endif
         default: break;
     }
-    return (payloadLength <= (CRSF_MAX_FRAME_LEN - 2U));
+    return (payloadLength <= CRSF_MAX_PAYLOAD_LEN);
 }
 
 #if CRSF_ENABLE_ADDRESS_VALIDATION
@@ -967,10 +930,12 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
 
             // Add information string if present and space available
             if (in->ACK.Information[0] != '\0' && (CRSF_MAX_COMMAND_PAYLOAD - off) > 0) {
-                uint8_t strLen = strlen(in->ACK.Information);
-                strncpy((char*)(payload + off), in->ACK.Information, strLen);
-                off += strLen;
-                payload[off++] = '\0'; // Add null terminator
+                off += CRSF_packString(payload + off, in->ACK.Information, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off);
+                //TODO remove
+                //uint8_t strLen = strlen(in->ACK.Information);
+                //strncpy((char*)(payload + off), in->ACK.Information, strLen);
+                //off += strLen;
+                //payload[off++] = '\0'; // Add null terminator
             }
             break;
 
@@ -993,10 +958,7 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
         case CRSF_CMDID_VTX:
             payload[off++] = (uint8_t)in->VTX.subCommand;
             switch (in->VTX.subCommand) {
-                case CRSF_CMD_VTX_SET_FREQUENCY:
-                    CRSF_packBE16(payload + off, in->VTX.FrequencyMHz);
-                    off += 2;
-                    break;
+                case CRSF_CMD_VTX_SET_FREQUENCY: off += CRSF_packBE16(payload + off, in->VTX.FrequencyMHz); break;
                 case CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP: payload[off++] = in->VTX.pitModeCfg; break;
                 case CRSF_CMD_VTX_SET_DYNAMIC_POWER:
                 case CRSF_CMD_VTX_SET_POWER: payload[off++] = in->VTX.Power_dBm; break;
@@ -1012,24 +974,21 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
                     off += 3;
                     break;
                 case CRSF_CMD_LED_OVERRIDE_PULSE:
-                    CRSF_packBE16(payload + off, in->LED.overridePulse.duration_ms);
-                    off += 2;
+                    off += CRSF_packBE16(payload + off, in->LED.overridePulse.duration_ms);
                     CRSF_packHSV(payload + off, in->LED.overridePulse.H_start, in->LED.overridePulse.S_start, in->LED.overridePulse.V_start);
                     off += 3;
                     CRSF_packHSV(payload + off, in->LED.overridePulse.H_stop, in->LED.overridePulse.S_stop, in->LED.overridePulse.V_stop);
                     off += 3;
                     break;
                 case CRSF_CMD_LED_OVERRIDE_BLINK:
-                    CRSF_packBE16(payload + off, in->LED.overrideBlink.interval_ms);
-                    off += 2;
+                    off += CRSF_packBE16(payload + off, in->LED.overrideBlink.interval_ms);
                     CRSF_packHSV(payload + off, in->LED.overrideBlink.H_start, in->LED.overrideBlink.S_start, in->LED.overrideBlink.V_start);
                     off += 3;
                     CRSF_packHSV(payload + off, in->LED.overrideBlink.H_stop, in->LED.overrideBlink.S_stop, in->LED.overrideBlink.V_stop);
                     off += 3;
                     break;
                 case CRSF_CMD_LED_OVERRIDE_SHIFT:
-                    CRSF_packBE16(payload + off, in->LED.overrideShift.interval_ms);
-                    off += 2;
+                    off += CRSF_packBE16(payload + off, in->LED.overrideShift.interval_ms);
                     CRSF_packHSV(payload + off, in->LED.overrideShift.H, in->LED.overrideShift.S, in->LED.overrideShift.V);
                     off += 3;
                     break;
@@ -1042,8 +1001,7 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
             switch (in->general.subCommand) {
                 case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL:
                     payload[off++] = in->general.protocolSpeedProposal.port_id;
-                    CRSF_packBE32(payload + off, in->general.protocolSpeedProposal.proposed_baudrate);
-                    off += 4;
+                    off += CRSF_packBE32(payload + off, in->general.protocolSpeedProposal.proposed_baudrate);
                     break;
                 case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE:
                     payload[off++] = in->general.protocolSpeedResponse.port_id;
@@ -1071,8 +1029,7 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
             switch (in->flow.subCommand) {
                 case CRSF_CMD_FLOW_SUBSCRIBE:
                     payload[off++] = in->flow.Frame_type;
-                    CRSF_packBE16(payload + off, in->flow.Max_interval_time_ms);
-                    off += 2;
+                    off += CRSF_packBE16(payload + off, in->flow.Max_interval_time_ms);
                     break;
                 case CRSF_CMD_FLOW_UNSUBSCRIBE: payload[off++] = in->flow.Frame_type; break;
                 default: break;
@@ -1084,20 +1041,26 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
             switch (in->screen.subCommand) {
                 case CRSF_CMD_SCREEN_POPUP_MESSAGE_START: {
                     // Pack header string
-                    uint8_t strLen = strnlen(in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                    // No check on the first item, as it is by design smaller than CRSF_MAX_COMMAND_PAYLOAD
-                    memcpy(payload + off, in->screen.popupMessageStart.Header, strLen);
-                    off += strLen;
-                    payload[off++] = '\0';
+                    off +=
+                        CRSF_packString(payload + off, in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off);
+                    //TODO remove
+                    //uint8_t strLen = strnlen(in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
+                    //// No check on the first item, as it is by design smaller than CRSF_MAX_COMMAND_PAYLOAD
+                    //memcpy(payload + off, in->screen.popupMessageStart.Header, strLen);
+                    //off += strLen;
+                    //payload[off++] = '\0';
 
                     // Pack info message string
-                    strLen = strnlen(in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                    if ((off + strLen + 1U + 2U) >= CRSF_MAX_COMMAND_PAYLOAD) {
-                        return CRSF_ERROR_TYPE_LENGTH;
-                    }
-                    memcpy(payload + off, in->screen.popupMessageStart.Info_message, strLen);
-                    off += strLen;
-                    payload[off++] = '\0';
+                    off += CRSF_packString(payload + off, in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
+                                           CRSF_MAX_COMMAND_PAYLOAD - off);
+                    //TODO remove
+                    //strLen = strnlen(in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
+                    //if ((off + strLen + 1U + 2U) > CRSF_MAX_COMMAND_PAYLOAD) {
+                    //    return CRSF_ERROR_TYPE_LENGTH;
+                    //}
+                    //memcpy(payload + off, in->screen.popupMessageStart.Info_message, strLen);
+                    //off += strLen;
+                    //payload[off++] = '\0';
 
                     // Pack timeout and close button option
                     payload[off++] = in->screen.popupMessageStart.Max_timeout_interval;
@@ -1105,34 +1068,40 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
 
                     // Pack additional data if present
                     if (in->screen.popupMessageStart.add_data.present) {
-                        strLen = strnlen(in->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                        if ((off + strLen + 1 + 4 + strlen(in->screen.popupMessageStart.add_data.unit) + 1) >= CRSF_MAX_COMMAND_PAYLOAD) {
-                            return CRSF_ERROR_TYPE_LENGTH;
-                        }
-                        memcpy(payload + off, in->screen.popupMessageStart.add_data.selectionText, strLen);
-                        off += strLen;
-                        payload[off++] = '\0';
-
+                        off += CRSF_packString(payload + off, in->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
+                                               CRSF_MAX_COMMAND_PAYLOAD - off);
+                        //TODO remove
+                        //strLen = strnlen(in->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
+                        //if ((off + strLen + 1 + 4 + strlen(in->screen.popupMessageStart.add_data.unit) + 1) > CRSF_MAX_COMMAND_PAYLOAD) {
+                        //    return CRSF_ERROR_TYPE_LENGTH;
+                        //}
+                        //memcpy(payload + off, in->screen.popupMessageStart.add_data.selectionText, strLen);
+                        //off += strLen;
+                        //payload[off++] = '\0';
                         payload[off++] = in->screen.popupMessageStart.add_data.value;
                         payload[off++] = in->screen.popupMessageStart.add_data.minValue;
                         payload[off++] = in->screen.popupMessageStart.add_data.maxValue;
                         payload[off++] = in->screen.popupMessageStart.add_data.defaultValue;
-
-                        strLen = strnlen(in->screen.popupMessageStart.add_data.unit, 5U);
-                        memcpy(payload + off, in->screen.popupMessageStart.add_data.unit, strLen);
-                        off += strLen;
-                        payload[off++] = '\0';
+                        off += CRSF_packString(payload + off, in->screen.popupMessageStart.add_data.unit, 5U, CRSF_MAX_COMMAND_PAYLOAD - off);
+                        //TODO remove
+                        //strLen = strnlen(in->screen.popupMessageStart.add_data.unit, 5U);
+                        //memcpy(payload + off, in->screen.popupMessageStart.add_data.unit, strLen);
+                        //off += strLen;
+                        //payload[off++] = '\0';
                     }
 
                     // Pack possible values if present
                     if (in->screen.popupMessageStart.has_possible_values) {
-                        strLen = strnlen(in->screen.popupMessageStart.possible_values, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                        if ((off + strLen + 1) >= CRSF_MAX_COMMAND_PAYLOAD) {
-                            return CRSF_ERROR_TYPE_LENGTH;
-                        }
-                        memcpy(payload + off, in->screen.popupMessageStart.possible_values, strLen);
-                        off += strLen;
-                        payload[off++] = '\0';
+                        off += CRSF_packString(payload + off, in->screen.popupMessageStart.possible_values, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
+                                               CRSF_MAX_COMMAND_PAYLOAD - off);
+                        //TODO remove
+                        //strLen = strnlen(in->screen.popupMessageStart.possible_values, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
+                        //if ((off + strLen + 1U) > CRSF_MAX_COMMAND_PAYLOAD) {
+                        //    return CRSF_ERROR_TYPE_LENGTH;
+                        //}
+                        //memcpy(payload + off, in->screen.popupMessageStart.possible_values, strLen);
+                        //off += strLen;
+                        //payload[off++] = '\0';
                     }
                     break;
                 }
@@ -1208,7 +1177,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     if (length < off + 2U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
-                    out->VTX.FrequencyMHz = CRSF_unpackBE16(payload + off);
+                    off += CRSF_unpackBE16(payload + off, &out->VTX.FrequencyMHz);
                     break;
                 case CRSF_CMD_VTX_ENABLE_PITMODE_ON_PUP:
                     if (length < off + 1U) {
@@ -1243,8 +1212,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     if (length < off + 8U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
-                    out->LED.overridePulse.duration_ms = CRSF_unpackBE16(payload + off);
-                    off += sizeof(uint16_t);
+                    off += CRSF_unpackBE16(payload + off, &out->LED.overridePulse.duration_ms);
                     CRSF_unpackHSV(payload + off, &out->LED.overridePulse.H_start, &out->LED.overridePulse.S_start, &out->LED.overridePulse.V_start);
                     off += 3U;
                     CRSF_unpackHSV(payload + off, &out->LED.overridePulse.H_stop, &out->LED.overridePulse.S_stop, &out->LED.overridePulse.V_stop);
@@ -1253,8 +1221,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     if (length < off + 8U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
-                    out->LED.overrideBlink.interval_ms = CRSF_unpackBE16(payload + off);
-                    off += sizeof(uint16_t);
+                    off += CRSF_unpackBE16(payload + off, &out->LED.overrideBlink.interval_ms);
                     CRSF_unpackHSV(payload + off, &out->LED.overrideBlink.H_start, &out->LED.overrideBlink.S_start, &out->LED.overrideBlink.V_start);
                     off += 3U;
                     CRSF_unpackHSV(payload + off, &out->LED.overrideBlink.H_stop, &out->LED.overrideBlink.S_stop, &out->LED.overrideBlink.V_stop);
@@ -1263,8 +1230,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     if (length < off + 5U) {
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
-                    out->LED.overrideShift.interval_ms = CRSF_unpackBE16(payload + off);
-                    off += sizeof(uint16_t);
+                    off += CRSF_unpackBE16(payload + off, &out->LED.overrideShift.interval_ms);
                     CRSF_unpackHSV(payload + off, &out->LED.overrideShift.H, &out->LED.overrideShift.S, &out->LED.overrideShift.V);
                     break;
                 default: break;
@@ -1282,7 +1248,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->general.protocolSpeedProposal.port_id = payload[off++];
-                    out->general.protocolSpeedProposal.proposed_baudrate = CRSF_unpackBE32(payload + off);
+                    off += CRSF_unpackBE32(payload + off, &(out->general.protocolSpeedProposal.proposed_baudrate));
                     break;
                 case CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE:
                     if (length < off + 2U) {
@@ -1327,7 +1293,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                         return CRSF_ERROR_TYPE_LENGTH;
                     }
                     out->flow.Frame_type = payload[off++];
-                    out->flow.Max_interval_time_ms = CRSF_unpackBE16(payload + off);
+                    off += CRSF_unpackBE16(payload + off, &out->flow.Max_interval_time_ms);
                     break;
                 case CRSF_CMD_FLOW_UNSUBSCRIBE:
                     if (length < off + 1U) {
@@ -1421,14 +1387,26 @@ static inline void CRSF_updateTimestamp(CRSF_t* crsf, uint8_t frame_type) {
 
 /* Helpers -------------------------------------------------------------------*/
 
-static inline void CRSF_packBE16(uint8_t* dest, const uint16_t value) {
+static inline uint8_t CRSF_packBE16(uint8_t* dest, const uint16_t value) {
     uint16_t be_value = HTOBE16(value);
     memcpy(dest, &be_value, sizeof(uint16_t));
+    return sizeof(uint16_t);
 }
 
-static inline void CRSF_packBE32(uint8_t* dest, const uint32_t value) {
+static inline uint8_t CRSF_packBE32(uint8_t* dest, const uint32_t value) {
     uint32_t be_value = HTOBE32(value);
     memcpy(dest, &be_value, sizeof(uint32_t));
+    return sizeof(uint32_t);
+}
+
+static inline uint8_t CRSF_packString(uint8_t* payload, const char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength) {
+    uint8_t strLen = strnlen(string, maxStringLength - 1U);
+    if ((strLen + 1U) > maxPayloadLength) {
+        strLen = maxPayloadLength - 1U;
+    }
+    memcpy(payload, string, strLen);
+    payload[strLen] = '\0';
+    return (strLen + 1U);
 }
 
 static inline void CRSF_packHSV(uint8_t* dest, uint16_t H, uint8_t S, uint8_t V) {
@@ -1438,16 +1416,25 @@ static inline void CRSF_packHSV(uint8_t* dest, uint16_t H, uint8_t S, uint8_t V)
     *dest++ = (uint8_t)v;
 }
 
-static inline uint16_t CRSF_unpackBE16(const uint8_t* src) {
-    uint16_t value;
-    memcpy(&value, src, sizeof(uint16_t));
-    return BE16TOH(value);
+static inline uint8_t CRSF_unpackBE16(const uint8_t* src, void* value) {
+    uint16_t be_value;
+    memcpy(&be_value, src, sizeof(uint16_t));
+    *(uint16_t*)value = BE16TOH(be_value);
+    return sizeof(uint16_t);
 }
 
-static inline uint32_t CRSF_unpackBE32(const uint8_t* src) {
-    uint32_t value;
-    memcpy(&value, src, sizeof(uint32_t));
-    return BE32TOH(value);
+static inline uint8_t CRSF_unpackBE32(const uint8_t* src, void* value) {
+    uint32_t be_value;
+    memcpy(&be_value, src, sizeof(uint32_t));
+    *(uint32_t*)value = BE32TOH(be_value);
+    return sizeof(uint32_t);
+}
+
+static inline uint8_t CRSF_unpackString(const uint8_t* payload, char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength) {
+    uint8_t strLen = strnlen((char*)payload, maxPayloadLength) + 1U;
+    strncpy(string, (char*)payload, ((strLen > maxStringLength) ? maxStringLength : strLen) - 1U);
+    string[maxStringLength - 1U] = '\0';
+    return strLen;
 }
 
 static inline void CRSF_unpackHSV(const uint8_t* src, uint16_t* H, uint8_t* S, uint8_t* V) {

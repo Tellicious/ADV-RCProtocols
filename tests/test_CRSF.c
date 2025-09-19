@@ -3206,7 +3206,7 @@ static void test_roundtrip_command_oversized(void** state) {
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
 
     strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABA");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABAB");
     strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mVAB");
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_ERROR_TYPE_LENGTH);
 
@@ -5020,7 +5020,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         char sel[20];
         memset(sel, 'S', 19);
         sel[20] = '\0'; /* A=20 */
-        char unit[5 + 1];
+        char unit[5];
         memset(unit, 'u', 4);
         unit[4] = '\0'; /* B=5 (20+5=25) */
 
@@ -5065,7 +5065,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         s.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
 
         strcpy(s.Command.payload.screen.popupMessageStart.Header, "HHHH");
-        strcpy(s.Command.payload.screen.popupMessageStart.Info_message, "III");
+        strcpy(s.Command.payload.screen.popupMessageStart.Info_message, "IIII");
         s.Command.payload.screen.popupMessageStart.Max_timeout_interval = 60;
         s.Command.payload.screen.popupMessageStart.Close_button_option = 1;
 

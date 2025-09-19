@@ -36,7 +36,8 @@
 extern "C" {
 #endif
 
-#define CRSF_MAX_PARAM_STRING_LENGTH 20
+#define CRSF_MAX_PARAM_STRING_LENGTH    20
+#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56
 
 // ---- Types ---------------------------------------------------------------
 
@@ -72,60 +73,39 @@ typedef enum {
  */
 typedef union {
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
         int64_t cur, min, max;
         char units[5];
     } i; // int-like
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
-        int32_t cur, min, max;
+        int32_t value, min, max, def;
         uint8_t precision;
-        uint32_t step;
+        int32_t step;
         char units[5];
     } f; // fixed-point float
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
-        uint8_t current_index;
         char options[CRSF_MAX_PARAM_STRING_LENGTH];
+        uint8_t value, hasOptData, min, max, def;
         char units[5];
     } sel; // select
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
         char value[CRSF_MAX_PARAM_STRING_LENGTH];
         uint8_t has_max_len;
         uint8_t max_len;
     } str; // string
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
         uint8_t children[CRSF_MAX_PARAM_STRING_LENGTH];
         uint8_t child_count;
     } folder; // folder
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
         char text[CRSF_MAX_PARAM_STRING_LENGTH];
     } info; // info
 
     struct {
-        uint8_t hidden;                          // from high bit of type byte
-        uint8_t parent;                          // parent field index; 0xFF for root
-        char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
         CRSF_ParamCommandStatus_t status;
         uint8_t timeout; // ms * 100
         char info[CRSF_MAX_PARAM_STRING_LENGTH];
@@ -139,7 +119,7 @@ typedef enum {
     CRSF_ERROR_TYPE_LENGTH = -1,   // not enough bytes
     CRSF_P2B_ERR_BADSTRING = -2,   // missing NULL terminator
     CRSF_ERROR_INVALID_FRAME = -3, // unknown type
-} crsf_p2b_rc;
+} CRSF_Status_t;
 
 // ---- Helpers: big-endian read/write -------------------------------------
 
@@ -166,28 +146,32 @@ static inline void CRSF_packBE64(uint8_t* p, uint64_t v) {
     CRSF_packBE32(p + 4, (uint32_t)v);
 }
 
-static inline int crsf_find_nul(const uint8_t* buf, size_t len) {
-    for (size_t i = 0; i < len; ++i) {
-        if (buf[i] == 0) {
-            return (int)i;
-        }
+static inline uint8_t CRSF_unpackString(const uint8_t* payload, char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength) {
+    uint8_t strLen = strnlen((char*)payload, maxPayloadLength) + 1U;
+    strncpy(string, (char*)payload, ((strLen > maxStringLength) ? maxStringLength : strLen) - 1U);
+    string[maxStringLength - 1U] = '\0';
+    return strLen;
+}
+
+static inline uint8_t CRSF_packString(uint8_t* payload, const char* string, const uint8_t maxStringLength, const uint8_t maxPayloadLength) {
+    uint8_t strLen = strnlen(string, maxStringLength - 1U);
+    if ((strLen + 1U) > maxPayloadLength) {
+        return CRSF_ERROR_TYPE_LENGTH;
     }
-    return -1;
+    memcpy(payload, string, strLen);
+    payload[strLen] = '\0';
+    return strLen + 1U;
 }
 
 // ---- Decoder -------------------------------------------------------------
 // Decodes a 0x2B entry payload that starts at [parent]. On success, returns CRSF_OK and fills *out.
 // Pointers in *out refer to 'payload' memory; keep it alive while using the struct.
 
-static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload, uint8_t len, CRSF_ParamEntry_t* out) {
-    if (len < 3U) {
+static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntry_t* out, const uint8_t* payload, uint8_t length) {
+    if (length < 3U) {
         return CRSF_ERROR_TYPE_LENGTH; // need at least parent + type + one name byte
     }
-
     uint8_t off = 0;
-    uint8_t parent = payload[off++];
-    CRSF_ParamType_t type = (CRSF_ParamType_t)(payload[off] & 0x7F); //do not increment here
-
     switch (type) {
         case CRSF_PARAM_INT8:
         case CRSF_PARAM_UINT8:
@@ -199,64 +183,68 @@ static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload
         case CRSF_PARAM_UINT64: //deprecated
             break;
         case CRSF_PARAM_FLOAT: {
-            out->f.parent = parent;
+            /*out->f.parent = parent;
             out->f.hidden = (payload[off++] & 0x80) != 0;
             uint8_t strLen = strlen((char*)(payload + off)) + 1U;
             strncpy(out->f.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
             out->f.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
+            off += strLen;*/
 
-            if (len < off + 4 * 3 + 1 + 4) {
-                return CRSF_ERROR_TYPE_LENGTH; // cur,min,max,prec,step
+            if (length < off + 4 * 4 + 1 + 4) {
+                return CRSF_ERROR_TYPE_LENGTH; // cur,min,max,def,prec,step
             }
-            out->f.cur = CRSF_unpackBE32(payload + off);
+            out->f.value = CRSF_unpackBE32(payload + off);
             off += 4;
             out->f.min = CRSF_unpackBE32(payload + off);
             off += 4;
             out->f.max = CRSF_unpackBE32(payload + off);
             off += 4;
+            out->f.def = CRSF_unpackBE32(payload + off);
+            off += 4;
             out->f.precision = payload[off++];
             out->f.step = CRSF_unpackBE32(payload + off);
             off += 4;
-            strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->f.units, (char*)(payload + off), ((strLen > 5U) ? 5U : strLen) - 1U);
-            out->f.units[4] = '\0';
+            off += CRSF_unpackString(payload + off, out->f.units, 5U, length - off);
+            //TODO remove
+            //uint8_t strLen = strlen((char*)(payload + off)) + 1U;
+            //strncpy(out->f.units, (char*)(payload + off), ((strLen > 5U) ? 5U : strLen) - 1U);
+            //out->f.units[4] = '\0';
             break;
         }
 
         case CRSF_PARAM_SELECT: {
-            out->sel.parent = parent;
-            out->sel.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->sel.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->sel.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            if (len < off + 1U) {
+            if (length < off + 2U) {
                 return CRSF_ERROR_TYPE_LENGTH;
             }
-            out->sel.current_index = payload[off++];
-            strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->sel.options, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->sel.options[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->sel.units, (char*)(payload + off), ((strLen > 5U) ? 5U : strLen) - 1U);
-            out->sel.units[4] = '\0';
+            off += CRSF_unpackString(payload + off, out->sel.options, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            out->sel.value = payload[off++];
+            out->sel.hasOptData = 0U;
+            if (off + 3U < length) {
+                out->sel.hasOptData = 1U;
+                out->sel.min = payload[off++];
+                out->sel.max = payload[off++];
+                out->sel.def = payload[off++];
+                off += CRSF_unpackString(payload + off, out->sel.units, 5U, length - off);
+            }
+            //TODO remove
+            //uint8_t strLen = strlen((char*)(payload + off)) + 1U;
+            //strncpy(out->sel.options, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
+            //out->sel.options[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
+            //off += strLen;
+            //strLen = strlen((char*)(payload + off)) + 1U;
+            //strncpy(out->sel.units, (char*)(payload + off), ((strLen > 5U) ? 5U : strLen) - 1U);
+            //out->sel.units[4] = '\0';
             break;
         }
 
         case CRSF_PARAM_STRING: {
-            out->str.parent = parent;
-            out->str.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->str.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->str.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->str.value, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->str.value[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            if (off < len) {
+            //TODO remove
+            // uint8_t strLen = strlen((char*)(payload + off)) + 1U;
+            // strncpy(out->str.value, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
+            // out->str.value[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
+            // off += strLen;
+            off += CRSF_unpackString(payload + off, out->str.value, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            if (off < length) {
                 out->str.has_max_len = true;
                 out->str.max_len = payload[off++];
             } else {
@@ -267,15 +255,9 @@ static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload
         }
 
         case CRSF_PARAM_FOLDER: {
-            out->folder.parent = parent;
-            out->folder.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->folder.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->folder.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
             out->folder.child_count = 0;
-            if (len > off) {
-                uint8_t rem = len - off;
+            if (off < length) {
+                uint8_t rem = length - off;
                 for (uint8_t ii = 0; ii < rem; ii++) {
                     if (payload[off] != 0xFF) {
                         break;
@@ -288,34 +270,21 @@ static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload
         }
 
         case CRSF_PARAM_INFO: {
-            out->info.parent = parent;
-            out->info.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->info.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->info.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->info.text, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->info.text[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
+            off += CRSF_unpackString(payload + off, out->info.text, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
             break;
         }
 
         case CRSF_PARAM_COMMAND: {
-            out->cmd.parent = parent;
-            out->cmd.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->cmd.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->cmd.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;
-            if (len < off + 2U) {
+            if (length < off + 2U) {
                 return CRSF_ERROR_TYPE_LENGTH;
             }
             out->cmd.status = (CRSF_ParamCommandStatus_t)payload[off++];
             out->cmd.timeout = payload[off++];
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->cmd.info, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->cmd.info[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
+            off += CRSF_unpackString(payload + off, out->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            //TODO remove
+            //uint8_t strLen = strlen((char*)(payload + off)) + 1U;
+            //strncpy(out->cmd.info, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
+            //out->cmd.info[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
             break;
         }
 
@@ -325,31 +294,13 @@ static inline crsf_p2b_rc crsf_param2b_decode_from_parent(const uint8_t* payload
 }
 
 // ---- Encoder -------------------------------------------------------------
-// Encodes a 0x2B entry payload that starts at [parent] into outb (capacity out_cap).
+// Encodes a 0x2B entry payload that starts at [parent] into payload (capacity out_cap).
 // Returns number of bytes written, or a negative error code.
 
-static inline int crsf_param2b_encode_from_parent(uint8_t* outb, size_t out_cap, const CRSF_ParamEntry_t* in) {
-    size_t off = 0;
-    if (out_cap < 2) {
-        return CRSF_ERROR_TYPE_LENGTH; // need at least parent+type
-    }
-    outb[off++] = in->parent;
-    outb[off++] = (uint8_t)((in->hidden ? 0x80 : 0) | (in->type & 0x7F));
+static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_ParamEntry_t* in, uint8_t* payload, uint8_t* length) {
+    uint8_t off = 0;
 
-    // name
-    const char* name = in->name ? in->name : "";
-    for (size_t i = 0; name[i]; ++i) {
-        if (off >= out_cap) {
-            return CRSF_ERROR_TYPE_LENGTH;
-        }
-        outb[off++] = (uint8_t)name[i];
-    }
-    if (off >= out_cap) {
-        return CRSF_ERROR_TYPE_LENGTH;
-    }
-    outb[off++] = 0;
-
-    switch (in->type) {
+    switch (type) {
         case CRSF_PARAM_INT8:
         case CRSF_PARAM_UINT8:
         case CRSF_PARAM_INT16:
@@ -361,146 +312,92 @@ static inline int crsf_param2b_encode_from_parent(uint8_t* outb, size_t out_cap,
             break;
 
         case CRSF_PARAM_FLOAT: {
-            if (off + 4 * 3 + 1 + 4 > out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            CRSF_packBE32(outb + off, (uint32_t)in->v.f.cur);
+            CRSF_packBE32(payload + off, in->f.value);
             off += 4;
-            CRSF_packBE32(outb + off, (uint32_t)in->v.f.min);
+            CRSF_packBE32(payload + off, in->f.min);
             off += 4;
-            CRSF_packBE32(outb + off, (uint32_t)in->v.f.max);
+            CRSF_packBE32(payload + off, in->f.max);
             off += 4;
-            outb[off++] = in->v.f.precision;
-            CRSF_packBE32(outb + off, in->v.f.step);
+            CRSF_packBE32(payload + off, in->f.def);
             off += 4;
-            const char* u = in->v.f.units ? in->v.f.units : "";
-            for (size_t i = 0; u[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)u[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
+            payload[off++] = in->f.precision;
+            CRSF_packBE32(payload + off, in->f.step);
+            off += 4;
+            off += CRSF_packString(payload + off, in->f.units, 5U, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
             break;
         }
 
         case CRSF_PARAM_SELECT: {
-            if (off + 1 > out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
+            off += CRSF_packString(payload + off, in->sel.options, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            payload[off++] = in->sel.value;
+            if (in->sel.hasOptData == 1U) {
+                payload[off++] = in->sel.min;
+                payload[off++] = in->sel.max;
+                payload[off++] = in->sel.def;
+                off += CRSF_packString(payload + off, in->sel.units, 5U, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
             }
-            outb[off++] = in->v.sel.current_index;
-            const char* opts = in->v.sel.options ? in->v.sel.options : "";
-            for (size_t i = 0; opts[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)opts[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
-            const char* uu = in->v.sel.units ? in->v.sel.units : "";
-            for (size_t i = 0; uu[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)uu[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
             break;
         }
 
         case CRSF_PARAM_STRING: {
-            const char* s = in->v.str.value ? in->v.str.value : "";
-            for (size_t i = 0; s[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)s[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
-            if (in->v.str.has_max_len) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = in->v.str.max_len;
+            off += CRSF_packString(payload + off, in->str.value, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            //TODO remove
+            //uint8_t strLen = strnlen(in->str.value, CRSF_MAX_PARAM_STRING_LENGTH);
+            //if ((strLen + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
+            //    return CRSF_ERROR_TYPE_LENGTH;
+            //}
+            //memcpy(payload + off, in->str.value, strLen);
+            //off += strLen;
+            //payload[off++] = '\0';
+            if (in->str.has_max_len) {
+                payload[off++] = in->str.max_len;
             }
             break;
         }
 
         case CRSF_PARAM_FOLDER: {
-            const char* n = in->v.folder.name ? in->v.folder.name : "";
-            for (size_t i = 0; n[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)n[i];
-            }
-            if (off >= out_cap) {
+            if ((in->folder.child_count + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
                 return CRSF_ERROR_TYPE_LENGTH;
             }
-            outb[off++] = 0;
-            if (in->v.folder.children && in->v.folder.child_count > 0) {
-                if (off + in->v.folder.child_count + 1 > out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                for (size_t k = 0; k < in->v.folder.child_count; ++k) {
-                    outb[off++] = in->v.folder.children[k];
-                }
-                outb[off++] = 0xFF; // terminator
-            }
+            memcpy(payload + off, in->folder.children, in->folder.child_count);
+            off += in->folder.child_count;
+            payload[off++] = 0xFF;
             break;
         }
 
         case CRSF_PARAM_INFO: {
-            const char* t = in->v.info.text ? in->v.info.text : "";
-            for (size_t i = 0; t[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)t[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
+            off += CRSF_packString(payload + off, in->info.text, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            //TODO remove
+            //uint8_t strLen = strnlen(in->info.text, CRSF_MAX_PARAM_STRING_LENGTH);
+            //if ((strLen + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
+            //    return CRSF_ERROR_TYPE_LENGTH;
+            //}
+            //memcpy(payload + off, in->info.text, strLen);
+            //off += strLen;
+            //payload[off++] = '\0';
             break;
         }
 
         case CRSF_PARAM_COMMAND: {
-            if (off + 2 > out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = in->v.cmd.step;
-            outb[off++] = in->v.cmd.timeout;
-            const char* s = in->v.cmd.status ? in->v.cmd.status : "";
-            for (size_t i = 0; s[i]; ++i) {
-                if (off >= out_cap) {
-                    return CRSF_ERROR_TYPE_LENGTH;
-                }
-                outb[off++] = (uint8_t)s[i];
-            }
-            if (off >= out_cap) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            outb[off++] = 0;
+            payload[off++] = (uint8_t)in->cmd.status;
+            payload[off++] = in->cmd.timeout;
+            off += CRSF_packString(payload + off, in->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            //TODO remove
+            //uint8_t strLen = strnlen(in->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH);
+            //if ((strLen + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
+            //    return CRSF_ERROR_TYPE_LENGTH;
+            //}
+            //memcpy(payload + off, in->cmd.info, strLen);
+            //off += strLen;
+            //payload[off++] = '\0';
             break;
         }
 
         default: return CRSF_ERROR_INVALID_FRAME;
     }
 
-    return (int)off;
+    *length += off;
+    return CRSF_OK;
 }
 
 #ifdef __cplusplus

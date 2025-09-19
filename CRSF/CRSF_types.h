@@ -81,10 +81,11 @@ extern "C" {
 
 /* Characteristics -----------------------------------------------------------*/
 
-#define CRSF_MIN_FRAME_LEN 2U  // Excluding Sync byte and Frame Length
-#define CRSF_MAX_FRAME_LEN 62U // Excluding Sync byte and Frame Length
-#define CRSF_STD_HDR_SIZE  3U  /* addr,len,type */
-#define CRSF_CRC_SIZE      1U
+#define CRSF_MIN_FRAME_LEN   2U  // Excluding addr byte and Frame Length
+#define CRSF_MAX_FRAME_LEN   62U // Excluding addr byte and Frame Length
+#define CRSF_STD_HDR_SIZE    3U  /* addr,len,type */
+#define CRSF_CRC_SIZE        1U
+#define CRSF_MAX_PAYLOAD_LEN (CRSF_MAX_FRAME_LEN - CRSF_CRC_SIZE - 1U) // Excluding also type byte
 
 /* Typedefs ------------------------------------------------------------------*/
 
@@ -587,8 +588,21 @@ typedef struct {
 typedef struct {
     uint8_t dest_address;
     uint8_t origin_address;
-    uint8_t Parameter_number;                         // Starting from 0
-    uint8_t Parameter_chunks_remaining;               // Chunks remaining count
+    uint8_t Parameter_number;           // Starting from 0
+    uint8_t Parameter_chunks_remaining; // Chunks remaining count        uint8_t hidden;                          // from high bit of type byte
+    uint8_t parent;                     // parent field index; 0xFF for root
+
+    union {
+        struct {
+            uint8_t hidden : 1;
+            uint8_t v      : 7;
+        };
+
+        uint8_t byte;
+    } type;
+
+    //TODO correct name length and remove payload
+    char name[20];                                    //CRSF_MAX_PARAM_STRING_LENGTH];          // NULL-terminated string in input buffer
     uint8_t Payload[CRSF_MAX_PARAM_SETTINGS_PAYLOAD]; // Depending on parameter type
 } CRSF_ParamSettingsEntry_t;
 
