@@ -33,6 +33,7 @@
 
 #include "CRSF.h"
 #include <math.h>
+//TODO remove
 #include <stdio.h>
 #include <string.h>
 #include "CRSF_CRC.h"
@@ -85,6 +86,14 @@ static void CRSF_packRC(uint8_t* payload, const uint16_t* channels);
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
 static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels);
+#endif
+
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_ParamEntry_t* in, uint8_t* payload, uint8_t* length);
+#endif
+
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntry_t* out, const uint8_t* payload, uint8_t length);
 #endif
 
 #if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
@@ -320,10 +329,6 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         case CRSF_FRAMETYPE_FLIGHT_MODE:
             *frameLength += CRSF_packString(payload + off, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN);
-            //TODO remove
-            //strncpy((char*)payload, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U);
-            //payload[CRSF_MAX_FLIGHT_MODE_NAME_LEN - 1U] = '\0'; // Ensure null termination
-            //*frameLength += strlen((char*)payload) + 1U;        // Adding also null termination
             break;
 #endif
 
@@ -336,15 +341,10 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             BUILD_FRAME(DEVICE_PING, Ping);
             UPDATE_LENGTH(Ping);
 
-        case CRSF_FRAMETYPE_DEVICE_INFO: {
-            //uint16_t nameLen = strlen(crsf->DeviceInfo.Device_name);
+        case CRSF_FRAMETYPE_DEVICE_INFO:
             payload[off++] = crsf->DeviceInfo.dest_address;
             payload[off++] = crsf->DeviceInfo.origin_address;
             off += CRSF_packString(payload + off, crsf->DeviceInfo.Device_name, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN - off - 14U);
-            //TODO remove
-            //strncpy((char*)(payload + off), crsf->DeviceInfo.Device_name, nameLen);
-            //off += nameLen;
-            //payload[off++] = '\0'; //Ensure null termination
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Hardware_ID);
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Firmware_ID);
@@ -352,20 +352,29 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->DeviceInfo.Parameter_version_number;
             *frameLength += off;
             break;
-        }
 
-        case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: {
-            memcpy(payload, &(crsf->ParamSettingsEntry), 4U);
-
-            uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
-            memcpy(payload, &(crsf->ParamSettingsEntry), paramLen);
-            *frameLength += paramLen;
-            if (paramLen == 4U) {
-                payload[4] = 0;
-                *frameLength += sizeof(uint8_t);
-            }
+        case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
+            payload[off++] = crsf->ParamSettingsEntry.dest_address;
+            payload[off++] = crsf->ParamSettingsEntry.origin_address;
+            payload[off++] = crsf->ParamSettingsEntry.Parameter_number;
+            payload[off++] = crsf->ParamSettingsEntry.Parameter_chunks_remaining;
+            payload[off++] = crsf->ParamSettingsEntry.parent;
+            payload[off++] = crsf->ParamSettingsEntry.type.byte;
+            off += CRSF_packString(payload + off, crsf->ParamSettingsEntry.name, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PAYLOAD_LEN - off - 8U);
+            if (CRSF_encodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, &off)) {
+                //TODO make this
+            };
+            *frameLength += off;
+            //TODO remove
+            //memcpy(payload, &(crsf->ParamSettingsEntry), 4U);
+            //uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
+            //memcpy(payload, &(crsf->ParamSettingsEntry), paramLen);
+            //*frameLength += paramLen;
+            //if (paramLen == 4U) {
+            //    payload[4] = 0;
+            //    *frameLength += sizeof(uint8_t);
+            //}
             break;
-        }
 
             BUILD_FRAME(PARAMETER_READ, ParamRead);
             UPDATE_LENGTH(ParamRead);
@@ -644,8 +653,17 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(DEVICE_INFO);
         }
         case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY:
-            memcpy(&(crsf->ParamSettingsEntry), payload,
-                   payloadLength < (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U) ? payloadLength : (CRSF_MAX_PARAM_SETTINGS_PAYLOAD + 4U));
+            crsf->ParamSettingsEntry.dest_address = payload[off++];
+            crsf->ParamSettingsEntry.origin_address = payload[off++];
+            crsf->ParamSettingsEntry.Parameter_number = payload[off++];
+            crsf->ParamSettingsEntry.Parameter_chunks_remaining = payload[off++];
+            crsf->ParamSettingsEntry.parent = payload[off++];
+            crsf->ParamSettingsEntry.type.byte = payload[off++];
+            off += CRSF_unpackString(payload + off, crsf->ParamSettingsEntry.name, CRSF_MAX_PARAM_STRING_LENGTH, payloadLength - off);
+            if (CRSF_decodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, payloadLength - off) != CRSF_OK) {
+                //TODO not sure this is right
+                return CRSF_ERROR_TYPE_LENGTH;
+            };
             UPDATE_FRESHNESS(PARAMETER_SETTINGS_ENTRY);
 
             PROCESS_FRAME(PARAMETER_READ, ParamRead);
@@ -918,6 +936,169 @@ static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
 }
 #endif
 
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_ParamEntry_t* in, uint8_t* payload, uint8_t* length) {
+    uint8_t off = 0;
+
+    switch (type) {
+        case CRSF_PARAM_INT8:
+        case CRSF_PARAM_UINT8:
+        case CRSF_PARAM_INT16:
+        case CRSF_PARAM_UINT16:
+        case CRSF_PARAM_INT32:
+        case CRSF_PARAM_UINT32: break;
+
+        case CRSF_PARAM_FLOAT: {
+            off += CRSF_packBE32(payload + off, in->f.value);
+            off += CRSF_packBE32(payload + off, in->f.min);
+            off += CRSF_packBE32(payload + off, in->f.max);
+            off += CRSF_packBE32(payload + off, in->f.def);
+            payload[off++] = in->f.precision;
+            off += CRSF_packBE32(payload + off, in->f.step);
+            off += CRSF_packString(payload + off, in->f.units, 5U, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            break;
+        }
+
+        case CRSF_PARAM_TEXT_SELECTION: {
+            off += CRSF_packString(payload + off, in->sel.options, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            payload[off++] = in->sel.value;
+            if ((in->sel.hasOptData == 1U) && (off + 3U * sizeof(uint8_t) + CRSF_MIN_STRING_LENGTH <= CRSF_MAX_PARAM_SETTINGS_PAYLOAD)) {
+                payload[off++] = in->sel.min;
+                payload[off++] = in->sel.max;
+                payload[off++] = in->sel.def;
+                off += CRSF_packString(payload + off, in->sel.units, 5U, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            }
+            break;
+        }
+
+        case CRSF_PARAM_STRING: {
+            off += CRSF_packString(payload + off, in->str.value, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            if (in->str.has_max_len) {
+                payload[off++] = in->str.max_len;
+            }
+            break;
+        }
+
+        case CRSF_PARAM_FOLDER: {
+            if ((in->folder.child_count + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            memcpy(payload + off, in->folder.children, in->folder.child_count);
+            off += in->folder.child_count;
+            payload[off++] = 0xFF;
+            break;
+        }
+
+        case CRSF_PARAM_INFO: off += CRSF_packString(payload + off, in->info.text, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off); break;
+
+        case CRSF_PARAM_COMMAND:
+            payload[off++] = (uint8_t)in->cmd.status;
+            payload[off++] = in->cmd.timeout;
+            off += CRSF_packString(payload + off, in->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
+            break;
+
+        default: return CRSF_ERROR_INVALID_FRAME;
+    }
+
+    *length += off;
+    return CRSF_OK;
+}
+#endif
+
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntry_t* out, const uint8_t* payload, uint8_t length) {
+    if (length < 3U) {
+        return CRSF_ERROR_TYPE_LENGTH; // need at least parent + type + one name byte
+    }
+    uint8_t off = 0;
+    switch (type) {
+        case CRSF_PARAM_INT8:
+        case CRSF_PARAM_UINT8:
+        case CRSF_PARAM_INT16:
+        case CRSF_PARAM_UINT16:
+        case CRSF_PARAM_INT32:
+        case CRSF_PARAM_UINT32: break;
+
+        case CRSF_PARAM_FLOAT: {
+            /*out->f.parent = parent;
+            out->f.hidden = (payload[off++] & 0x80) != 0;
+            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
+            strncpy(out->f.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
+            out->f.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
+            off += strLen;*/
+
+            if (length < off + 4 * 4 + 1 + 4) {
+                return CRSF_ERROR_TYPE_LENGTH; // cur,min,max,def,prec,step
+            }
+            off += CRSF_unpackBE32(payload + off, &(out->f.value));
+            off += CRSF_unpackBE32(payload + off, &(out->f.min));
+            off += CRSF_unpackBE32(payload + off, &(out->f.max));
+            off += CRSF_unpackBE32(payload + off, &(out->f.def));
+            out->f.precision = payload[off++];
+            off += CRSF_unpackBE32(payload + off, &(out->f.step));
+            off += CRSF_unpackString(payload + off, out->f.units, 5U, length - off);
+            break;
+        }
+
+        case CRSF_PARAM_TEXT_SELECTION:
+            if (length < off + 2U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            off += CRSF_unpackString(payload + off, out->sel.options, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            out->sel.value = payload[off++];
+            out->sel.hasOptData = 0U;
+            if (off + 3U < length) {
+                out->sel.hasOptData = 1U;
+                out->sel.min = payload[off++];
+                out->sel.max = payload[off++];
+                out->sel.def = payload[off++];
+                off += CRSF_unpackString(payload + off, out->sel.units, 5U, length - off);
+            }
+            break;
+
+        case CRSF_PARAM_STRING:
+            off += CRSF_unpackString(payload + off, out->str.value, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            if (off < length) {
+                out->str.has_max_len = 1U;
+                out->str.max_len = payload[off++];
+            } else {
+                out->str.has_max_len = 0U;
+                out->str.max_len = 0;
+            }
+            break;
+
+        case CRSF_PARAM_FOLDER: {
+            out->folder.child_count = 0;
+            if (off < length) {
+                uint8_t rem = length - off;
+                for (uint8_t ii = 0; ii < rem; ii++) {
+                    if (payload[off] != 0xFF) {
+                        break;
+                    }
+                    out->folder.children[ii] = payload[off++];
+                    out->folder.child_count++;
+                }
+            }
+            break;
+        }
+
+        case CRSF_PARAM_INFO: off += CRSF_unpackString(payload + off, out->info.text, CRSF_MAX_PARAM_STRING_LENGTH, length - off); break;
+
+        case CRSF_PARAM_COMMAND:
+            if (length < off + 2U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            out->cmd.status = (CRSF_ParamCommandStatus_t)payload[off++];
+            out->cmd.timeout = payload[off++];
+            off += CRSF_unpackString(payload + off, out->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            break;
+
+        default: return CRSF_ERROR_INVALID_FRAME;
+    }
+    return CRSF_OK;
+}
+#endif
+
 #if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
 static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const CRSF_CommandPayload_t* in, uint8_t* payload, uint8_t* length) {
     uint8_t off = 0;
@@ -929,13 +1110,8 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
             payload[off++] = in->ACK.Action;
 
             // Add information string if present and space available
-            if (in->ACK.Information[0] != '\0' && (CRSF_MAX_COMMAND_PAYLOAD - off) > 0) {
+            if (in->ACK.Information[0] != '\0') {
                 off += CRSF_packString(payload + off, in->ACK.Information, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off);
-                //TODO remove
-                //uint8_t strLen = strlen(in->ACK.Information);
-                //strncpy((char*)(payload + off), in->ACK.Information, strLen);
-                //off += strLen;
-                //payload[off++] = '\0'; // Add null terminator
             }
             break;
 
@@ -1040,68 +1216,40 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
             payload[off++] = (uint8_t)in->screen.subCommand;
             switch (in->screen.subCommand) {
                 case CRSF_CMD_SCREEN_POPUP_MESSAGE_START: {
+                    uint8_t reqNextValues = CRSF_MIN_STRING_LENGTH + 2U * sizeof(uint8_t);
                     // Pack header string
-                    off +=
-                        CRSF_packString(payload + off, in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off);
-                    //TODO remove
-                    //uint8_t strLen = strnlen(in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                    //// No check on the first item, as it is by design smaller than CRSF_MAX_COMMAND_PAYLOAD
-                    //memcpy(payload + off, in->screen.popupMessageStart.Header, strLen);
-                    //off += strLen;
-                    //payload[off++] = '\0';
+                    off += CRSF_packString(payload + off, in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
+                                           CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
 
                     // Pack info message string
+                    reqNextValues -= CRSF_MIN_STRING_LENGTH;
                     off += CRSF_packString(payload + off, in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                           CRSF_MAX_COMMAND_PAYLOAD - off);
-                    //TODO remove
-                    //strLen = strnlen(in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                    //if ((off + strLen + 1U + 2U) > CRSF_MAX_COMMAND_PAYLOAD) {
-                    //    return CRSF_ERROR_TYPE_LENGTH;
-                    //}
-                    //memcpy(payload + off, in->screen.popupMessageStart.Info_message, strLen);
-                    //off += strLen;
-                    //payload[off++] = '\0';
+                                           CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
 
                     // Pack timeout and close button option
                     payload[off++] = in->screen.popupMessageStart.Max_timeout_interval;
                     payload[off++] = in->screen.popupMessageStart.Close_button_option ? 1U : 0U;
 
                     // Pack additional data if present
-                    if (in->screen.popupMessageStart.add_data.present) {
+                    reqNextValues = 2U * CRSF_MIN_STRING_LENGTH + 4U * sizeof(uint8_t);
+                    if (in->screen.popupMessageStart.add_data.present && (off + reqNextValues <= CRSF_MAX_COMMAND_PAYLOAD)) {
+                        reqNextValues -= CRSF_MIN_STRING_LENGTH;
                         off += CRSF_packString(payload + off, in->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                               CRSF_MAX_COMMAND_PAYLOAD - off);
-                        //TODO remove
-                        //strLen = strnlen(in->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                        //if ((off + strLen + 1 + 4 + strlen(in->screen.popupMessageStart.add_data.unit) + 1) > CRSF_MAX_COMMAND_PAYLOAD) {
-                        //    return CRSF_ERROR_TYPE_LENGTH;
-                        //}
-                        //memcpy(payload + off, in->screen.popupMessageStart.add_data.selectionText, strLen);
-                        //off += strLen;
-                        //payload[off++] = '\0';
+                                               CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
                         payload[off++] = in->screen.popupMessageStart.add_data.value;
                         payload[off++] = in->screen.popupMessageStart.add_data.minValue;
                         payload[off++] = in->screen.popupMessageStart.add_data.maxValue;
                         payload[off++] = in->screen.popupMessageStart.add_data.defaultValue;
-                        off += CRSF_packString(payload + off, in->screen.popupMessageStart.add_data.unit, 5U, CRSF_MAX_COMMAND_PAYLOAD - off);
-                        //TODO remove
-                        //strLen = strnlen(in->screen.popupMessageStart.add_data.unit, 5U);
-                        //memcpy(payload + off, in->screen.popupMessageStart.add_data.unit, strLen);
-                        //off += strLen;
-                        //payload[off++] = '\0';
+                        reqNextValues -= (CRSF_MIN_STRING_LENGTH + 4U * sizeof(uint8_t));
+                        off += CRSF_packString(payload + off, in->screen.popupMessageStart.add_data.unit, 5U, CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
                     }
 
+                    reqNextValues = CRSF_MIN_STRING_LENGTH;
                     // Pack possible values if present
-                    if (in->screen.popupMessageStart.has_possible_values) {
+                    if (in->screen.popupMessageStart.has_possible_values && (off + reqNextValues <= CRSF_MAX_COMMAND_PAYLOAD)) {
+                        reqNextValues -= CRSF_MIN_STRING_LENGTH;
                         off += CRSF_packString(payload + off, in->screen.popupMessageStart.possible_values, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                               CRSF_MAX_COMMAND_PAYLOAD - off);
-                        //TODO remove
-                        //strLen = strnlen(in->screen.popupMessageStart.possible_values, CRSF_MAX_COMMAND_PAYLOAD_STRINGS);
-                        //if ((off + strLen + 1U) > CRSF_MAX_COMMAND_PAYLOAD) {
-                        //    return CRSF_ERROR_TYPE_LENGTH;
-                        //}
-                        //memcpy(payload + off, in->screen.popupMessageStart.possible_values, strLen);
-                        //off += strLen;
-                        //payload[off++] = '\0';
+                                               CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
                     }
                     break;
                 }

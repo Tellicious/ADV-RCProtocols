@@ -62,6 +62,7 @@ extern "C" {
 #define CRSF_MAX_PARAM_DATA_LEN 32 /* Max parameter value length */
 #endif
 
+//TODO check if this is ok
 #ifndef CRSF_MAX_COMMAND_PAYLOAD
 #define CRSF_MAX_COMMAND_PAYLOAD 32 /* Max command payload */
 #endif
@@ -77,6 +78,18 @@ extern "C" {
 
 #ifndef CRSF_MAX_MAVLINK_PAYLOAD
 #define CRSF_MAX_MAVLINK_PAYLOAD 58 /* Max MAVLink payload */
+#endif
+
+#ifndef CRSF_MAX_PARAM_STRING_LENGTH
+#define CRSF_MAX_PARAM_STRING_LENGTH 20 /* Max parameter string length */
+#endif
+
+#ifndef CRSF_MAX_PARAM_SETTINGS_PAYLOAD
+#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56 /* Max parameter settings payload */
+#endif
+
+#ifndef CRSF_MIN_STRING_LENGTH
+#define CRSF_MIN_STRING_LENGTH 2 /* Min string length */
 #endif
 
 /* Characteristics -----------------------------------------------------------*/
@@ -583,6 +596,64 @@ typedef struct {
 } CRSF_DeviceInfo_t;
 
 /**
+ * Command parameter status
+*/
+//TODO rename
+typedef enum {
+    READY = 0,               //--> feedback
+    START = 1,               //<-- input
+    PROGRESS = 2,            //--> feedback
+    CONFIRMATION_NEEDED = 3, //--> feedback
+    CONFIRM = 4,             //<-- input
+    CANCEL = 5,              //<-- input
+    POLL = 6                 //<-- input
+} CRSF_ParamCommandStatus_t;
+
+/**
+ * Parameter inner payload
+ */
+typedef union {
+    struct {
+        int64_t cur, min, max;
+        char units[5];
+    } i; // int-like
+
+    struct {
+        int32_t value, min, max, def;
+        uint8_t precision;
+        int32_t step;
+        char units[5];
+    } f; // fixed-point float
+
+    struct {
+        char options[CRSF_MAX_PARAM_STRING_LENGTH];
+        uint8_t value, hasOptData, min, max, def;
+        char units[5];
+    } sel; // select
+
+    struct {
+        char value[CRSF_MAX_PARAM_STRING_LENGTH];
+        uint8_t has_max_len;
+        uint8_t max_len;
+    } str; // string
+
+    struct {
+        uint8_t children[CRSF_MAX_PARAM_STRING_LENGTH];
+        uint8_t child_count;
+    } folder; // folder
+
+    struct {
+        char text[CRSF_MAX_PARAM_STRING_LENGTH];
+    } info; // info
+
+    struct {
+        CRSF_ParamCommandStatus_t status;
+        uint8_t timeout; // ms * 100
+        char info[CRSF_MAX_PARAM_STRING_LENGTH];
+    } cmd; // command
+} CRSF_ParamEntry_t;
+
+/**
  * CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY payload
  */
 typedef struct {
@@ -601,9 +672,8 @@ typedef struct {
         uint8_t byte;
     } type;
 
-    //TODO correct name length and remove payload
-    char name[20];                                    //CRSF_MAX_PARAM_STRING_LENGTH];          // NULL-terminated string in input buffer
-    uint8_t Payload[CRSF_MAX_PARAM_SETTINGS_PAYLOAD]; // Depending on parameter type
+    char name[CRSF_MAX_PARAM_STRING_LENGTH]; // NULL-terminated string in input buffer
+    CRSF_ParamEntry_t payload;               // inner payload
 } CRSF_ParamSettingsEntry_t;
 
 /**

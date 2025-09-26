@@ -69,7 +69,7 @@ typedef enum {
 } CRSF_ParamCommandStatus_t;
 
 /**
- * Command inner payload
+ * Parameter inner payload
  */
 typedef union {
     struct {
@@ -330,7 +330,7 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
         case CRSF_PARAM_SELECT: {
             off += CRSF_packString(payload + off, in->sel.options, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
             payload[off++] = in->sel.value;
-            if (in->sel.hasOptData == 1U) {
+            if ((in->sel.hasOptData == 1U) && (off + 3U * sizeof(uint8_t) + CRSF_MIN_STRING_LENGTH <= CRSF_MAX_PARAM_SETTINGS_PAYLOAD)) {
                 payload[off++] = in->sel.min;
                 payload[off++] = in->sel.max;
                 payload[off++] = in->sel.def;

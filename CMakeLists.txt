@@ -44,7 +44,7 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Compiler options
     set(compiler_OPTS
-        -fdiagnostics-color=always
+        #-fdiagnostics-color=always
         -fno-builtin
         -Wall
         -Wextra
