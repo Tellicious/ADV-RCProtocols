@@ -2783,12 +2783,7 @@ static void test_roundtrip_parameter_settings_entry(void** state) {
     tx.ParamSettingsEntry.payload.f.step = 12;
     memcpy(tx.ParamSettingsEntry.payload.f.units, "mVA", 4U);
 
-    //TODO remove
-    //for (uint8_t ii = 0; ii < 10; ii++) {
-    //    tx.ParamSettingsEntry.Payload[ii] = ii + 0xA0;
-    //}
-
-    /* Test Build with 10 payload bytes */
+    /* Test Build */
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
     assert_int_equal(frameLength, 14U + 3U + 1U);
 

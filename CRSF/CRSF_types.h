@@ -598,7 +598,6 @@ typedef struct {
 /**
  * Command parameter status
 */
-//TODO rename
 typedef enum {
     READY = 0,               //--> feedback
     START = 1,               //<-- input
@@ -607,7 +606,7 @@ typedef enum {
     CONFIRM = 4,             //<-- input
     CANCEL = 5,              //<-- input
     POLL = 6                 //<-- input
-} CRSF_ParamCommandStatus_t;
+} CRSF_ParamEntryCommandStatus_t;
 
 /**
  * Parameter inner payload
@@ -647,7 +646,7 @@ typedef union {
     } info; // info
 
     struct {
-        CRSF_ParamCommandStatus_t status;
+        CRSF_ParamEntryCommandStatus_t status;
         uint8_t timeout; // ms * 100
         char info[CRSF_MAX_PARAM_STRING_LENGTH];
     } cmd; // command

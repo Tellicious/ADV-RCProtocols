@@ -365,15 +365,6 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
                 //TODO make this
             };
             *frameLength += off;
-            //TODO remove
-            //memcpy(payload, &(crsf->ParamSettingsEntry), 4U);
-            //uint8_t paramLen = (values > CRSF_MAX_PARAM_SETTINGS_PAYLOAD ? CRSF_MAX_PARAM_SETTINGS_PAYLOAD : values) + 4U;
-            //memcpy(payload, &(crsf->ParamSettingsEntry), paramLen);
-            //*frameLength += paramLen;
-            //if (paramLen == 4U) {
-            //    payload[4] = 0;
-            //    *frameLength += sizeof(uint8_t);
-            //}
             break;
 
             BUILD_FRAME(PARAMETER_READ, ParamRead);
