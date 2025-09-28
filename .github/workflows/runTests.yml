@@ -24,7 +24,7 @@ jobs:
     
     - name: Wait for code formatting to succeed
       if: ${{ github.event_name == 'pull_request' }}
-      uses: lewagon/wait-on-check-action@v1.4.0
+      uses: lewagon/wait-on-check-action@v1.4.1
       with:
         ref: ${{ env.BRANCH_NAME }}
         check-name: 'formatCode'
