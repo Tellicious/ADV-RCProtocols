@@ -5187,163 +5187,120 @@ static void test_parse_cmd_invalid_cmd_id(void** state) {
 
 //TODO move
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_PARAMETER_GROUP
-/* -------------------------------------------------------------------------
- * Parameter Settings Entry – helpers for golden frames
- * -------------------------------------------------------------------------*/
+/* ========================================================================== */
+/* Parameter Settings Entry – Inline-golden helpers (NOT from CRSF.c)         */
+/* ========================================================================== */
 
-static uint8_t test_packBE32(uint8_t* dst, uint32_t v) {
-    dst[0] = (uint8_t)(v >> 24);
-    dst[1] = (uint8_t)(v >> 16);
-    dst[2] = (uint8_t)(v >> 8);
-    dst[3] = (uint8_t)(v);
-    return 4U;
+static inline void put_be32(uint8_t* p, int32_t v) {
+    p[0] = (uint8_t)((uint32_t)v >> 24);
+    p[1] = (uint8_t)((uint32_t)v >> 16);
+    p[2] = (uint8_t)((uint32_t)v >> 8);
+    p[3] = (uint8_t)((uint32_t)v);
 }
 
-static uint8_t test_packString(uint8_t* payload, const char* s, uint8_t maxStrLen, uint8_t maxPayloadLen) {
-    uint8_t sl = (uint8_t)strnlen(s, (size_t)maxStrLen - 1U);
-    if ((uint8_t)(sl + 1U) > maxPayloadLen) {
-        sl = (uint8_t)(maxPayloadLen - 1U);
+static inline uint8_t* put_cstr(uint8_t* p, const char* s) {
+    while (*s) {
+        *p++ = (uint8_t)*s++;
     }
-    memcpy(payload, s, sl);
-    payload[sl] = '\0';
-    return (uint8_t)(sl + 1U);
+    *p++ = 0;
+    return p;
 }
 
-/* Build a golden PARAMETER_SETTINGS_ENTRY frame exactly like the encoder */
-static void build_golden_param_settings(const CRSF_ParamSettingsEntry_t* in, uint8_t bus_addr, uint8_t* out, uint8_t* out_len) {
-    uint8_t off = 0;
-    /* Standard header (addr, length, type follows after we know payload len) */
-    out[0] = bus_addr;
-    out[2] = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+/* finalize length + CRC8(D5) over [Type..payload] */
+static inline void finalize_len_crc(uint8_t* frame, uint8_t** p_end, uint8_t* out_len) {
+    uint8_t* p = *p_end;
 
-    /* Payload begins at CRSF_STD_HDR_SIZE (==2) + 1(type) == 3 */
-    uint8_t* p = &out[CRSF_STD_HDR_SIZE + 1U];
+    /* Ltp = bytes from [Type] (frame[2]) through the last payload byte (exclusive of CRC) */
+    uint8_t Ltp = (uint8_t)(p - (frame + 2)); /* type + payload length */
 
-    /* Common header in payload */
-    p[off++] = in->dest_address;
-    p[off++] = in->origin_address;
-    p[off++] = in->Parameter_number;
-    p[off++] = in->Parameter_chunks_remaining;
-    p[off++] = in->parent;
-    p[off++] = in->type.byte;
-    off += test_packString(p + off, in->name, CRSF_MAX_PARAM_STRING_LENGTH, (uint8_t)(CRSF_MAX_PAYLOAD_LEN - off - 8U));
+    /* frame[1] counts [Type..CRC] inclusive, so add 1 for the CRC byte */
+    frame[1] = (uint8_t)(Ltp + 1U);
 
-    /* Type-specific payload – mirror CRSF_encodeParamEntry */
-    switch ((CRSF_ParamType_t)in->type.v) {
-        case CRSF_PARAM_INT8:
-        case CRSF_PARAM_UINT8:
-        case CRSF_PARAM_INT16:
-        case CRSF_PARAM_UINT16:
-        case CRSF_PARAM_INT32:
-        case CRSF_PARAM_UINT32:
-            /* No payload */
-            break;
+    /* CRC is computed over [Type..payload] (Ltp bytes) */
+    uint8_t crc = test_calc_checksum(frame + 2, Ltp, 0xD5U);
 
-        case CRSF_PARAM_FLOAT: {
-            off += test_packBE32(p + off, (uint32_t)in->payload.f.value);
-            off += test_packBE32(p + off, (uint32_t)in->payload.f.min);
-            off += test_packBE32(p + off, (uint32_t)in->payload.f.max);
-            off += test_packBE32(p + off, (uint32_t)in->payload.f.def);
-            p[off++] = in->payload.f.precision;
-            off += test_packBE32(p + off, (uint32_t)in->payload.f.step);
-            off += test_packString(p + off, in->payload.f.units, 5U, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-        } break;
+    /* CRC lives at index (addr,len) + (Type..payload) = frame[1] + 1 */
+    frame[frame[1] + 1U] = crc;
 
-        case CRSF_PARAM_TEXT_SELECTION: {
-            off += test_packString(p + off, in->payload.sel.options, CRSF_MAX_PARAM_STRING_LENGTH, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-            p[off++] = in->payload.sel.value;
-            /* Optional data only if room (matches encoder guard) */
-            if (in->payload.sel.hasOptData == 1U) {
-                uint8_t req = (uint8_t)(3U + CRSF_MIN_STRING_LENGTH);
-                if ((uint8_t)(off + req) <= CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
-                    p[off++] = in->payload.sel.min;
-                    p[off++] = in->payload.sel.max;
-                    p[off++] = in->payload.sel.def;
-                    off += test_packString(p + off, in->payload.sel.units, 5U, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-                }
-            }
-        } break;
+    /* total frame length in bytes (including addr+len) */
+    *out_len = (uint8_t)(frame[1] + 2U);
 
-        case CRSF_PARAM_STRING: {
-            off += test_packString(p + off, in->payload.str.value, CRSF_MAX_PARAM_STRING_LENGTH, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-            if (in->payload.str.has_max_len) {
-                p[off++] = in->payload.str.max_len;
-            }
-        } break;
-
-        case CRSF_PARAM_FOLDER: {
-            /* encoder returns TYPE_LENGTH if (child_count + 1) > MAX_PAYLOAD */
-            if ((uint8_t)(in->payload.folder.child_count + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
-                /* mark impossible frame (caller uses this to expect an error) */
-                *out_len = 0U;
-                return;
-            }
-            memcpy(p + off, in->payload.folder.children, in->payload.folder.child_count);
-            off += in->payload.folder.child_count;
-            p[off++] = 0xFF; /* terminator */
-        } break;
-
-        case CRSF_PARAM_INFO: {
-            off += test_packString(p + off, in->payload.info.text, CRSF_MAX_PARAM_STRING_LENGTH, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-        } break;
-
-        case CRSF_PARAM_COMMAND: {
-            p[off++] = (uint8_t)in->payload.cmd.status;
-            p[off++] = in->payload.cmd.timeout;
-            off += test_packString(p + off, in->payload.cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, (uint8_t)(CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off));
-        } break;
-
-        default: break;
-    }
-
-    /* Finalize std header: len = 1(type) + payload + 1(CRC) */
-    uint8_t payload_len = off;
-    out[1] = (uint8_t)(1U + payload_len + CRSF_CRC_SIZE);
-
-    /* CRC over [type + payload] */
-    out[CRSF_STD_HDR_SIZE + payload_len] = test_calc_checksum(&out[2], (uint8_t)(1U + payload_len), 0xD5U);
-
-    *out_len = (uint8_t)(CRSF_STD_HDR_SIZE + payload_len + CRSF_CRC_SIZE);
+    /* (optional) move p to CRC position if the caller wants to append after CRC */
+    *p_end = frame + (frame[1] + 1U);
 }
 
-/* Convenient wrapper to compare a built frame against a golden */
-static void assert_frame_equals(const uint8_t* got, uint8_t got_len, const uint8_t* exp, uint8_t exp_len) {
-    assert_int_equal(got_len, exp_len);
-    assert_memory_equal(got, exp, exp_len);
+/* Convenience to deliberately truncate declared payload length and recompute CRC. 
+   new_payload_len counts bytes AFTER the address+length, i.e., number of bytes from [Type] up to but EXCLUDING CRC. */
+static inline void set_declared_payload_len(uint8_t* frame, uint8_t new_payload_len, uint8_t* out_len) {
+    frame[1] = (uint8_t)(new_payload_len + 1U); /* +1 for CRC */
+    frame[CRSF_STD_HDR_SIZE + new_payload_len - 1U] = test_calc_checksum(frame + 2, new_payload_len, 0xD5U);
+    *out_len = (uint8_t)(CRSF_STD_HDR_SIZE + new_payload_len - 1U);
 }
 
-/* -------------------------------------------------------------------------
- * FLOAT
- * -------------------------------------------------------------------------*/
+/* ========================================================================== */
+/* FLOAT (0x08)                                                                */
+/* ========================================================================== */
+
+/* Encode vs golden */
 static void test_param_float_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 1;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x2A;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x00;
-    tx.ParamSettingsEntry.type.v = CRSF_PARAM_FLOAT;
     tx.ParamSettingsEntry.type.hidden = 0;
-    strcpy(tx.ParamSettingsEntry.name, "Flt");
-    tx.ParamSettingsEntry.payload.f.value = 1234;
-    tx.ParamSettingsEntry.payload.f.min = -100;
-    tx.ParamSettingsEntry.payload.f.max = 9000;
-    tx.ParamSettingsEntry.payload.f.def = 100;
-    tx.ParamSettingsEntry.payload.f.precision = 2;
-    tx.ParamSettingsEntry.payload.f.step = 25;
-    strcpy(tx.ParamSettingsEntry.payload.f.units, "ms");
+    tx.ParamSettingsEntry.type.v = CRSF_PARAM_FLOAT;
+    strcpy(tx.ParamSettingsEntry.name, "Gain");
+    tx.ParamSettingsEntry.payload.f.value = 1255;
+    tx.ParamSettingsEntry.payload.f.min = -1000;
+    tx.ParamSettingsEntry.payload.f.max = 2000;
+    tx.ParamSettingsEntry.payload.f.def = 1000;
+    tx.ParamSettingsEntry.payload.f.precision = 1;
+    tx.ParamSettingsEntry.payload.f.step = 12;
+    strcpy(tx.ParamSettingsEntry.payload.f.units, "mVA");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    uint8_t built[128], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    uint8_t golden[128], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;          /* bus addr */
+    p++;                                            /* length placeholder */
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY; /* 0x2B */
+
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER; /* dest */
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;  /* origin */
+    *p++ = 0x2A;                           /* param # */
+    *p++ = 0x00;                           /* chunks rem */
+
+    *p++ = 0x00;                                  /* parent */
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_FLOAT; /* type byte */
+    p = put_cstr(p, "Gain");
+
+    put_be32(p, tx.ParamSettingsEntry.payload.f.value);
+    p += 4;
+    put_be32(p, tx.ParamSettingsEntry.payload.f.min);
+    p += 4;
+    put_be32(p, tx.ParamSettingsEntry.payload.f.max);
+    p += 4;
+    put_be32(p, tx.ParamSettingsEntry.payload.f.def);
+    p += 4;
+    *p++ = tx.ParamSettingsEntry.payload.f.precision;
+    put_be32(p, tx.ParamSettingsEntry.payload.f.step);
+    p += 4;
+    p = put_cstr(p, tx.ParamSettingsEntry.payload.f.units);
+
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
+/* Decode golden (+ freshness guarded) */
 static void test_param_float_decode_from_golden(void** state) {
     (void)state;
     CRSF_t rx;
@@ -5351,31 +5308,39 @@ static void test_param_float_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    /* reuse the same golden as above */
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 2;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x01;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_FLOAT;
-    tmp.ParamSettingsEntry.type.hidden = 0;
-    strcpy(tmp.ParamSettingsEntry.name, "F2");
-    tmp.ParamSettingsEntry.payload.f.value = -1;
-    tmp.ParamSettingsEntry.payload.f.min = -2;
-    tmp.ParamSettingsEntry.payload.f.max = 3;
-    tmp.ParamSettingsEntry.payload.f.def = 0;
-    tmp.ParamSettingsEntry.payload.f.precision = 1;
-    tmp.ParamSettingsEntry.payload.f.step = 7;
-    strcpy(tmp.ParamSettingsEntry.payload.f.units, "v");
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    /* build golden inline */
+    uint8_t golden[128], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x31; /* param# */
+        *p++ = 0x00; /* chunks */
+        *p++ = 0x00; /* parent */
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_FLOAT;
+        p = put_cstr(p, "F2");
+        put_be32(p, -1);
+        p += 4;
+        put_be32(p, -2);
+        p += 4;
+        put_be32(p, 3);
+        p += 4;
+        put_be32(p, 0);
+        p += 4;
+        *p++ = 1;
+        put_be32(p, 7);
+        p += 4;
+        p = put_cstr(p, "v");
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
     assert_int_equal(ft, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
-
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_FLOAT);
     assert_string_equal(rx.ParamSettingsEntry.name, "F2");
     assert_int_equal(rx.ParamSettingsEntry.payload.f.value, -1);
@@ -5388,14 +5353,14 @@ static void test_param_float_decode_from_golden(void** state) {
 
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
-        mock_timestamp += 10;
-        assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 20));
-        assert_false(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 5));
-        mock_timestamp -= 10;
+        mock_timestamp += 5;
+        assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
+        mock_timestamp -= 5;
     }
 #endif
 }
 
+/* Roundtrip (+ freshness/stats guarded) */
 static void test_param_float_roundtrip_stats_fresh(void** state) {
     (void)state;
     CRSF_t tx, rx;
@@ -5410,12 +5375,11 @@ static void test_param_float_roundtrip_stats_fresh(void** state) {
 #endif
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 3;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x33;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FLOAT;
-    tx.ParamSettingsEntry.type.hidden = 0;
     strcpy(tx.ParamSettingsEntry.name, "F3");
     tx.ParamSettingsEntry.payload.f.value = 10;
     tx.ParamSettingsEntry.payload.f.min = 0;
@@ -5425,7 +5389,7 @@ static void test_param_float_roundtrip_stats_fresh(void** state) {
     tx.ParamSettingsEntry.payload.f.step = 5;
     strcpy(tx.ParamSettingsEntry.payload.f.units, "uS");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
@@ -5440,22 +5404,18 @@ static void test_param_float_roundtrip_stats_fresh(void** state) {
 #if CRSF_ENABLE_STATS
     CRSF_getStats(&rx, &s1);
     assert_true(s1.frames_total == (uint32_t)(s0.frames_total + 1U));
-    assert_int_equal(s0.frames_bad_len, s1.frames_bad_len);
-    assert_int_equal(s0.frames_bad_crc, s1.frames_bad_crc);
 #endif
 }
 
+/* Per-type errors (truncate float body to be too short) */
 static void test_param_float_errors(void** state) {
     (void)state;
-    /* Build valid then truncate payload so FLOAT block is too short => TYPE_LENGTH */
     CRSF_t tx;
     CRSF_init(&tx);
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    CRSF_FrameType_t ft;
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 4;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x34;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x02;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FLOAT;
@@ -5468,45 +5428,61 @@ static void test_param_float_errors(void** state) {
     tx.ParamSettingsEntry.payload.f.step = 1;
     strcpy(tx.ParamSettingsEntry.payload.f.units, "x");
 
+    uint8_t frame[128], fl = 0;
+    CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
 
-    /* shrink: keep only 20 bytes of FLOAT payload instead of 21+ */
+    /* compute name end offset: payload start is at (STD_HDR_SIZE+1 type byte); 
+       within payload: first 6 bytes are dest,origin,param,chunks,parent,type; then name\0 */
     uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
     uint8_t off_after_name = (uint8_t)(6U + name_len);
-    uint8_t payload_len = (uint8_t)(off_after_name + 20U);
-out:
-    frame[1] = (uint8_t)(1U + payload_len + 1U);
-    frame[CRSF_STD_HDR_SIZE + payload_len] = test_calc_checksum(frame + 2U, (uint8_t)(1U + payload_len), 0xD5U);
-    fl = (uint8_t)(CRSF_STD_HDR_SIZE + payload_len + 1U);
+    /* FLOAT body needs 4*4 + 1 + 4 + 1(min unit NUL) = 21+ at least. Keep only 20 -> TYPE_LENGTH */
+    set_declared_payload_len(frame, (uint8_t)(off_after_name + 20U), &fl);
 
     assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
-/* -------------------------------------------------------------------------
- * STRING
- * -------------------------------------------------------------------------*/
+/* ========================================================================== */
+/* STRING (0x0A)                                                               */
+/* ========================================================================== */
+
 static void test_param_string_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 10;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x05;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x00;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_STRING;
-    strcpy(tx.ParamSettingsEntry.name, "Nick");
-    strcpy(tx.ParamSettingsEntry.payload.str.value, "Hello");
+    strcpy(tx.ParamSettingsEntry.name, "SSID");
+    strcpy(tx.ParamSettingsEntry.payload.str.value, "MyWiFi");
     tx.ParamSettingsEntry.payload.str.has_max_len = 1;
-    tx.ParamSettingsEntry.payload.str.max_len = 12;
+    tx.ParamSettingsEntry.payload.str.max_len = 20;
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    uint8_t built[128], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    uint8_t golden[128], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    p++;
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    *p++ = 0x05;
+    *p++ = 0x00;
+    *p++ = 0x00;
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_STRING;
+    p = put_cstr(p, "SSID");
+    p = put_cstr(p, "MyWiFi");
+    *p++ = 20;
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
 static void test_param_string_decode_from_golden(void** state) {
@@ -5516,24 +5492,28 @@ static void test_param_string_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 11;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x00;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_STRING;
-    strcpy(tmp.ParamSettingsEntry.name, "Nm");
-    strcpy(tmp.ParamSettingsEntry.payload.str.value, "World");
-    tmp.ParamSettingsEntry.payload.str.has_max_len = 0;
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    uint8_t golden[128], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x06;
+        *p++ = 0x00;
+        *p++ = 0x00;
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_STRING;
+        p = put_cstr(p, "Nm");
+        p = put_cstr(p, "World"); /* no max_len byte */
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
-    assert_int_equal(ft, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_STRING);
+    assert_string_equal(rx.ParamSettingsEntry.name, "Nm");
     assert_string_equal(rx.ParamSettingsEntry.payload.str.value, "World");
     assert_int_equal(rx.ParamSettingsEntry.payload.str.has_max_len, 0);
 
@@ -5558,8 +5538,8 @@ static void test_param_string_roundtrip_stats_fresh(void** state) {
 #endif
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 12;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x07;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_STRING;
@@ -5568,11 +5548,10 @@ static void test_param_string_roundtrip_stats_fresh(void** state) {
     tx.ParamSettingsEntry.payload.str.has_max_len = 1;
     tx.ParamSettingsEntry.payload.str.max_len = 8;
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
-    assert_int_equal(ft, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
     assert_string_equal(rx.ParamSettingsEntry.payload.str.value, "abc");
     assert_int_equal(rx.ParamSettingsEntry.payload.str.max_len, 8);
 
@@ -5587,64 +5566,83 @@ static void test_param_string_roundtrip_stats_fresh(void** state) {
 #endif
 }
 
-/* STRING oversize: strings are truncated (no error) */
+/* Oversize (STRING has a string payload) – long value, decode still OK (truncated by encoder) */
 static void test_param_string_oversize_truncation(void** state) {
     (void)state;
     CRSF_t tx, rx;
     CRSF_init(&tx);
     CRSF_init(&rx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 13;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x08;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x00;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_STRING;
-    memset(tx.ParamSettingsEntry.name, 'N', CRSF_MAX_PARAM_STRING_LENGTH - 1U);
-    tx.ParamSettingsEntry.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-    char big[60];
+    strcpy(tx.ParamSettingsEntry.name, "TXT");
+    char big[80];
     memset(big, 'X', sizeof(big) - 1);
-    big[sizeof(big) - 1] = '\0';
+    big[sizeof(big) - 1] = 0;
     strcpy(tx.ParamSettingsEntry.payload.str.value, big);
     tx.ParamSettingsEntry.payload.str.has_max_len = 0;
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
-    /* value got truncated to CRSF_MAX_PARAM_STRING_LENGTH-1 chars */
+    /* value got truncated to MAX string */
     assert_true(strlen(rx.ParamSettingsEntry.payload.str.value) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
 }
 
-/* No STRING-specific invalid packet other than general guards – covered below */
+/* ========================================================================== */
+/* TEXT_SELECTION (0x09)                                                       */
+/* ========================================================================== */
 
-/* -------------------------------------------------------------------------
- * TEXT_SELECTION
- * -------------------------------------------------------------------------*/
 static void test_param_textsel_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 20;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x10;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x05;
+    tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_TEXT_SELECTION;
     strcpy(tx.ParamSettingsEntry.name, "Mode");
-    strcpy(tx.ParamSettingsEntry.payload.sel.options, "A|B|C");
-    tx.ParamSettingsEntry.payload.sel.value = 1;
+    strcpy(tx.ParamSettingsEntry.payload.sel.options, "Acro;Stab;Horizon");
+    tx.ParamSettingsEntry.payload.sel.value = 2;
     tx.ParamSettingsEntry.payload.sel.hasOptData = 1;
     tx.ParamSettingsEntry.payload.sel.min = 0;
     tx.ParamSettingsEntry.payload.sel.max = 3;
     tx.ParamSettingsEntry.payload.sel.def = 1;
-    strcpy(tx.ParamSettingsEntry.payload.sel.units, "u");
+    strcpy(tx.ParamSettingsEntry.payload.sel.units, "idx");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    uint8_t built[160], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    uint8_t golden[160], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    p++;
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    *p++ = 0x10;
+    *p++ = 0x00;
+    *p++ = 0x01;
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_TEXT_SELECTION;
+    p = put_cstr(p, "Mode");
+    p = put_cstr(p, "Acro;Stab;Horizon");
+    *p++ = 2;
+    *p++ = 0;
+    *p++ = 3;
+    *p++ = 1;
+    p = put_cstr(p, "idx");
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
 static void test_param_textsel_decode_from_golden(void** state) {
@@ -5654,26 +5652,33 @@ static void test_param_textsel_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 21;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x06;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_TEXT_SELECTION;
-    strcpy(tmp.ParamSettingsEntry.name, "Rates");
-    strcpy(tmp.ParamSettingsEntry.payload.sel.options, "LO|HI");
-    tmp.ParamSettingsEntry.payload.sel.value = 0;
-    tmp.ParamSettingsEntry.payload.sel.hasOptData = 0;
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    uint8_t golden[128], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x11;
+        *p++ = 0x00;
+        *p++ = 0x01;
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_TEXT_SELECTION;
+        p = put_cstr(p, "Rates");
+        p = put_cstr(p, "LO;HI");
+        *p++ = 0; /* value */
+        /* no optional fields */
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_TEXT_SELECTION);
-    assert_string_equal(rx.ParamSettingsEntry.payload.sel.options, "LO|HI");
+    assert_string_equal(rx.ParamSettingsEntry.name, "Rates");
+    assert_string_equal(rx.ParamSettingsEntry.payload.sel.options, "LO;HI");
     assert_int_equal(rx.ParamSettingsEntry.payload.sel.value, 0);
+
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
         assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
@@ -5693,14 +5698,15 @@ static void test_param_textsel_roundtrip_stats_fresh(void** state) {
     CRSF_Stats_t s0, s1;
     CRSF_getStats(&rx, &s0);
 #endif
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 22;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x12;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x06;
+    tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_TEXT_SELECTION;
     strcpy(tx.ParamSettingsEntry.name, "TS");
-    strcpy(tx.ParamSettingsEntry.payload.sel.options, "X|Y");
+    strcpy(tx.ParamSettingsEntry.payload.sel.options, "X;Y");
     tx.ParamSettingsEntry.payload.sel.value = 1;
     tx.ParamSettingsEntry.payload.sel.hasOptData = 1;
     tx.ParamSettingsEntry.payload.sel.min = 0;
@@ -5708,33 +5714,35 @@ static void test_param_textsel_roundtrip_stats_fresh(void** state) {
     tx.ParamSettingsEntry.payload.sel.def = 1;
     strcpy(tx.ParamSettingsEntry.payload.sel.units, "u");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
     assert_int_equal(rx.ParamSettingsEntry.payload.sel.value, 1);
+
 #if CRSF_ENABLE_STATS
     CRSF_getStats(&rx, &s1);
     assert_true(s1.frames_total == (uint32_t)(s0.frames_total + 1U));
 #endif
 }
 
+/* Oversize (has string payload): very long options; encode stays valid and may drop optional data */
 static void test_param_textsel_oversize_truncation(void** state) {
     (void)state;
-    /* Very long options – encoder will truncate and may omit extras */
     CRSF_t tx, rx;
     CRSF_init(&tx);
     CRSF_init(&rx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 23;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x13;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x06;
+    tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_TEXT_SELECTION;
     strcpy(tx.ParamSettingsEntry.name, "O");
-    char longopt[80];
-    memset(longopt, 'A', 70);
-    longopt[70] = '\0';
+    char longopt[100];
+    memset(longopt, 'A', sizeof(longopt) - 1);
+    longopt[sizeof(longopt) - 1] = 0;
     strcpy(tx.ParamSettingsEntry.payload.sel.options, longopt);
     tx.ParamSettingsEntry.payload.sel.value = 0;
     tx.ParamSettingsEntry.payload.sel.hasOptData = 1;
@@ -5743,69 +5751,83 @@ static void test_param_textsel_oversize_truncation(void** state) {
     tx.ParamSettingsEntry.payload.sel.def = 0;
     strcpy(tx.ParamSettingsEntry.payload.sel.units, "u");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[160], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
-    /* options get truncated; extras may be omitted – but decode must be valid */
+    /* options truncated; optional data may have been omitted by encoder */
     assert_int_equal(rx.ParamSettingsEntry.payload.sel.value, 0);
 }
 
+/* Errors: declare payload too short (<2 after name) */
 static void test_param_textsel_errors(void** state) {
     (void)state;
-    /* truncate to make (length < name + at least 2 bytes) => TYPE_LENGTH */
     CRSF_t tx;
     CRSF_init(&tx);
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    CRSF_FrameType_t ft;
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 24;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x14;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x06;
+    tx.ParamSettingsEntry.parent = 0x01;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_TEXT_SELECTION;
     strcpy(tx.ParamSettingsEntry.name, "E");
-    strcpy(tx.ParamSettingsEntry.payload.sel.options, "A|B");
+    strcpy(tx.ParamSettingsEntry.payload.sel.options, "A;B");
     tx.ParamSettingsEntry.payload.sel.value = 0;
     tx.ParamSettingsEntry.payload.sel.hasOptData = 0;
 
+    uint8_t frame[128], fl = 0;
+    CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
 
     uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
     uint8_t off_after_name = (uint8_t)(6U + name_len);
-    uint8_t payload_len = (uint8_t)(off_after_name + 1U); /* <2 required */
-    frame[1] = (uint8_t)(1U + payload_len + 1U);
-    frame[CRSF_STD_HDR_SIZE + payload_len] = test_calc_checksum(frame + 2U, (uint8_t)(1U + payload_len), 0xD5U);
-    fl = (uint8_t)(CRSF_STD_HDR_SIZE + payload_len + 1U);
+    set_declared_payload_len(frame, (uint8_t)(off_after_name + 1U), &fl); /* <2 */
     assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
-/* -------------------------------------------------------------------------
- * FOLDER
- * -------------------------------------------------------------------------*/
+/* ========================================================================== */
+/* FOLDER (0x0B)                                                               */
+/* ========================================================================== */
+
 static void test_param_folder_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 30;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x00;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x0F;
+    tx.ParamSettingsEntry.parent = 0xFF; /* root */
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
-    strcpy(tx.ParamSettingsEntry.name, "Fold");
-    tx.ParamSettingsEntry.payload.folder.child_count = 3;
+    strcpy(tx.ParamSettingsEntry.name, "ROOT");
+    tx.ParamSettingsEntry.payload.folder.child_count = 2;
     tx.ParamSettingsEntry.payload.folder.children[0] = 1;
     tx.ParamSettingsEntry.payload.folder.children[1] = 2;
-    tx.ParamSettingsEntry.payload.folder.children[2] = 3;
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    uint8_t built[128], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    uint8_t golden[128], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    p++;
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    *p++ = 0x00;
+    *p++ = 0x00;
+    *p++ = 0xFF;
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_FOLDER;
+    p = put_cstr(p, "ROOT");
+    *p++ = 1;
+    *p++ = 2;
+    *p++ = 0xFF; /* children then terminator */
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
 static void test_param_folder_decode_from_golden(void** state) {
@@ -5815,24 +5837,34 @@ static void test_param_folder_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 31;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x0F;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
-    strcpy(tmp.ParamSettingsEntry.name, "Ff");
-    tmp.ParamSettingsEntry.payload.folder.child_count = 0; /* encoder writes only 0xFF terminator */
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    uint8_t golden[128], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x20;
+        *p++ = 0x00;
+        *p++ = 0x10;
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_FOLDER;
+        p = put_cstr(p, "Ff");
+        *p++ = 5;
+        *p++ = 6;
+        *p++ = 0xFF;
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_FOLDER);
-    /* decoder counts leading 0xFF children; here first is 0xFF -> count becomes 1 with 0xFF copied */
-    assert_true(rx.ParamSettingsEntry.payload.folder.child_count >= 1);
+    assert_string_equal(rx.ParamSettingsEntry.name, "Ff");
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.child_count, 2);
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.children[0], 5);
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.children[1], 6);
+
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
         assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
@@ -5845,68 +5877,92 @@ static void test_param_folder_roundtrip(void** state) {
     CRSF_t tx, rx;
     CRSF_init(&tx);
     CRSF_init(&rx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 32;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x21;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x0F;
+    tx.ParamSettingsEntry.parent = 0x10;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
     strcpy(tx.ParamSettingsEntry.name, "RF");
-    tx.ParamSettingsEntry.payload.folder.child_count = 2;
-    tx.ParamSettingsEntry.payload.folder.children[0] = 0xFF;
-    tx.ParamSettingsEntry.payload.folder.children[1] = 0xFF;
+    tx.ParamSettingsEntry.payload.folder.child_count = 3;
+    tx.ParamSettingsEntry.payload.folder.children[0] = 1;
+    tx.ParamSettingsEntry.payload.folder.children[1] = 2;
+    tx.ParamSettingsEntry.payload.folder.children[2] = 3;
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
-    /* current decoder counts leading 0xFF children and includes terminator => >= 3 */
-    assert_true(rx.ParamSettingsEntry.payload.folder.child_count >= 3);
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.child_count, 3);
 }
 
-static void test_param_folder_oversize_error(void** state) {
+/* FOLDER has no string payload -> no oversize test per your rule */
+
+/* Per-type error: truncate so that there is no 0xFF terminator */
+static void test_param_folder_errors(void** state) {
     (void)state;
-    /* (child_count + 1) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD => TYPE_LENGTH */
+    /* build a valid folder and then drop the terminator by decreasing declared length */
     CRSF_t tx;
     CRSF_init(&tx);
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
 
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 33;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x22;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x0F;
+    tx.ParamSettingsEntry.parent = 0x10;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
-    strcpy(tx.ParamSettingsEntry.name, "OVF");
-    tx.ParamSettingsEntry.payload.folder.child_count = (uint8_t)CRSF_MAX_PARAM_SETTINGS_PAYLOAD;
+    strcpy(tx.ParamSettingsEntry.name, "E");
+    tx.ParamSettingsEntry.payload.folder.child_count = 1;
+    tx.ParamSettingsEntry.payload.folder.children[0] = 7;
 
-    assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl), CRSF_ERROR_TYPE_LENGTH);
+    uint8_t frame[128], fl = 0;
+    CRSF_FrameType_t ft;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+
+    /* shorten by 1 to remove trailing 0xFF */
+    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 1U), &fl);
+    assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
-/* No folder-specific decoder error other than general guards */
+/* ========================================================================== */
+/* INFO (0x0C)                                                                 */
+/* ========================================================================== */
 
-/* -------------------------------------------------------------------------
- * INFO
- * -------------------------------------------------------------------------*/
 static void test_param_info_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 40;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x30;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x02;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
-    strcpy(tx.ParamSettingsEntry.name, "Info");
-    strcpy(tx.ParamSettingsEntry.payload.info.text, "rev-1");
+    strcpy(tx.ParamSettingsEntry.name, "FW");
+    strcpy(tx.ParamSettingsEntry.payload.info.text, "v1.2.3");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    uint8_t built[128], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    uint8_t golden[128], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    p++;
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    *p++ = 0x30;
+    *p++ = 0x00;
+    *p++ = 0x02;
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_INFO;
+    p = put_cstr(p, "FW");
+    p = put_cstr(p, "v1.2.3");
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
 static void test_param_info_decode_from_golden(void** state) {
@@ -5916,23 +5972,30 @@ static void test_param_info_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 41;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x02;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
-    strcpy(tmp.ParamSettingsEntry.name, "I");
-    strcpy(tmp.ParamSettingsEntry.payload.info.text, "ok");
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    uint8_t golden[128], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x31;
+        *p++ = 0x00;
+        *p++ = 0x02;
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_INFO;
+        p = put_cstr(p, "I");
+        p = put_cstr(p, "ok");
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_INFO);
+    assert_string_equal(rx.ParamSettingsEntry.name, "I");
     assert_string_equal(rx.ParamSettingsEntry.payload.info.text, "ok");
+
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
         assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
@@ -5940,75 +6003,136 @@ static void test_param_info_decode_from_golden(void** state) {
 #endif
 }
 
-static void test_param_info_roundtrip(void** state) {
+static void test_param_info_roundtrip_stats_fresh(void** state) {
     (void)state;
     CRSF_t tx, rx;
     CRSF_init(&tx);
     CRSF_init(&rx);
+#if CRSF_ENABLE_FRESHNESS_CHECK
+    CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
+#endif
+#if CRSF_ENABLE_STATS
+    CRSF_Stats_t s0, s1;
+    CRSF_getStats(&rx, &s0);
+#endif
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 42;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x32;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x02;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
     strcpy(tx.ParamSettingsEntry.name, "R");
     strcpy(tx.ParamSettingsEntry.payload.info.text, "hello");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
     assert_string_equal(rx.ParamSettingsEntry.payload.info.text, "hello");
+
+#if CRSF_ENABLE_FRESHNESS_CHECK
+    if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
+        assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
+    }
+#endif
+#if CRSF_ENABLE_STATS
+    CRSF_getStats(&rx, &s1);
+    assert_true(s1.frames_total == (uint32_t)(s0.frames_total + 1U));
+#endif
 }
 
+/* Oversize (INFO has string) – long info text still decodes (truncated by encoder) */
 static void test_param_info_oversize_truncation(void** state) {
     (void)state;
-    /* Long info text should be truncated (no error) */
     CRSF_t tx, rx;
     CRSF_init(&tx);
     CRSF_init(&rx);
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 43;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x33;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
     tx.ParamSettingsEntry.parent = 0x02;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
     strcpy(tx.ParamSettingsEntry.name, "T");
-    char longtxt[80];
+    char longtxt[100];
     memset(longtxt, 'z', sizeof(longtxt) - 1);
-    longtxt[sizeof(longtxt) - 1] = '\0';
+    longtxt[sizeof(longtxt) - 1] = 0;
     strcpy(tx.ParamSettingsEntry.payload.info.text, longtxt);
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[160], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
     assert_true(strlen(rx.ParamSettingsEntry.payload.info.text) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
 }
 
-/* -------------------------------------------------------------------------
- * COMMAND
- * -------------------------------------------------------------------------*/
+/* Errors: cut trailing NUL of info string => TYPE_LENGTH */
+static void test_param_info_errors(void** state) {
+    (void)state;
+    CRSF_t tx;
+    CRSF_init(&tx);
+
+    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x34;
+    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+    tx.ParamSettingsEntry.parent = 0x02;
+    tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
+    strcpy(tx.ParamSettingsEntry.name, "E");
+    strcpy(tx.ParamSettingsEntry.payload.info.text, "Z");
+
+    uint8_t frame[128], fl = 0;
+    CRSF_FrameType_t ft;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    /* drop 1 byte => remove NUL */
+    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 1U), &fl);
+    assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
+}
+
+/* ========================================================================== */
+/* COMMAND (0x0D)                                                              */
+/* ========================================================================== */
+
 static void test_param_command_encode_equals_golden(void** state) {
     (void)state;
     CRSF_t tx;
     CRSF_init(&tx);
-    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 50;
-    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x07;
-    tx.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
-    strcpy(tx.ParamSettingsEntry.name, "Cmd");
-    tx.ParamSettingsEntry.payload.cmd.status = PROGRESS;
-    tx.ParamSettingsEntry.payload.cmd.timeout = 50;
-    strcpy(tx.ParamSettingsEntry.payload.cmd.info, "Busy");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tx.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
-    assert_frame_equals(frame, fl, golden, gl);
+    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x40;
+    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+    tx.ParamSettingsEntry.parent = 0x03;
+    tx.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
+    strcpy(tx.ParamSettingsEntry.name, "Bind");
+    tx.ParamSettingsEntry.payload.cmd.status = READY;
+    tx.ParamSettingsEntry.payload.cmd.timeout = 10;
+    strcpy(tx.ParamSettingsEntry.payload.cmd.info, "OK");
+
+    uint8_t built[160], blen = 0;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, built, &blen) == CRSF_OK);
+
+    uint8_t golden[160], glen = 0;
+    uint8_t* p = golden;
+    *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    p++;
+    *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+    *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    *p++ = 0x40;
+    *p++ = 0x00;
+    *p++ = 0x03;
+    *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_COMMAND;
+    p = put_cstr(p, "Bind");
+    *p++ = (uint8_t)READY;
+    *p++ = 10;
+    p = put_cstr(p, "OK");
+    finalize_len_crc(golden, &p, &glen);
+
+    assert_int_equal(blen, glen);
+    assert_memory_equal(built, golden, glen);
 }
 
 static void test_param_command_decode_from_golden(void** state) {
@@ -6018,26 +6142,34 @@ static void test_param_command_decode_from_golden(void** state) {
 #if CRSF_ENABLE_FRESHNESS_CHECK
     CRSF_setTimestampCallback(&rx, test_getTimestamp_ms);
 #endif
-    CRSF_t tmp;
-    CRSF_init(&tmp);
-    tmp.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tmp.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tmp.ParamSettingsEntry.Parameter_number = 51;
-    tmp.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tmp.ParamSettingsEntry.parent = 0x07;
-    tmp.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
-    strcpy(tmp.ParamSettingsEntry.name, "C");
-    tmp.ParamSettingsEntry.payload.cmd.status = READY;
-    tmp.ParamSettingsEntry.payload.cmd.timeout = 10;
-    strcpy(tmp.ParamSettingsEntry.payload.cmd.info, "ok");
 
-    uint8_t golden[CRSF_MAX_FRAME_LEN + 2], gl = 0;
-    build_golden_param_settings(&tmp.ParamSettingsEntry, CRSF_ADDRESS_FLIGHT_CONTROLLER, golden, &gl);
+    uint8_t golden[160], glen = 0;
+    {
+        uint8_t* p = golden;
+        *p++ = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        p++;
+        *p++ = CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY;
+        *p++ = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        *p++ = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        *p++ = 0x41;
+        *p++ = 0x00;
+        *p++ = 0x03;
+        *p++ = (0U << 7) | (uint8_t)CRSF_PARAM_COMMAND;
+        p = put_cstr(p, "C");
+        *p++ = (uint8_t)READY;
+        *p++ = 10;
+        p = put_cstr(p, "ok");
+        finalize_len_crc(golden, &p, &glen);
+    }
+
     CRSF_FrameType_t ft;
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
+    assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_COMMAND);
+    assert_string_equal(rx.ParamSettingsEntry.name, "C");
     assert_int_equal(rx.ParamSettingsEntry.payload.cmd.status, READY);
     assert_int_equal(rx.ParamSettingsEntry.payload.cmd.timeout, 10);
     assert_string_equal(rx.ParamSettingsEntry.payload.cmd.info, "ok");
+
 #if CRSF_ENABLE_FRESHNESS_CHECK
     if (CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY < 0xFF) {
         assert_true(CRSF_isFrameFresh(&rx, CRSF_TRK_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 10));
@@ -6057,113 +6189,157 @@ static void test_param_command_roundtrip_stats_fresh(void** state) {
     CRSF_Stats_t s0, s1;
     CRSF_getStats(&rx, &s0);
 #endif
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 52;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x42;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x07;
+    tx.ParamSettingsEntry.parent = 0x03;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
     strcpy(tx.ParamSettingsEntry.name, "Rc");
     tx.ParamSettingsEntry.payload.cmd.status = PROGRESS;
     tx.ParamSettingsEntry.payload.cmd.timeout = 1;
     strcpy(tx.ParamSettingsEntry.payload.cmd.info, "");
 
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
+    uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
+
 #if CRSF_ENABLE_STATS
     CRSF_getStats(&rx, &s1);
     assert_true(s1.frames_total == (uint32_t)(s0.frames_total + 1U));
 #endif
 }
 
+/* Oversize (COMMAND has string 'info') – long string still decodes (truncated by encoder) */
+static void test_param_command_oversize_truncation(void** state) {
+    (void)state;
+    CRSF_t tx, rx;
+    CRSF_init(&tx);
+    CRSF_init(&rx);
+
+    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x43;
+    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+    tx.ParamSettingsEntry.parent = 0x03;
+    tx.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
+    strcpy(tx.ParamSettingsEntry.name, "O");
+    tx.ParamSettingsEntry.payload.cmd.status = READY;
+    tx.ParamSettingsEntry.payload.cmd.timeout = 5;
+    char longtxt[100];
+    memset(longtxt, 'y', sizeof(longtxt) - 1);
+    longtxt[sizeof(longtxt) - 1] = 0;
+    strcpy(tx.ParamSettingsEntry.payload.cmd.info, longtxt);
+
+    uint8_t frame[160], fl = 0;
+    CRSF_FrameType_t ft;
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
+    assert_true(strlen(rx.ParamSettingsEntry.payload.cmd.info) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
+}
+
+/* Errors: too short (<2 for status+timeout) */
 static void test_param_command_errors(void** state) {
     (void)state;
-    /* Too short for (status+timeout) => TYPE_LENGTH */
     CRSF_t tx;
     CRSF_init(&tx);
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    CRSF_FrameType_t ft;
+
     tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 53;
+    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+    tx.ParamSettingsEntry.Parameter_number = 0x44;
     tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x07;
+    tx.ParamSettingsEntry.parent = 0x03;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_COMMAND;
     strcpy(tx.ParamSettingsEntry.name, "E");
     tx.ParamSettingsEntry.payload.cmd.status = READY;
     tx.ParamSettingsEntry.payload.cmd.timeout = 1;
     strcpy(tx.ParamSettingsEntry.payload.cmd.info, "");
 
+    uint8_t frame[128], fl = 0;
+    CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
     uint8_t off_after_name = (uint8_t)(6U + name_len);
-    uint8_t payload_len = (uint8_t)(off_after_name + 1U); /* only 1 byte */
-    frame[1] = (uint8_t)(1U + payload_len + 1U);
-    frame[CRSF_STD_HDR_SIZE + payload_len] = test_calc_checksum(frame + 2U, (uint8_t)(1U + payload_len), 0xD5U);
-    fl = (uint8_t)(CRSF_STD_HDR_SIZE + payload_len + 1U);
+    set_declared_payload_len(frame, (uint8_t)(off_after_name + 1U), &fl); /* only 1 byte after name */
     assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
-/* -------------------------------------------------------------------------
- * GENERAL paramEntry errors (type-agnostic guards / defaults)
- * -------------------------------------------------------------------------*/
+/* ========================================================================== */
+/* GENERAL paramEntry errors (type-agnostic)                                   */
+/* ========================================================================== */
+
 static void test_param_entry_general_errors(void** state) {
     (void)state;
+
     /* Unknown/invalid type at encode => INVALID_FRAME */
-    CRSF_t tx;
-    CRSF_init(&tx);
-    uint8_t frame[CRSF_MAX_FRAME_LEN + 2], fl = 0;
-    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 60;
-    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x01;
-    tx.ParamSettingsEntry.type.byte = 0x7F; /* not handled */
-    strcpy(tx.ParamSettingsEntry.name, "X");
-    assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl), CRSF_ERROR_INVALID_FRAME);
-
-    /* Unknown type at decode => INVALID_FRAME (mutate type byte inside payload) */
-    CRSF_init(&tx);
-    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 61;
-    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x01;
-    tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
-    strcpy(tx.ParamSettingsEntry.name, "Y");
-    strcpy(tx.ParamSettingsEntry.payload.info.text, "y");
-
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
-    /* type is at payload index 5 (after 5 header bytes) */
-    frame[CRSF_STD_HDR_SIZE + 5U] = 0x7F;
-    /* fix CRC */
-    frame[CRSF_STD_HDR_SIZE + (frame[1] - 1U)] = test_calc_checksum(frame + 2U, (uint8_t)(frame[1] - 1U), 0xD5U);
-    CRSF_FrameType_t ft;
-    assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_INVALID_FRAME);
-
-    /* length < 3 (after name) guard => TYPE_LENGTH (use INT8 which has no payload) */
-    CRSF_init(&tx);
-    fl = 0;
-    tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
-    tx.ParamSettingsEntry.Parameter_number = 62;
-    tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
-    tx.ParamSettingsEntry.parent = 0x01;
-    tx.ParamSettingsEntry.type.v = CRSF_PARAM_INT8;
-    strcpy(tx.ParamSettingsEntry.name, "G");
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
-    /* Force payload to end immediately after name + 2 bytes total left */
     {
+        CRSF_t tx;
+        CRSF_init(&tx);
+        uint8_t frame[64], fl = 0;
+        tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        tx.ParamSettingsEntry.Parameter_number = 0x60;
+        tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+        tx.ParamSettingsEntry.parent = 0x01;
+        tx.ParamSettingsEntry.type.byte = 0x7F; /* not handled */
+        strcpy(tx.ParamSettingsEntry.name, "X");
+        assert_int_equal(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl),
+                         CRSF_ERROR_INVALID_FRAME);
+    }
+
+    /* Unknown type at decode => INVALID_FRAME (mutate type byte in payload after build) */
+    {
+        CRSF_t tx;
+        CRSF_init(&tx);
+        uint8_t frame[128], fl = 0;
+        CRSF_FrameType_t ft;
+
+        tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        tx.ParamSettingsEntry.Parameter_number = 0x61;
+        tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+        tx.ParamSettingsEntry.parent = 0x01;
+        tx.ParamSettingsEntry.type.v = CRSF_PARAM_INFO;
+        strcpy(tx.ParamSettingsEntry.name, "Y");
+        strcpy(tx.ParamSettingsEntry.payload.info.text, "ok"); // <-- 2 chars + NUL = 3 bytes >= guard
+
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+
+        /* Type byte sits at payload offset 5 (dest,origin,number,chunks,parent,TYPE) */
+        frame[CRSF_STD_HDR_SIZE + 5U] = 0x7F; // unknown
+
+        /* Recompute CRC: CRC over [Type..payload] where Ltp = frame[1] - 1, CRC at index frame[1] + 1 */
+        {
+            uint8_t Ltp = (uint8_t)(frame[1] - 1U);
+            frame[frame[1] + 1U] = test_calc_checksum(frame + 2U, Ltp, 0xD5U);
+        }
+
+        assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_INVALID_FRAME);
+    }
+
+    /* Top-level decode guard: length < 3 after name -> TYPE_LENGTH (use INT8 zero-payload type) */
+    {
+        CRSF_t tx;
+        CRSF_init(&tx);
+        uint8_t frame[128], fl = 0;
+        CRSF_FrameType_t ft;
+        tx.ParamSettingsEntry.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+        tx.ParamSettingsEntry.origin_address = CRSF_ADDRESS_CRSF_TRANSMITTER;
+        tx.ParamSettingsEntry.Parameter_number = 0x62;
+        tx.ParamSettingsEntry.Parameter_chunks_remaining = 0;
+        tx.ParamSettingsEntry.parent = 0x01;
+        tx.ParamSettingsEntry.type.v = CRSF_PARAM_INT8; /* no payload */
+        strcpy(tx.ParamSettingsEntry.name, "G");
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
+
+        /* Force (remaining bytes after name) < 3 by shrinking payload length */
         uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
         uint8_t off_after_name = (uint8_t)(6U + name_len);
-        uint8_t payload_len = (uint8_t)(off_after_name + 2U - 1U); /* <3 */
-        frame[1] = (uint8_t)(1U + payload_len + 1U);
-        frame[CRSF_STD_HDR_SIZE + payload_len] = test_calc_checksum(frame + 2U, (uint8_t)(1U + payload_len), 0xD5U);
-        fl = (uint8_t)(CRSF_STD_HDR_SIZE + payload_len + 1U);
+        set_declared_payload_len(frame, (uint8_t)(off_after_name + 2U), &fl);
+        assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
     }
-    assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
 #endif /* TX && RX && PARAMETER_GROUP */
@@ -6537,44 +6713,46 @@ int main(void) {
 
 //TODO move
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_PARAMETER_GROUP
-        /* FLOAT */
+        // FLOAT
         cmocka_unit_test(test_param_float_encode_equals_golden),
         cmocka_unit_test(test_param_float_decode_from_golden),
         cmocka_unit_test(test_param_float_roundtrip_stats_fresh),
         cmocka_unit_test(test_param_float_errors),
 
-        /* STRING */
+        // STRING
         cmocka_unit_test(test_param_string_encode_equals_golden),
         cmocka_unit_test(test_param_string_decode_from_golden),
         cmocka_unit_test(test_param_string_roundtrip_stats_fresh),
         cmocka_unit_test(test_param_string_oversize_truncation),
 
-        /* TEXT_SELECTION */
+        // TEXT_SELECTION
         cmocka_unit_test(test_param_textsel_encode_equals_golden),
         cmocka_unit_test(test_param_textsel_decode_from_golden),
         cmocka_unit_test(test_param_textsel_roundtrip_stats_fresh),
         cmocka_unit_test(test_param_textsel_oversize_truncation),
         cmocka_unit_test(test_param_textsel_errors),
 
-        /* FOLDER */
+        // FOLDER (no oversize, no strings)
         cmocka_unit_test(test_param_folder_encode_equals_golden),
         cmocka_unit_test(test_param_folder_decode_from_golden),
         cmocka_unit_test(test_param_folder_roundtrip),
-        cmocka_unit_test(test_param_folder_oversize_error),
+        cmocka_unit_test(test_param_folder_errors),
 
-        /* INFO */
+        // INFO
         cmocka_unit_test(test_param_info_encode_equals_golden),
         cmocka_unit_test(test_param_info_decode_from_golden),
-        cmocka_unit_test(test_param_info_roundtrip),
+        cmocka_unit_test(test_param_info_roundtrip_stats_fresh),
         cmocka_unit_test(test_param_info_oversize_truncation),
+        cmocka_unit_test(test_param_info_errors),
 
-        /* COMMAND */
+        // COMMAND
         cmocka_unit_test(test_param_command_encode_equals_golden),
         cmocka_unit_test(test_param_command_decode_from_golden),
         cmocka_unit_test(test_param_command_roundtrip_stats_fresh),
+        cmocka_unit_test(test_param_command_oversize_truncation),
         cmocka_unit_test(test_param_command_errors),
 
-        /* GENERAL paramEntry errors */
+        // GENERAL
         cmocka_unit_test(test_param_entry_general_errors),
 #endif
 

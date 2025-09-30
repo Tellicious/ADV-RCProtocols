@@ -1056,7 +1056,7 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
             if (off < length) {
                 uint8_t rem = length - off;
                 for (uint8_t ii = 0; ii < rem; ii++) {
-                    if (payload[off] != 0xFF) {
+                    if (payload[off] == 0xFF) {
                         break;
                     }
                     out->folder.children[ii] = payload[off++];

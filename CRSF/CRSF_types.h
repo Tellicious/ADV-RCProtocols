@@ -664,8 +664,8 @@ typedef struct {
 
     union {
         struct {
-            uint8_t hidden : 1;
             uint8_t v      : 7;
+            uint8_t hidden : 1;
         };
 
         uint8_t byte;
