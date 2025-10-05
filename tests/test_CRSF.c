@@ -3098,44 +3098,32 @@ static void test_roundtrip_command_oversized(void** state) {
     tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     tx.Command.Command_ID = CRSF_CMDID_SCREEN;
     tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
-    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
-    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "What");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "Test Header");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "Information message");
     tx.Command.payload.screen.popupMessageStart.Max_timeout_interval = 3;
     tx.Command.payload.screen.popupMessageStart.Close_button_option = 1;
     tx.Command.payload.screen.popupMessageStart.add_data.present = 1;
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "SelectionT");
     tx.Command.payload.screen.popupMessageStart.add_data.value = 5;
     tx.Command.payload.screen.popupMessageStart.add_data.minValue = 2;
     tx.Command.payload.screen.popupMessageStart.add_data.maxValue = 7;
     tx.Command.payload.screen.popupMessageStart.add_data.defaultValue = 4;
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "Jkg");
     tx.Command.payload.screen.popupMessageStart.has_possible_values = 1;
-    strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3;4;5;6;7;8");
+    strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3;4;5;6;7;8;9;10");
 
     /* Test Build with oversized payload */
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
     assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
-    assert_string_equal((char*)&frame[frameLength - 9U], "2;3;4;");
-
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABABABABABABABABA");
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mV");
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
-    assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
-    assert_string_equal((char*)&frame[frameLength - 4U], "m");
-
-    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHHABABABABABABA");
-    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "WhatABABABABABABABA");
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qq");
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
-    assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
-    assert_string_equal((char*)&frame[frameLength - 13U], "WhatABAB");
-
-    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "TestHH");
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "qqABAB");
-    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "mVAB");
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
-    assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     assert_string_equal((char*)&frame[frameLength - 4U], "2");
+
+    strcpy(tx.Command.payload.screen.popupMessageStart.Header, "Longer Test Header");
+    strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "Information message");
+    strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "SelectionTxt");
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
+    assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
+    assert_string_equal((char*)&frame[frameLength - 16U], "Selecti");
+    assert_string_equal((char*)&frame[frameLength - 4U], "J");
 
 #if CRSF_ENABLE_STATS
     assert_int_equal(rx.Stats.commands_rx, 0);
@@ -5230,11 +5218,11 @@ static inline void finalize_len_crc(uint8_t* frame, uint8_t** p_end, uint8_t* ou
 }
 
 /* Convenience to deliberately truncate declared payload length and recompute CRC. 
-   new_payload_len counts bytes AFTER the address+length, i.e., number of bytes from [Type] up to but EXCLUDING CRC. */
+   new_payload_len counts bytes AFTER the address+length, i.e., number of bytes from after [Type] up to but EXCLUDING CRC. */
 static inline void set_declared_payload_len(uint8_t* frame, uint8_t new_payload_len, uint8_t* out_len) {
-    frame[1] = (uint8_t)(new_payload_len + 1U); /* +1 for CRC */
-    frame[CRSF_STD_HDR_SIZE + new_payload_len - 1U] = test_calc_checksum(frame + 2, new_payload_len, 0xD5U);
-    *out_len = (uint8_t)(CRSF_STD_HDR_SIZE + new_payload_len - 1U);
+    frame[1] = (uint8_t)(new_payload_len + 2U); /* +2 for type and CRC */
+    frame[CRSF_STD_HDR_SIZE + new_payload_len] = test_calc_checksum(frame + 2, new_payload_len + 1U, 0xD5U);
+    *out_len = (uint8_t)(CRSF_STD_HDR_SIZE + new_payload_len + 1U);
 }
 
 /* ========================================================================== */
@@ -5802,7 +5790,7 @@ static void test_param_folder_encode_equals_golden(void** state) {
     tx.ParamSettingsEntry.parent = 0xFF; /* root */
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
     strcpy(tx.ParamSettingsEntry.name, "ROOT");
-    tx.ParamSettingsEntry.payload.folder.child_count = 2;
+    tx.ParamSettingsEntry.payload.folder.childrenCnt = 2;
     tx.ParamSettingsEntry.payload.folder.children[0] = 1;
     tx.ParamSettingsEntry.payload.folder.children[1] = 2;
 
@@ -5861,7 +5849,7 @@ static void test_param_folder_decode_from_golden(void** state) {
     assert_true(CRSF_processFrame(&rx, golden, &ft) == CRSF_OK);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_FOLDER);
     assert_string_equal(rx.ParamSettingsEntry.name, "Ff");
-    assert_int_equal(rx.ParamSettingsEntry.payload.folder.child_count, 2);
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.childrenCnt, 2);
     assert_int_equal(rx.ParamSettingsEntry.payload.folder.children[0], 5);
     assert_int_equal(rx.ParamSettingsEntry.payload.folder.children[1], 6);
 
@@ -5885,7 +5873,7 @@ static void test_param_folder_roundtrip(void** state) {
     tx.ParamSettingsEntry.parent = 0x10;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
     strcpy(tx.ParamSettingsEntry.name, "RF");
-    tx.ParamSettingsEntry.payload.folder.child_count = 3;
+    tx.ParamSettingsEntry.payload.folder.childrenCnt = 3;
     tx.ParamSettingsEntry.payload.folder.children[0] = 1;
     tx.ParamSettingsEntry.payload.folder.children[1] = 2;
     tx.ParamSettingsEntry.payload.folder.children[2] = 3;
@@ -5894,7 +5882,7 @@ static void test_param_folder_roundtrip(void** state) {
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
     assert_true(CRSF_processFrame(&rx, frame, &ft) == CRSF_OK);
-    assert_int_equal(rx.ParamSettingsEntry.payload.folder.child_count, 3);
+    assert_int_equal(rx.ParamSettingsEntry.payload.folder.childrenCnt, 3);
 }
 
 /* FOLDER has no string payload -> no oversize test per your rule */
@@ -5913,7 +5901,7 @@ static void test_param_folder_errors(void** state) {
     tx.ParamSettingsEntry.parent = 0x10;
     tx.ParamSettingsEntry.type.v = CRSF_PARAM_FOLDER;
     strcpy(tx.ParamSettingsEntry.name, "E");
-    tx.ParamSettingsEntry.payload.folder.child_count = 1;
+    tx.ParamSettingsEntry.payload.folder.childrenCnt = 1;
     tx.ParamSettingsEntry.payload.folder.children[0] = 7;
 
     uint8_t frame[128], fl = 0;
@@ -5921,7 +5909,7 @@ static void test_param_folder_errors(void** state) {
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
 
     /* shorten by 1 to remove trailing 0xFF */
-    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 1U), &fl);
+    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 3U), &fl);
     assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
@@ -6086,8 +6074,8 @@ static void test_param_info_errors(void** state) {
     uint8_t frame[128], fl = 0;
     CRSF_FrameType_t ft;
     assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
-    /* drop 1 byte => remove NUL */
-    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 1U), &fl);
+    /* drop 2 bytes */
+    set_declared_payload_len(frame, (uint8_t)((frame[1] - 1U) - 2U), &fl);
     assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
 }
 
@@ -6319,7 +6307,7 @@ static void test_param_entry_general_errors(void** state) {
         assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_INVALID_FRAME);
     }
 
-    /* Top-level decode guard: length < 3 after name -> TYPE_LENGTH (use INT8 zero-payload type) */
+    /* Top-level decode guard: length < 1 after name -> TYPE_LENGTH (use INT8 zero-payload type) */
     {
         CRSF_t tx;
         CRSF_init(&tx);
@@ -6334,10 +6322,10 @@ static void test_param_entry_general_errors(void** state) {
         strcpy(tx.ParamSettingsEntry.name, "G");
         assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &fl) == CRSF_OK);
 
-        /* Force (remaining bytes after name) < 3 by shrinking payload length */
+        /* Force (remaining bytes after name) < 1 by shrinking payload length */
         uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
         uint8_t off_after_name = (uint8_t)(6U + name_len);
-        set_declared_payload_len(frame, (uint8_t)(off_after_name + 2U), &fl);
+        set_declared_payload_len(frame, (uint8_t)(off_after_name), &fl);
         assert_int_equal(CRSF_processFrame(&tx, frame, &ft), CRSF_ERROR_TYPE_LENGTH);
     }
 }

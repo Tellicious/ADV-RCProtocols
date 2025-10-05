@@ -62,9 +62,9 @@ extern "C" {
 #define CRSF_MAX_PARAM_DATA_LEN 32 /* Max parameter value length */
 #endif
 
-//TODO check if this is ok
+//TODO check if this is ok. should be 56
 #ifndef CRSF_MAX_COMMAND_PAYLOAD
-#define CRSF_MAX_COMMAND_PAYLOAD 32 /* Max command payload */
+#define CRSF_MAX_COMMAND_PAYLOAD 56 /* Max command payload */
 #endif
 
 #ifndef CRSF_MAX_COMMAND_PAYLOAD_STRINGS
@@ -637,8 +637,8 @@ typedef union {
     } str; // string
 
     struct {
-        uint8_t children[CRSF_MAX_PARAM_STRING_LENGTH];
-        uint8_t child_count;
+        uint8_t children[CRSF_MAX_PARAM_SETTINGS_PAYLOAD - 1];
+        uint8_t childrenCnt;
     } folder; // folder
 
     struct {

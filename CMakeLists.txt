@@ -16,6 +16,8 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Fetch and build CMocka
     SET(CMAKE_TLS_VERIFY FALSE)
+    
+    #set(FETCHCONTENT_FULLY_DISCONNECTED ON CACHE BOOL "work offline" FORCE)
 
     set(WITH_EXAMPLES OFF CACHE BOOL "CMocka: Build examples" FORCE)
     set(UNIT_TESTING OFF CACHE BOOL "CMocka: Build with unit testing" FORCE)

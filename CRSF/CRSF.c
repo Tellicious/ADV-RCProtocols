@@ -964,11 +964,8 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
         }
 
         case CRSF_PARAM_FOLDER: {
-            if ((in->folder.child_count + 1U) > CRSF_MAX_PARAM_SETTINGS_PAYLOAD) {
-                return CRSF_ERROR_TYPE_LENGTH;
-            }
-            memcpy(payload + off, in->folder.children, in->folder.child_count);
-            off += in->folder.child_count;
+            memcpy(payload + off, in->folder.children, in->folder.childrenCnt);
+            off += in->folder.childrenCnt;
             payload[off++] = 0xFF;
             break;
         }
@@ -991,8 +988,8 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
 
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
 static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntry_t* out, const uint8_t* payload, uint8_t length) {
-    if (length < 3U) {
-        return CRSF_ERROR_TYPE_LENGTH; // need at least parent + type + one name byte
+    if (length < 1U) {
+        return CRSF_ERROR_TYPE_LENGTH;
     }
     uint8_t off = 0;
     switch (type) {
@@ -1004,13 +1001,6 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
         case CRSF_PARAM_UINT32: break;
 
         case CRSF_PARAM_FLOAT: {
-            /*out->f.parent = parent;
-            out->f.hidden = (payload[off++] & 0x80) != 0;
-            uint8_t strLen = strlen((char*)(payload + off)) + 1U;
-            strncpy(out->f.name, (char*)(payload + off), ((strLen > CRSF_MAX_PARAM_STRING_LENGTH) ? CRSF_MAX_PARAM_STRING_LENGTH : strLen) - 1U);
-            out->f.name[CRSF_MAX_PARAM_STRING_LENGTH - 1U] = '\0';
-            off += strLen;*/
-
             if (length < off + 4 * 4 + 1 + 4) {
                 return CRSF_ERROR_TYPE_LENGTH; // cur,min,max,def,prec,step
             }
@@ -1052,7 +1042,7 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
             break;
 
         case CRSF_PARAM_FOLDER: {
-            out->folder.child_count = 0;
+            out->folder.childrenCnt = 0;
             if (off < length) {
                 uint8_t rem = length - off;
                 for (uint8_t ii = 0; ii < rem; ii++) {
@@ -1060,13 +1050,18 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
                         break;
                     }
                     out->folder.children[ii] = payload[off++];
-                    out->folder.child_count++;
+                    out->folder.childrenCnt++;
                 }
             }
             break;
         }
 
-        case CRSF_PARAM_INFO: off += CRSF_unpackString(payload + off, out->info.text, CRSF_MAX_PARAM_STRING_LENGTH, length - off); break;
+        case CRSF_PARAM_INFO:
+            if (length < off + 2U) {
+                return CRSF_ERROR_TYPE_LENGTH;
+            }
+            off += CRSF_unpackString(payload + off, out->info.text, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
+            break;
 
         case CRSF_PARAM_COMMAND:
             if (length < off + 2U) {

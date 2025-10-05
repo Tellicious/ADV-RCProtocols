@@ -33,7 +33,6 @@
 /* END Header */
 
 /* Includes ------------------------------------------------------------------*/
-
 #include "RC.h"
 #include <math.h>
 #include <string.h>
@@ -41,80 +40,22 @@
 #include "basicMath.h"
 #include "droneTypes.h"
 #include "gpio.h"
+#include "iBus.h" // Add new include
 
 #ifdef REMOCON_BLE
 #include "hci.h"
 #endif /* REMOCON_BLE */
 
 /* Macros --------------------------------------------------------------------*/
-#define IBUS_LENGTH           0x20 // Length of iBUS data: 32 bytes
-#define IBUS_COMMAND40        0x40 // Command to set servo or motor speed is always 0x40
-#define IBUS_COMMAND_DISCOVER 0x80 // Command discover sensor (lowest 4 bits are sensor)
-#define IBUS_COMMAND_TYPE     0x90 // Command discover sensor (lowest 4 bits are sensor)
-#define IBUS_COMMAND_VALUE    0xA0 // Command send sensor data (lowest 4 bits are sensor)
-#define IBUS_SENSORS_NUM      5
-
-/* Private typedefs ----------------------------------------------------------*/
-#if defined(REMOCON_IBUS) && defined(configRC_USE_TELEMETRY)
-typedef enum {
-    IBUS_SENSOR_TYPE_NONE = 0x00,
-    IBUS_SENSOR_TYPE_TEMPERATURE = 0x01,
-    IBUS_SENSOR_TYPE_RPM_FLYSKY = 0x02,
-    IBUS_SENSOR_TYPE_EXTERNAL_VOLTAGE = 0x03,
-    IBUS_SENSOR_TYPE_CELL = 0x04,       // Avg Cell voltage
-    IBUS_SENSOR_TYPE_BAT_CURR = 0x05,   // battery current A * 100
-    IBUS_SENSOR_TYPE_FUEL = 0x06,       // remaining battery percentage / mah drawn otherwise or fuel level no unit!
-    IBUS_SENSOR_TYPE_RPM = 0x07,        // throttle value / battery capacity
-    IBUS_SENSOR_TYPE_CMP_HEAD = 0x08,   //Heading  0..360 deg, 0=north 2bytes
-    IBUS_SENSOR_TYPE_CLIMB_RATE = 0x09, //2 bytes m/s *100
-    IBUS_SENSOR_TYPE_COG = 0x0A, //2 bytes  Course over ground(NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. unknown max uint
-    IBUS_SENSOR_TYPE_GPS_STATUS = 0x0B,     //2 bytes
-    IBUS_SENSOR_TYPE_ACC_X = 0x0C,          //2 bytes m/s *100 signed
-    IBUS_SENSOR_TYPE_ACC_Y = 0x0D,          //2 bytes m/s *100 signed
-    IBUS_SENSOR_TYPE_ACC_Z = 0x0E,          //2 bytes m/s *100 signed
-    IBUS_SENSOR_TYPE_ROLL = 0x0F,           //2 bytes deg *100 signed
-    IBUS_SENSOR_TYPE_PITCH = 0x10,          //2 bytes deg *100 signed
-    IBUS_SENSOR_TYPE_YAW = 0x11,            //2 bytes deg *100 signed
-    IBUS_SENSOR_TYPE_VERTICAL_SPEED = 0x12, //2 bytes m/s *100
-    IBUS_SENSOR_TYPE_GROUND_SPEED = 0x13,   //2 bytes m/s *100 different unit than build-in sensor
-    IBUS_SENSOR_TYPE_GPS_DIST = 0x14,       //2 bytes dist from home m unsigned
-    IBUS_SENSOR_TYPE_ARMED = 0x15,          //2 bytes
-    IBUS_SENSOR_TYPE_FLIGHT_MODE = 0x16,    //2 bytes
-    IBUS_SENSOR_TYPE_PRES = 0x41,           // Pressure
-    IBUS_SENSOR_TYPE_ODO1 = 0x7C,           // Odometer1
-    IBUS_SENSOR_TYPE_ODO2 = 0x7D,           // Odometer2
-    IBUS_SENSOR_TYPE_SPE = 0x7E,            // Speed 2bytes km/h
-    IBUS_SENSOR_TYPE_GPS_LAT = 0x80,        //4bytes signed WGS84 in degrees * 1E7
-    IBUS_SENSOR_TYPE_GPS_LON = 0x81,        //4bytes signed WGS84 in degrees * 1E7
-    IBUS_SENSOR_TYPE_GPS_ALT = 0x82,        //4bytes signed!!! GPS alt m*100
-    IBUS_SENSOR_TYPE_ALT = 0x83,            //4bytes signed!!! Alt m*100
-    IBUS_SENSOR_TYPE_ALT_MAX = 0x84,        //4bytes signed MaxAlt m*100
-    IBUS_SENSOR_TYPE_ALT_FLYSKY = 0xF9,     //Altitude 2 bytes signed in m
-    IBUS_SENSOR_TYPE_UNKNOWN = 0xFF
-} iBusSensorType_t;
-
-typedef struct {
-    iBusSensorType_t type; // sensor type
-    uint8_t length;        // data length for defined sensor (can be 2 or 4)
-    int32_t value;
-} iBusSensor_t;
-#endif /* defined(REMOCON_IBUS) && defined(configRC_USE_TELEMETRY) */
-
-/* Extern variables ----------------------------------------------------------*/
-
-/* Global R/C data */
-#if defined(REMOCON_BLE)
-extern uint8_t RCRXBufferBLE[6];
-extern int RCConnectedBLE;
-#elif defined(REMOCON_IBUS)
-extern UART_HandleTypeDef huart2;
-extern DMA_HandleTypeDef hdma_usart2_rx;
-#endif
 
 /* Private variables ---------------------------------------------------------*/
-
-#if defined(REMOCON_PWM) || defined(REMOCON_PPM) || defined(REMOCON_IBUS)
+#if !defined(REMOCON_BLE)
 static int16_t _RCCenter[4] = {0};
+#endif
+
+#ifdef REMOCON_IBUS
+static iBus_t _iBus; // Add iBus instance
+static uint8_t _RCRXBufferiBUS[32];
 #endif
 
 /* Maximum values */
@@ -184,80 +125,28 @@ static uint8_t RC_iBUSChecksum(uint8_t length) {
 
 /* Read input from iBUS receiver */
 static void RC_readiBUS(RC_t* RC) {
-    uint8_t channel = 0;
-    //if (_RCRXBufferiBUS[0] == IBUS_LENGTH && (RC_iBUSChecksum() == 0)) {
-    if (RC_iBUSChecksum(_RCRXBufferiBUS[0]) == 0) {
-        if ((_RCRXBufferiBUS[0] == IBUS_LENGTH) && (_RCRXBufferiBUS[1] == IBUS_COMMAND40)) {
-            memcpy(&RC->cmd, &_RCRXBufferiBUS[2], 2 * configRC_IBUS_PPM_CHANNELS);
-            for (channel = 0; channel < configRC_IBUS_PPM_CHANNELS; channel++) {
-                RC->cmd[channel] <<= 2; // multiply by 4 to get to same values as with PWM / PPM
-                if (channel == 2) {
-                    RC->cmd[2] = (RC->cmd[2] > configRC_THR_BOTTOM) ? (RC->cmd[2] - configRC_THR_BOTTOM) : 0;
-                } else if (channel < 4) {
+    if (iBus_processFrame(&_iBus, _RCRXBufferiBUS) == IBUS_OK) {
+        memcpy(RC->cmd, _iBus.channels, configRC_IBUS_PPM_CHANNELS * sizeof(uint16_t));
+        for (uint8_t channel = 0; channel < configRC_IBUS_PPM_CHANNELS; channel++) {
+            //TODO is cast to uint32_t necessary?
+            RC->cmd[channel] = _iBus.channels[channel] << 2; // multiply by 4 to match PWM/PPM values
+            if (channel == 2) {
+                RC->cmd[2] = (RC->cmd[2] > configRC_THR_BOTTOM) ? (RC->cmd[2] - configRC_THR_BOTTOM) : 0;
+            } else if (channel < 4) {
 #ifdef configRC_AUTO_CENTERING
-                    // Average 10 RC data during connection as the center of RC
-                    if (RC->initialized == RC_NOT_INIT) {
-                        RC_autoCentering(RC, channel, RC->cmd[channel]);
-                    }
-                    RC->cmd[channel] -= _RCCenter[channel];
+                // Average 10 RC data during connection as the center of RC
+                if (RC->initialized == RC_NOT_INIT) {
+                    RC_autoCentering(RC, channel, RC->cmd[channel]);
+                }
+                RC->cmd[channel] -= _RCCenter[channel];
 #endif
-                }
             }
         }
-#ifdef configRC_USE_TELEMETRY
-        else {
-            uint8_t addr = _RCRXBufferiBUS[1] & 0x0F;
-            if (addr <= IBUS_SENSORS_NUM) {
-                uint8_t txBuffer[8] = {0};
-                uint16_t cksum;
-                uint8_t txSize = 0;
-                switch (_RCRXBufferiBUS[1] & 0xF0) {
-                    case IBUS_COMMAND_DISCOVER: // 0x80, discover sensor
-                        txSize = 4;
-                        txBuffer[0] = 0x04;
-                        txBuffer[1] = IBUS_COMMAND_DISCOVER + addr;
-                        cksum = 0xFFFF - txBuffer[0] - txBuffer[1];
-                        break;
-                    case IBUS_COMMAND_TYPE: // 0x90, send sensor type
-                        txSize = 6;
-                        txBuffer[0] = 0x06;
-                        txBuffer[1] = IBUS_COMMAND_TYPE + addr;
-                        txBuffer[2] = _RCiBUSsensors[addr - 1].type;
-                        txBuffer[3] = _RCiBUSsensors[addr - 1].length;
-                        cksum = 0xFFFF - txBuffer[0] - txBuffer[1] - txBuffer[2] - txBuffer[3];
-                        break;
-                    case IBUS_COMMAND_VALUE: // 0xA0, send sensor data
-                        txSize = 6;
-                        txBuffer[0] = 0x04 + _RCiBUSsensors[addr - 1].length;
-                        txBuffer[1] = IBUS_COMMAND_VALUE + addr;
-                        txBuffer[2] = _RCiBUSsensors[addr - 1].value & 0xFF;
-                        txBuffer[3] = (_RCiBUSsensors[addr - 1].value >> 8) & 0xFF;
-                        cksum = 0xFFFF - txBuffer[0] - txBuffer[1] - txBuffer[2] - txBuffer[3];
-                        if (_RCiBUSsensors[addr - 1].length == 4) {
-                            txSize += 2;
-                            txBuffer[4] = (_RCiBUSsensors[addr - 1].value >> 16) & 0xFF;
-                            txBuffer[5] = (_RCiBUSsensors[addr - 1].value >> 24) & 0xFF;
-                            cksum += -txBuffer[4] - txBuffer[5];
-                        }
-                        break;
-                    default:
-                        addr = 0; // unknown command, prevent sending chksum
-                        break;
-                }
-                if (addr > 0) {
-                    txBuffer[txSize - 2] = cksum & 0xFF;
-                    txBuffer[txSize - 1] = cksum >> 8;
-                    HAL_UART_Transmit(&huart2, txBuffer, txSize, 0xFFFF);
-                }
-            }
-        }
-#endif /* configRC_USE_TELEMETRY */
     } else {
         HAL_UART_DMAStop(&huart2);
-        memset(_RCRXBufferiBUS, 0x00, IBUS_LENGTH);
+        memset(_RCRXBufferiBUS, 0x00, IBUS_SERVO_FRAME_LEN);
         HAL_DMA_Init(&hdma_usart2_rx);
-        //hdma_usart2_rx.Instance->M0AR = _RCRXBufferiBUS;
-        HAL_UART_Receive_DMA(&huart2, _RCRXBufferiBUS, IBUS_LENGTH);
+        HAL_UART_Receive_DMA(&huart2, _RCRXBufferiBUS, IBUS_SERVO_FRAME_LEN);
     }
 }
 #endif
@@ -293,36 +182,16 @@ void RC_init(RC_t* RC) {
 #endif
 
 #ifdef REMOCON_IBUS
+    iBus_init(&_iBus); // Initialize iBus decoder
 #ifdef configRC_USE_TELEMETRY
-    /* Configure iBUS sensors */
-
-    /* Remaining battery percentage */
-    _RCiBUSsensors[0].type = IBUS_SENSOR_TYPE_FUEL;
-    _RCiBUSsensors[0].length = 2;
-    _RCiBUSsensors[0].value = 0;
-
-    /* 2 bytes m/s * 100 */
-    _RCiBUSsensors[1].type = IBUS_SENSOR_TYPE_CLIMB_RATE;
-    _RCiBUSsensors[1].length = 2;
-    _RCiBUSsensors[1].value = 0;
-
-    /* 2 bytes m signed */
-    _RCiBUSsensors[2].type = IBUS_SENSOR_TYPE_ALT_FLYSKY;
-    _RCiBUSsensors[2].length = 2;
-    _RCiBUSsensors[2].value = 0;
-
-    /* 2 bytes deg * 100 signed */
-    _RCiBUSsensors[3].type = IBUS_SENSOR_TYPE_PITCH;
-    _RCiBUSsensors[3].length = 2;
-    _RCiBUSsensors[3].value = 0;
-
-    /* 2 bytes deg * 100 signed */
-    _RCiBUSsensors[4].type = IBUS_SENSOR_TYPE_ROLL;
-    _RCiBUSsensors[4].length = 2;
-    _RCiBUSsensors[4].value = 0;
-
-#endif /* configRC_USE_TELEMETRY */
-    HAL_UART_Receive_DMA(&huart2, _RCRXBufferiBUS, IBUS_LENGTH);
+    // Register sensors
+    iBus_registerSensor(&_iBus, IBUS_MEAS_TYPE_FUEL);       // Battery %
+    iBus_registerSensor(&_iBus, IBUS_MEAS_TYPE_CLIMB);      // Climb rate
+    iBus_registerSensor(&_iBus, IBUS_MEAS_TYPE_ALT_FLYSKY); // Altitude
+    iBus_registerSensor(&_iBus, IBUS_MEAS_TYPE_PITCH);      // Pitch
+    iBus_registerSensor(&_iBus, IBUS_MEAS_TYPE_ROLL);       // Roll
+#endif
+    HAL_UART_Receive_DMA(&huart2, _RCRXBufferiBUS, IBUS_SERVO_FRAME_LEN);
 #endif /* REMOCON_IBUS */
 
 #if defined(REMOCON_BLE) || !defined(configRC_AUTO_CENTERING)
@@ -475,14 +344,13 @@ void RC_parseCommands(RC_t* RC) {
 
 #if defined(REMOCON_IBUS) && defined(configRC_USE_TELEMETRY)
 void RC_iBUSUpdateSensors(sensors_t sensors, AHRS_State_t ahrs) {
-    _RCiBUSsensors[0].value = CONSTRAIN((uint16_t)((float)(sensors.VBatt - 3.7f) * 2000.0f), 0, 1000);
+    iBus_writeSensor(&_iBus, IBUS_MEAS_TYPE_FUEL, (uint16_t)((float)(sensors.VBatt - 3.7f) * 2000.0f));
 #ifdef configAUTO_ALTITUDE_CONTROL
-    _RCiBUSsensors[1].value = (uint16_t)(ahrs.altState.RoC * 100.f);
-    _RCiBUSsensors[2].value = (uint16_t)ahrs.altState.alt;
-#endif /* configAUTO_ALTITUDE_CONTROL */
-    _RCiBUSsensors[3].value = (uint16_t)(ahrs.e.x * 100.f);
-    _RCiBUSsensors[4].value = (uint16_t)(ahrs.e.y * 100.f);
-    return;
+    iBus_writeSensor(&_iBus, IBUS_MEAS_TYPE_CLIMB, (int16_t)(ahrs.altState.RoC * 100.f));
+    iBus_writeSensor(&_iBus, IBUS_MEAS_TYPE_ALT_FLYSKY, (int16_t)ahrs.altState.alt);
+#endif
+    iBus_writeSensor(&_iBus, IBUS_MEAS_TYPE_PITCH, (int16_t)(ahrs.e.x * 100.f));
+    iBus_writeSensor(&_iBus, IBUS_MEAS_TYPE_ROLL, (int16_t)(ahrs.e.y * 100.f));
 }
 #endif /* defined(REMOCON_IBUS) && defined(configRC_USE_TELEMETRY) */
 
@@ -490,11 +358,18 @@ void RC_iBUSUpdateSensors(sensors_t sensors, AHRS_State_t ahrs) {
 #if defined(REMOCON_IBUS)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
     if (huart == &huart2) {
+#ifdef configRC_USE_TELEMETRY
+        uint8_t txbuf[32], txlen;
+        if (iBus_handleTelemetryFromISR(&_iBus, _RCRXBufferiBUS, txbuf, &txlen) == IBUS_TEL_REPLY_READY) {
+            HAL_UART_Transmit(&huart2, txbuf, txlen, 0xFFFF);
+        }
+#endif
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
+
 #elif defined(REMOCON_PWM)
 /* Read PWM input from RC */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
