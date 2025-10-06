@@ -62,7 +62,6 @@ extern "C" {
 #define CRSF_MAX_PARAM_DATA_LEN 32 /* Max parameter value length */
 #endif
 
-//TODO check if this is ok. should be 56
 #ifndef CRSF_MAX_COMMAND_PAYLOAD
 #define CRSF_MAX_COMMAND_PAYLOAD 56 /* Max command payload */
 #endif
