@@ -882,20 +882,20 @@ static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* 
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
 static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
-    uint32_t bitbuf = 0;
-    uint8_t bitcnt = 0;
+    uint32_t bitBuf = 0;
+    uint8_t bitCnt = 0;
     uint8_t* p = payload;
 
     for (uint8_t ii = 0; ii < CRSF_RC_CHANNELS; ii++) {
         // Map 1000..2000us <-> 172..1811 (11-bit)
         uint16_t val = CRSF_RC_US_TO_TICKS(channels[ii]);
-        bitbuf |= ((uint32_t)val & 0x7FFU) << bitcnt;
-        bitcnt += 11;
+        bitBuf |= ((uint32_t)val & 0x7FFU) << bitCnt;
+        bitCnt += 11;
 
-        while (bitcnt >= 8) {
-            *p++ = (uint8_t)bitbuf;
-            bitbuf >>= 8;
-            bitcnt -= 8;
+        while (bitCnt >= 8) {
+            *p++ = (uint8_t)bitBuf;
+            bitBuf >>= 8;
+            bitCnt -= 8;
         }
     }
 }
@@ -903,19 +903,19 @@ static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
 static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
-    uint32_t bitbuf = 0;
-    uint8_t bitcnt = 0;
+    uint32_t bitBuf = 0;
+    uint8_t bitCnt = 0;
     const uint8_t* p = payload;
 
     for (uint8_t ii = 0; ii < CRSF_RC_CHANNELS; ii++) {
-        while (bitcnt < 11U) {
-            bitbuf |= ((uint32_t)(*p++)) << bitcnt;
-            bitcnt += 8U;
+        while (bitCnt < 11U) {
+            bitBuf |= ((uint32_t)(*p++)) << bitCnt;
+            bitCnt += 8U;
         }
         // Map 1000..2000us <-> 172..1811 (11-bit)
-        channels[ii] = CRSF_RC_TICKS_TO_US((uint16_t)(bitbuf & 0x7FFU));
-        bitbuf >>= 11U;
-        bitcnt -= 11U;
+        channels[ii] = CRSF_RC_TICKS_TO_US((uint16_t)(bitBuf & 0x7FFU));
+        bitBuf >>= 11U;
+        bitCnt -= 11U;
     }
 }
 #endif
