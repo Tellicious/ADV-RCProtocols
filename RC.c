@@ -40,11 +40,10 @@
 #include "basicMath.h"
 #include "droneTypes.h"
 #include "gpio.h"
-#include "iBus.h" // Add new include
-
-#ifdef REMOCON_BLE
-#include "hci.h"
-#endif /* REMOCON_BLE */
+#include "iBus.h"
+#ifdef REMOCON_CRSF
+#include "crsf.h"
+#endif
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -58,6 +57,11 @@ static iBus_t _iBus; // Add iBus instance
 static uint8_t _RCRXBufferiBUS[32];
 #endif
 
+#ifdef REMOCON_CRSF
+static CRSF_t _CRSF;
+static uint8_t _RCRXBufferCRSF[CRSF_FRAME_SIZE_MAX];
+#endif
+
 /* Maximum values */
 static const float _RCMaxPitchRadNorm = DEG2RAD(configPITCH_MAX_DEG) / configRC_FULLSCALE;
 static const float _RCMaxRollRadNorm = DEG2RAD(configROLL_MAX_DEG) / configRC_FULLSCALE;
@@ -65,13 +69,6 @@ static const float _RCMaxRollRadNorm = DEG2RAD(configROLL_MAX_DEG) / configRC_FU
 const float _RCMaxYawRadSNorm = DEG2RAD(configYAW_MAX_DEG_S) / configRC_FULLSCALE;
 #else
 const float _RCMaxYawRadStep = DEG2RAD(configYAW_MAX_DEG_STEP);
-#endif
-
-#ifdef REMOCON_IBUS
-#ifdef configRC_USE_TELEMETRY
-iBusSensor_t _RCiBUSsensors[IBUS_SENSORS_NUM];
-#endif /* configRC_USE_TELEMETRY */
-static uint8_t _RCRXBufferiBUS[IBUS_LENGTH] = {0};
 #endif
 
 /* Private functions ---------------------------------------------------------*/
@@ -151,6 +148,31 @@ static void RC_readiBUS(RC_t* RC) {
 }
 #endif
 
+#ifdef REMOCON_CRSF
+/* Read input from CRSF receiver */
+static void RC_readCRSF(RC_t* RC) {
+    if (CRSF_processFrame(&_CRSF, _RCRXBufferCRSF) == CRSF_SUCCESS) {
+        for (uint8_t channel = 0; channel < 4; channel++) {
+            if (channel == 2) {
+                RC->cmd[2] = (RC->cmd[2] > configRC_THR_BOTTOM) ? (RC->cmd[2] - configRC_THR_BOTTOM) : 0;
+            } else {
+#ifdef configRC_AUTO_CENTERING
+                if (RC->initialized == RC_NOT_INIT) {
+                    RC_autoCentering(RC, channel, RC->cmd[channel]);
+                }
+                RC->cmd[channel] -= _RCCenter[channel];
+#endif
+            }
+        }
+    } else {
+        HAL_UART_DMAStop(&huart2);
+        memset(_RCRXBufferCRSF, 0x00, CRSF_FRAME_SIZE_MAX);
+        HAL_DMA_Init(&hdma_usart2_rx);
+        HAL_UART_Receive_DMA(&huart2, _RCRXBufferCRSF, CRSF_FRAME_SIZE_MAX);
+    }
+}
+#endif
+
 /* Functions -----------------------------------------------------------------*/
 void RC_init(RC_t* RC) {
     /* Init R/C global variables */
@@ -194,6 +216,11 @@ void RC_init(RC_t* RC) {
     HAL_UART_Receive_DMA(&huart2, _RCRXBufferiBUS, IBUS_SERVO_FRAME_LEN);
 #endif /* REMOCON_IBUS */
 
+#ifdef REMOCON_CRSF
+    CRSF_init(&_CRSF);
+    HAL_UART_Receive_DMA(&huart2, _RCRXBufferCRSF, CRSF_FRAME_SIZE_MAX);
+#endif
+
 #if defined(REMOCON_BLE) || !defined(configRC_AUTO_CENTERING)
     RC->initialized = RC_INIT;
 #endif
@@ -212,6 +239,8 @@ void RC_read(RC_t* RC) {
     RC_readBLE(RC);
 #elif defined(REMOCON_IBUS)
     RC_readiBUS(RC);
+#elif defined(REMOCON_CRSF)
+    RC_readCRSF(RC);
 #endif
 }
 
@@ -364,6 +393,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
             HAL_UART_Transmit(&huart2, txbuf, txlen, 0xFFFF);
         }
 #endif
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+}
+
+#elif defined(REMOCON_CRSF)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart) {
+    if (huart == &huart2) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
