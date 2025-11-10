@@ -78,6 +78,12 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
         add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
     endfunction()
 
+    #PWM tests
+    # RX minimal
+    add_protocol_test(PWM test_PWM_rx_minimal "PWM_ENABLE_STATS=0;PWM_ENABLE_FRESHNESS_CHECK=0")
+    # RX complete
+    add_protocol_test(PWM test_PWM_rx_complete "PWM_ENABLE_STATS=1;PWM_ENABLE_FRESHNESS_CHECK=1")
+    
     #PPM tests
     # RX minimal
     add_protocol_test(PPM test_PPM_rx_minimal "PPM_ENABLE_STATS=0;PPM_ENABLE_FRESHNESS_CHECK=0")
@@ -132,6 +138,7 @@ else()
     #
     set (libName RCProtocols)
 
+    option(BUILD_PWM "Build the PWM library" ON)
     option(BUILD_PPM "Build the PPM library" ON)
     option(BUILD_SYMAX "Build the SymaX library" ON)
     option(BUILD_IBUS "Build the iBus library" ON)
@@ -139,6 +146,9 @@ else()
 
     # Setup include directories    
     set(${libName}_inc "")
+    if(BUILD_PWM)
+        list(APPEND ${libName}_inc ${CMAKE_CURRENT_LIST_DIR}/PWM/)
+    endif()
     if(BUILD_PPM)
         list(APPEND ${libName}_inc ${CMAKE_CURRENT_LIST_DIR}/PPM/)
     endif()
@@ -154,6 +164,9 @@ else()
 
     # Setup source directories
     set(${libName}_src "")
+    if(BUILD_PWM)
+        list(APPEND ${libName}_src ${CMAKE_CURRENT_LIST_DIR}/PWM/PWM.c)
+    endif()
     if(BUILD_PPM)
         list(APPEND ${libName}_src ${CMAKE_CURRENT_LIST_DIR}/PPM/PPM.c)
     endif()

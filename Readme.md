@@ -23,13 +23,21 @@
 ## Library configuration:
 Configuration options passed via `RCProtocols_COMPILE_DEFS` CMake variable
 
+### PWM:
+| Parameter                    | Type | Options/Values   | Default Value | Description                                   |
+| ---------------------------- | ---- | ---------------- | ------------- | --------------------------------------------- |
+| `PWM_ENABLE_STATS`           | Bool | `1`,`0`          | `0`           | Enable protocol statistics                    |
+| `PWM_ENABLE_FRESHNESS_CHECK` | Bool | `1`,`0`          | `0`           | Enable packet freshness check                 |
+| `PWM_MAX_CHANNELS`           | Int  | Positive integer | `4`           | Max number of channels decoded                |
+| `PWM_SAMPLES_NUM`            | Int  | Positive integer | `2`           | Number of samples to be averaged, per channel |
+
 ### PPM:
-| Parameter                    | Type | Options/Values | Default Value | Description                         |
-| ---------------------------- | ---- | -------------- | ------------- | ----------------------------------- |
-| `PPM_ENABLE_STATS`           | Bool | `1`,`0`        | `0`           | Enable protocol statistics          |
-| `PPM_ENABLE_FRESHNESS_CHECK` | Bool | `1`,`0`        | `0`           | Enable packet freshness check       |
-| `PPM_MAX_CHANNELS`           | Int  | Any integer    | `8`           | Max number of channels decoded      |
-| `PPM_PACKET_END_US`          | Int  | Any integer    | `2500`        | Duration of packet end pulse, in us |
+| Parameter                    | Type | Options/Values   | Default Value | Description                         |
+| ---------------------------- | ---- | ---------------- | ------------- | ----------------------------------- |
+| `PPM_ENABLE_STATS`           | Bool | `1`,`0`          | `0`           | Enable protocol statistics          |
+| `PPM_ENABLE_FRESHNESS_CHECK` | Bool | `1`,`0`          | `0`           | Enable packet freshness check       |
+| `PPM_MAX_CHANNELS`           | Int  | Positive integer | `8`           | Max number of channels decoded      |
+| `PPM_PACKET_END_US`          | Int  | Positive integer | `2500`        | Duration of packet end pulse, in us |
 
 ### SymaX:
 | Parameter                      | Type   | Options/Values        | Default Value                                         | Description                                                 |
