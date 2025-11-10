@@ -6,6 +6,7 @@
 [![Codecov](https://codecov.io/gh/Tellicious/ADV-RCProtocols/graph/badge.svg?token=OJG3076HXJ)](https://codecov.io/gh/Tellicious/ADV-RCProtocols)
 
 ## Libraries included:
+- ***PWM:*** PWM protocol decoder
 - ***PPM:*** PPM protocol decoder
 - ***SymaX:*** SymaX protocol decoder/encoder
 - ***iBus:*** FlySky iBUS (AFHDS 2A) protocol decoder with full support for telemetry
@@ -95,11 +96,110 @@ Configuration options passed via `RCProtocols_COMPILE_DEFS` CMake variable
 | `CRSF_TEL_ENABLE_MAVLINK_ENVELOPE`   | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Envelope frame encoding / decoding                 |
 | `CRSF_TEL_ENABLE_MAVLINK_STATUS`     | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Status frame encoding / decoding                   |
 
+## Usage Example
+
+### PWM
+```cpp
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+    PWM_Status_t status = PWM_WAIT;
+    switch (htim->Channel) {
+        case HAL_TIM_ACTIVE_CHANNEL_1: status = PWM_processPacket(&_PWM, 0, HAL_GPIO_ReadPin(RC_CHANNEL1_GPIO_Port, RC_CHANNEL1_Pin), htim->Instance->CCR1); break;
+        case HAL_TIM_ACTIVE_CHANNEL_2: status = PWM_processPacket(&_PWM, 1, HAL_GPIO_ReadPin(RC_CHANNEL2_GPIO_Port, RC_CHANNEL2_Pin), htim->Instance->CCR2); break;
+        case HAL_TIM_ACTIVE_CHANNEL_3: status = PWM_processPacket(&_PWM, 2, HAL_GPIO_ReadPin(RC_CHANNEL3_GPIO_Port, RC_CHANNEL3_Pin), htim->Instance->CCR3); break;
+        case HAL_TIM_ACTIVE_CHANNEL_4: status = PWM_processPacket(&_PWM, 3, HAL_GPIO_ReadPin(RC_CHANNEL4_GPIO_Port, RC_CHANNEL4_Pin), htim->Instance->CCR4); break;
+        default: break;
+    }
+
+    if (status == PWM_OK) {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken); //Process received date
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return;
+    }
+}
+```
+
+### PPM
+```cpp
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
+    if (PPM_processPacket(&_PPM, htim->Instance->CCR1) == PPM_OK) {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken); //Process received date
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return;
+    }
+}
+```
+
+### iBus
+```cpp
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size) {
+    if (huart == &huart2) {
+        uint8_t txbuf[32], txlen;
+        if (iBus_handleTelemetryFromISR(&_iBus, _RCRXBufferiBUS, txbuf, &txlen) == IBUS_TEL_REPLY_READY) {
+            HAL_UART_Transmit(&huart2, txbuf, txlen, 0xFFFF);
+        }
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+}
+```
+```cpp
+utilsStatus_t RC_readHW(RC_t* RC) {
+    utilsStatus_t status = UTILS_STATUS_SUCCESS;
+    if (iBus_processFrame(&_iBus, _RCRXBufferiBUS) == IBUS_OK) {
+        memcpy(RC->cmd, _iBus.channels, configRC_CHANNELS * sizeof(uint16_t));
+    } else {
+        HAL_UART_DMAStop(&huart2);
+        memset(_RCRXBufferiBUS, 0x00, IBUS_SERVO_FRAME_LEN);
+        HAL_DMA_Init(&hdma_usart2_rx);
+        status = UTILS_STATUS_ERROR;
+    }
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, _RCRXBufferiBUS, IBUS_SERVO_FRAME_LEN);
+    __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
+    return status;
+}
+```
+
+
+### CRSF
+```cpp
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size) {
+    if (huart == &huart2) {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+}
+```
+```cpp
+utilsStatus_t RC_readHW(RC_t* RC) {
+    utilsStatus_t status = UTILS_STATUS_SUCCESS;
+#elif defined(REMOCON_CRSF)
+    CRSF_FrameType_t frameType;
+    if (CRSF_processFrame(&_CRSF, _RCRXBufferCRSF, &frameType) == CRSF_OK) {
+        if (frameType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) {
+            memcpy(RC->cmd, _CRSF.RC.channels, configRC_CHANNELS * sizeof(uint16_t));
+        } else {
+            status = UTILS_STATUS_WARNING; // Frame processed but not RC
+        }
+    } else {
+        HAL_UART_DMAStop(&huart2);
+        memset(_RCRXBufferCRSF, 0x00, CRSF_MAX_FRAME_LEN);
+        status = UTILS_STATUS_ERROR;
+    }
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, _RCRXBufferCRSF, CRSF_MAX_FRAME_LEN);
+    __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
+    return status;
+}
+```
 
 
 ## Tests coverage:
 | Object | Coverage |
 | ------ | -------: |
+| PWM    |     100% |
 | PPM    |     100% |
 | SymaX  |     100% |
 | iBus   |     100% |
