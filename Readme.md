@@ -6,12 +6,31 @@
 [![Codecov](https://codecov.io/gh/Tellicious/ADV-RCProtocols/graph/badge.svg?token=OJG3076HXJ)](https://codecov.io/gh/Tellicious/ADV-RCProtocols)
 
 ## Libraries included:
+- ***PPM:*** PPM protocol decoder
 - ***SymaX:*** SymaX protocol decoder/encoder
 - ***iBus:*** FlySky iBUS (AFHDS 2A) protocol decoder with full support for telemetry
 - ***CRSF:*** CRSF protocol decoder/encoder will full support for all frame types specified by TBS specs
 
+## Build configuration:
+### CMake build options:
+| Parameter     | Default Value | Description             |
+| ------------- | ------------- | ----------------------- |
+| `BUILD_PPM`   | ON            | Build the PPM library   |
+| `BUILD_SYMAX` | ON            | Build the SymaX library |
+| `BUILD_IBUS`  | ON            | Build the iBus library  |
+| `BUILD_CRSF`  | ON            | Build the CRSF library  |
+
 ## Library configuration:
-  
+Configuration options passed via `RCProtocols_COMPILE_DEFS` CMake variable
+
+### PPM:
+| Parameter                    | Type | Options/Values | Default Value | Description                         |
+| ---------------------------- | ---- | -------------- | ------------- | ----------------------------------- |
+| `PPM_ENABLE_STATS`           | Bool | `1`,`0`        | `0`           | Enable protocol statistics          |
+| `PPM_ENABLE_FRESHNESS_CHECK` | Bool | `1`,`0`        | `0`           | Enable packet freshness check       |
+| `PPM_MAX_CHANNELS`           | Int  | Any integer    | `8`           | Max number of channels decoded      |
+| `PPM_PACKET_END_US`          | Int  | Any integer    | `2500`        | Duration of packet end pulse, in us |
+
 ### SymaX:
 | Parameter                      | Type   | Options/Values        | Default Value                                         | Description                                                 |
 | ------------------------------ | ------ | --------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
@@ -73,6 +92,7 @@
 ## Tests coverage:
 | Object | Coverage |
 | ------ | -------: |
+| PPM    |     100% |
 | SymaX  |     100% |
 | iBus   |     100% |
 | CRSF   |     100% |
