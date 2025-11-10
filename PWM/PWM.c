@@ -87,7 +87,8 @@ PWM_Status_t PWM_processPacket(PWM_t* PWM, uint8_t channel, uint8_t rising, uint
         if (PWM->_fallTimer[channel] > PWM->_riseTimer[channel]) {
             PWM->channels[channel] = (PWM->_fallTimer[channel] - PWM->_riseTimer[channel]) * PWM->_freqMultiplier / PWM_SAMPLES_NUM;
         } else {
-            PWM->channels[channel] = (PWM->_fallTimer[channel] - PWM->_riseTimer[channel] + PWM->_timerAutoReload + 1U) * PWM->_freqMultiplier / PWM_SAMPLES_NUM;
+            PWM->channels[channel] =
+                (PWM->_fallTimer[channel] - PWM->_riseTimer[channel] + PWM->_timerAutoReload + 1U) * PWM->_freqMultiplier / PWM_SAMPLES_NUM;
         }
         PWM->_riseTimer[channel] = 0;
         PWM->_fallTimer[channel] = 0;
