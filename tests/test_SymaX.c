@@ -44,8 +44,7 @@
 #include "SymaX.h"
 
 /* Test Constants and Helpers */
-#define SYMAX_PREBIND_PACKET_EXPECTED                                                                                                                          \
-    { 0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF }
+#define SYMAX_PREBIND_PACKET_EXPECTED {0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF}
 
 #if SYMAX_ENABLE_FRESHNESS_CHECK
 static uint32_t mock_timestamp = 12345;
@@ -607,7 +606,7 @@ static void test_buildPacket_data_phase_basic(void** state) {
     st.channelsData.ail = -90;
 
     uint8_t packet[SYMAX_PACKET_SIZE] = {0};
-    assert_int_equal(SymaX_buildPacket(&st, packet), SYMAX_OK);
+    assert_int_equal(SymaX_buildPacket(&st, packet), SYMAX_SUCCESS);
 
     // Verify basic structure
     assert_int_equal(packet[5], 0xC0); // Rate control always high
@@ -835,7 +834,7 @@ static void test_processPacket_checksum_validation(void** state) {
 
     // Test valid checksum
     packet[9] = test_calc_checksum(packet);
-    assert_int_equal(SymaX_processPacket(&st, packet), SYMAX_OK);
+    assert_int_equal(SymaX_processPacket(&st, packet), SYMAX_SUCCESS);
 }
 
 #if !SYMAX_SKIP_PREBIND
@@ -986,7 +985,7 @@ static void test_processPacket_data_phase_basic(void** state) {
     uint8_t data_packet[SYMAX_PACKET_SIZE];
     create_data_packet(data_packet, 50, -60, 70, -80);
 
-    assert_int_equal(SymaX_processPacket(&st, data_packet), SYMAX_OK);
+    assert_int_equal(SymaX_processPacket(&st, data_packet), SYMAX_SUCCESS);
 
     // Verify channel data was extracted
     assert_int_equal(st.channelsData.thr, 50);
@@ -1016,7 +1015,7 @@ static void test_processPacket_data_sign_bit_handling(void** state) {
                                               0x00, 0xC0, 0x00, 0x00, 0x00, 0x00};
     data_packet[9] = test_calc_checksum(data_packet);
 
-    assert_int_equal(SymaX_processPacket(&st, data_packet), SYMAX_OK);
+    assert_int_equal(SymaX_processPacket(&st, data_packet), SYMAX_SUCCESS);
 
     assert_int_equal(st.channelsData.thr, 138);
     assert_int_equal(st.channelsData.ele, 20);  // No sign bit -> positive
@@ -1084,7 +1083,7 @@ static void test_processPacket_flags_extraction(void** state) {
                                                0x00,        0x00};
     flags_packet[9] = test_calc_checksum(flags_packet);
 
-    assert_int_equal(SymaX_processPacket(&st, flags_packet), SYMAX_OK);
+    assert_int_equal(SymaX_processPacket(&st, flags_packet), SYMAX_SUCCESS);
 
     assert_int_equal(st.flags.video, 1);
     assert_int_equal(st.flags.picture, 1);
@@ -1169,7 +1168,7 @@ static void test_processPacket_trim_data(void** state) {
                                          0x00,        0x00};
     packet[9] = test_calc_checksum(packet);
 
-    assert_int_equal(SymaX_processPacket(&st, packet), SYMAX_OK);
+    assert_int_equal(SymaX_processPacket(&st, packet), SYMAX_SUCCESS);
 
     // Verify channels with trim extension
     assert_int_equal(st.channelsData.thr, 0);   // No trim for throttle
@@ -1820,7 +1819,7 @@ static void test_complete_tx_rx_binding_flow(void** state) {
 #endif
 
     // Phase 2: TX sends bind packets, RX processes them
-    SymaX_Status_t rx_status = SYMAX_OK;
+    SymaX_Status_t rx_status = SYMAX_SUCCESS;
     while (tx.link.phase == SYMAX_BIND_IN_PROGRESS && rx_status != SYMAX_BIND_COMPLETE) {
         SymaX_buildPacket(&tx, packet);
         rx_status = SymaX_processPacket(&rx, packet);
@@ -1888,8 +1887,8 @@ static void test_encode_decode_roundtrip_comprehensive(void** state) {
         tx.channelsData.ail = test_values[i];
 
         uint8_t packet[SYMAX_PACKET_SIZE];
-        assert_int_equal(SymaX_buildPacket(&tx, packet), SYMAX_OK);
-        assert_int_equal(SymaX_processPacket(&rx, packet), SYMAX_OK);
+        assert_int_equal(SymaX_buildPacket(&tx, packet), SYMAX_SUCCESS);
+        assert_int_equal(SymaX_processPacket(&rx, packet), SYMAX_SUCCESS);
 
         assert_int_equal(rx.channelsData.thr, tx.channelsData.thr);
         if (test_values[i] < SYMAX_CHANNEL_MIN) {
@@ -2050,7 +2049,7 @@ static void test_complete_protocol_stress_test(void** state) {
 #endif
 
         SymaX_buildPacket(&tx, packet);
-        assert_int_equal(SymaX_processPacket(&rx, packet), SYMAX_OK);
+        assert_int_equal(SymaX_processPacket(&rx, packet), SYMAX_SUCCESS);
 
         // Verify data integrity
         assert_int_equal(rx.channelsData.thr, abs(test_patterns[pattern_idx][0]));

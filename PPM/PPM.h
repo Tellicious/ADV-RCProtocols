@@ -67,7 +67,7 @@ extern "C" {
  * Return values
  */
 typedef enum {
-    PPM_OK = 0,             /** Operation completed successfully */
+    PPM_SUCCESS = 0,        /** Operation completed successfully */
     PPM_ERROR_NULL_POINTER, /** Null pointer provided */
     PPM_WAIT,               /** Data reception in progress */
     PPM_ERROR,              /** Invalid packet length or format */
@@ -102,7 +102,7 @@ typedef struct {
  * \param[in]       timerFrequency: Timer frequency in Hz
  * \param[in]       timerAutoReload: Timer auto-reload value
  * 
- * \return          PPM_OK if initialization succesful, PPM_ERROR_NULL_POINTER if pointer is invalid, PPM_ERROR if timerFrequency in invalid
+ * \return          PPM_SUCCESS if initialization succesful, PPM_ERROR_NULL_POINTER if pointer is invalid, PPM_ERROR if timerFrequency in invalid
  */
 PPM_Status_t PPM_init(PPM_t* PPM, uint32_t timerFrequency, uint16_t timerAutoReload);
 
@@ -122,7 +122,7 @@ void PPM_setTimestampCallback(PPM_t* PPM, uint32_t (*getTimestamp_ms)(void));
  * \param[in]       PPM: PPM decoder
  * \param[in]       timerCounter: Current timer counter value at edge detection
  *
- * \return          PPM_OK if packet is valid, PPM_WAIT if reception is in progress, an error otherwise
+ * \return          PPM_SUCCESS if packet is valid, PPM_WAIT if reception is in progress, an error otherwise
  */
 PPM_Status_t PPM_processPacket(PPM_t* PPM, uint16_t timerCounter);
 

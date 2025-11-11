@@ -768,7 +768,7 @@ static void test_build_gps(void** state) {
     crsf.GPS.heading = 12345;      // 123.45° * 100
     crsf.GPS.altitude = 1250;      // meters + 1000
     crsf.GPS.satellites = 9;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_GPS, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_GPS, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_gps_packet[ii]);
     }
@@ -783,7 +783,7 @@ static void test_build_vario(void** state) {
     uint8_t frameLength = 0;
     CRSF_init(&crsf);
     crsf.Vario.v_speed = (int16_t)(20.12f * 100); // cm / s
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VARIO, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VARIO, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_vario_packet[ii]);
     }
@@ -801,7 +801,7 @@ static void test_build_battery(void** state) {
     crsf.Battery.current = 123;        // 12.3A
     crsf.Battery.capacity_used = 1500; // 1500 mAh
     crsf.Battery.remaining = 78;       // 78%
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BATTERY_SENSOR, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BATTERY_SENSOR, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_battery_packet[ii]);
     }
@@ -817,7 +817,7 @@ static void test_build_baro(void** state) {
     CRSF_init(&crsf);
     crsf.BaroAlt_VS.altitude = 1234; // 1234 dm
     crsf.BaroAlt_VS.vertical_speed = -150;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_baro_packet[ii]);
     }
@@ -832,7 +832,7 @@ static void test_build_airspeed(void** state) {
     uint8_t frameLength = 0;
     CRSF_init(&crsf);
     crsf.Airspeed.speed = 360; // 36.0 km / h
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_AIRSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_AIRSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_airspeed_packet[ii]);
     }
@@ -847,7 +847,7 @@ static void test_build_heartbeat(void** state) {
     uint8_t frameLength = 0;
     CRSF_init(&crsf);
     crsf.Heartbeat.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_heartbeat_packet[ii]);
     }
@@ -864,7 +864,7 @@ static void test_build_rpm(void** state) {
     crsf.RPM.rpm_source_id = 1;
     crsf.RPM.rpm_value[0] = 15000;
     crsf.RPM.rpm_value[1] = -122000;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 2, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 2, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_rpm_packet[ii]);
     }
@@ -881,7 +881,7 @@ static void test_build_temp(void** state) {
     crsf.Temperature.temp_source_id = 11;
     crsf.Temperature.temperature[0] = 25.3 * 10;
     crsf.Temperature.temperature[1] = -12.1 * 10;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 2, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 2, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_temp_packet[ii]);
     }
@@ -905,7 +905,7 @@ static void test_build_linkstats(void** state) {
     crsf.LinkStatistics.down_rssi = 0x46;
     crsf.LinkStatistics.down_link_quality = 0x63;
     crsf.LinkStatistics.down_snr = -9;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_linkstats_packet[ii]);
     }
@@ -922,7 +922,7 @@ static void test_build_rc_channels(void** state) {
     for (uint8_t ch = 0; ch < 16; ch++) {
         crsf.RC.channels[ch] = 1500;
     }
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_rc_channels_packet[ii]);
     }
@@ -941,7 +941,7 @@ static void test_build_link_rx_id(void** state) {
     crsf.LinkStatisticsRX.link_quality = 80;
     crsf.LinkStatisticsRX.snr = -10;
     crsf.LinkStatisticsRX.rf_power_db = 14;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS_RX, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS_RX, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_link_rx_id_packet[ii]);
     }
@@ -961,7 +961,7 @@ static void test_build_link_tx_id(void** state) {
     crsf.LinkStatisticsTX.snr = -7;
     crsf.LinkStatisticsTX.rf_power_db = 12;
     crsf.LinkStatisticsTX.fps = 30;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS_TX, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS_TX, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_link_tx_id_packet[ii]);
     }
@@ -978,7 +978,7 @@ static void test_build_attitude(void** state) {
     crsf.Attitude.roll = 1200; // rad * 10000
     crsf.Attitude.pitch = -7800;
     crsf.Attitude.yaw = 15700;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_ATTITUDE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_ATTITUDE, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_attitude_packet[ii]);
     }
@@ -993,7 +993,7 @@ static void test_build_flightmode(void** state) {
     uint8_t frameLength = 0;
     CRSF_init(&crsf);
     strcpy((char*)crsf.FlightMode.flight_mode, "ANGLE");
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_flightmode_packet[ii]);
     }
@@ -1009,7 +1009,7 @@ static void test_build_device_ping(void** state) {
     CRSF_init(&crsf);
     crsf.Ping.dest_address = CRSF_ADDRESS_BROADCAST;
     crsf.Ping.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_PING, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_PING, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_device_ping_packet[ii]);
     }
@@ -1029,7 +1029,7 @@ static void test_build_device_info(void** state) {
     crsf.DeviceInfo.Parameters_total = 5;
     crsf.DeviceInfo.Parameter_version_number = 2;
     strcpy((char*)crsf.DeviceInfo.Device_name, "CRSF-DEV");
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_device_info_packet[ii]);
     }
@@ -1045,7 +1045,7 @@ static void test_build_param_read(void** state) {
     crsf.ParamRead.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     crsf.ParamRead.Parameter_number = 1;
     crsf.ParamRead.Parameter_chunk_number = 2;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_READ, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_READ, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_param_read_packet[ii]);
     }
@@ -1061,7 +1061,7 @@ static void test_build_param_write(void** state) {
     crsf.ParamWrite.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     crsf.ParamWrite.Parameter_number = 1;
     crsf.ParamWrite.Data[0] = 0x2A;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_WRITE, 1, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_WRITE, 1, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_param_write_packet[ii]);
     }
@@ -1079,7 +1079,7 @@ static void test_build_command(void** state) {
     crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     crsf.Command.Command_ID = CRSF_CMDID_CROSSFIRE;                           // FC
     crsf.Command.payload.crossfire.subCommand = CRSF_CMD_CF_SET_RX_BIND_MODE; // Force Disarm
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 1, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 1, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_command_packet[ii]);
     }
@@ -1096,7 +1096,7 @@ static void test_process_gps(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_gps_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_gps_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_GPS);
     assert_int_equal(crsf.GPS.latitude, 454636810);
     assert_int_equal(crsf.GPS.longitude, 91881710);
@@ -1113,7 +1113,7 @@ static void test_process_vario(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_vario_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_vario_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VARIO);
     assert_int_equal(crsf.Vario.v_speed, (int16_t)(20.12f * 100));
 }
@@ -1125,7 +1125,7 @@ static void test_process_battery(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_battery_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_battery_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BATTERY_SENSOR);
     assert_int_equal(crsf.Battery.voltage, 168);
     assert_int_equal(crsf.Battery.current, 123);
@@ -1140,7 +1140,7 @@ static void test_process_baro(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_baro_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_baro_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
     assert_int_equal(crsf.BaroAlt_VS.altitude, 1234);
     assert_int_in_range(crsf.BaroAlt_VS.vertical_speed, -155, -145);
@@ -1153,7 +1153,7 @@ static void test_process_airspeed(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_airspeed_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_airspeed_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_AIRSPEED);
     assert_int_equal(crsf.Airspeed.speed, 360);
 }
@@ -1165,7 +1165,7 @@ static void test_process_heartbeat(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_heartbeat_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_heartbeat_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_HEARTBEAT);
 }
 #endif
@@ -1176,7 +1176,7 @@ static void test_process_rpm(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_rpm_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_rpm_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RPM);
     assert_int_equal(crsf.RPM.rpm_source_id, 1);
     assert_int_equal(crsf.RPM.rpm_value[0], 15000);
@@ -1190,7 +1190,7 @@ static void test_process_temp(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_temp_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_temp_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_TEMPERATURE);
     assert_int_equal(crsf.Temperature.temp_source_id, 11);
     assert_int_equal(crsf.Temperature.temperature[0], 25.3 * 10);
@@ -1204,7 +1204,7 @@ static void test_process_linkstats(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_linkstats_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_linkstats_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS);
     assert_int_equal(crsf.LinkStatistics.up_rssi_ant1, 0x41);
     assert_int_equal(crsf.LinkStatistics.up_rssi_ant2, 0x42);
@@ -1225,7 +1225,7 @@ static void test_process_rc_channels(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_rc_channels_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_rc_channels_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED);
     for (uint8_t ch = 0; ch < CRSF_RC_CHANNELS; ch++) {
         assert_int_equal(crsf.RC.channels[ch], 1500);
@@ -1239,7 +1239,7 @@ static void test_process_link_rx_id(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_link_rx_id_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_link_rx_id_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS_RX);
     assert_int_equal(crsf.LinkStatisticsRX.rssi_db, 86);
     assert_int_equal(crsf.LinkStatisticsRX.rssi_percent, 92);
@@ -1255,7 +1255,7 @@ static void test_process_link_tx_id(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_link_tx_id_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_link_tx_id_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS_TX);
     assert_int_equal(crsf.LinkStatisticsTX.rssi_db, 40);
     assert_int_equal(crsf.LinkStatisticsTX.rssi_percent, 22);
@@ -1272,7 +1272,7 @@ static void test_process_attitude(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_attitude_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_attitude_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_ATTITUDE);
     assert_int_equal(crsf.Attitude.roll, 1200);
     assert_int_equal(crsf.Attitude.pitch, -7800);
@@ -1286,7 +1286,7 @@ static void test_process_flightmode(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_flightmode_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_flightmode_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_FLIGHT_MODE);
     assert_string_equal(crsf.FlightMode.flight_mode, "ANGLE");
 }
@@ -1298,7 +1298,7 @@ static void test_process_device_ping(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_device_ping_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_device_ping_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_DEVICE_PING);
     assert_true(crsf.Ping.dest_address == CRSF_ADDRESS_BROADCAST);
     assert_true(crsf.Ping.origin_address == CRSF_ADDRESS_RADIO_TRANSMITTER);
@@ -1309,7 +1309,7 @@ static void test_process_device_info(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_device_info_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_device_info_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_DEVICE_INFO);
     assert_true(crsf.DeviceInfo.dest_address == CRSF_ADDRESS_RADIO_TRANSMITTER);
     assert_true(crsf.DeviceInfo.origin_address == CRSF_ADDRESS_FLIGHT_CONTROLLER);
@@ -1326,7 +1326,7 @@ static void test_process_param_read(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_param_read_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_param_read_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_READ);
     assert_true(crsf.ParamRead.dest_address == CRSF_ADDRESS_FLIGHT_CONTROLLER);
     assert_true(crsf.ParamRead.origin_address == CRSF_ADDRESS_RADIO_TRANSMITTER);
@@ -1339,7 +1339,7 @@ static void test_process_param_write(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_param_write_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_param_write_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_WRITE);
     assert_true(crsf.ParamWrite.dest_address == CRSF_ADDRESS_FLIGHT_CONTROLLER);
     assert_true(crsf.ParamWrite.origin_address == CRSF_ADDRESS_RADIO_TRANSMITTER);
@@ -1354,7 +1354,7 @@ static void test_process_command(void** state) {
     CRSF_t crsf;
     CRSF_FrameType_t frameType;
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, test_command_packet, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, test_command_packet, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_COMMAND);
     assert_true(crsf.Command.dest_address == CRSF_ADDRESS_CRSF_RECEIVER);
     assert_true(crsf.Command.origin_address == CRSF_ADDRESS_RADIO_TRANSMITTER);
@@ -1391,11 +1391,11 @@ static void test_roundtrip_gps(void** state) {
     tx.GPS.satellites = 2;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_GPS, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_GPS, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_GPS_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_GPS);
 
     /* Check received frame */
@@ -1445,11 +1445,11 @@ static void test_roundtrip_gps_time(void** state) {
     tx.GPS_Time.millisecond = 999;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_GPS, CRSF_FRAMETYPE_GPS_TIME, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_GPS, CRSF_FRAMETYPE_GPS_TIME, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_GPS_Time_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_GPS_TIME);
 
     /* Check received frame */
@@ -1502,11 +1502,11 @@ static void test_roundtrip_gps_extended(void** state) {
     tx.GPS_Ext.vDOP = 25;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_GPS, CRSF_FRAMETYPE_GPS_EXTENDED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_GPS, CRSF_FRAMETYPE_GPS_EXTENDED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_GPS_Ext_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_GPS_EXTENDED);
 
     /* Check received frame */
@@ -1553,11 +1553,11 @@ static void test_roundtrip_vario(void** state) {
     tx.Vario.v_speed = (int16_t)0xABCD; // Strong downward speed
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VARIO, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VARIO, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Vario_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VARIO);
 
     /* Check received frame */
@@ -1596,11 +1596,11 @@ static void test_roundtrip_battery_sensor(void** state) {
     tx.Battery.remaining = 0;             // Empty battery
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_BATTERY_SENSOR, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_BATTERY_SENSOR, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Battery_t) + 3U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BATTERY_SENSOR);
 
     /* Check received frame */
@@ -1640,11 +1640,11 @@ static void test_roundtrip_baroalt_vspeed(void** state) {
     tx.BaroAlt_VS.vertical_speed = 1500;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 3U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
 
     /* Check received frame(note: packed format may have precision loss) */
@@ -1656,11 +1656,11 @@ static void test_roundtrip_baroalt_vspeed(void** state) {
     tx.BaroAlt_VS.vertical_speed = -1500;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 3U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
 
     /* Check received frame(note: packed format may have precision loss) */
@@ -1672,11 +1672,11 @@ static void test_roundtrip_baroalt_vspeed(void** state) {
     tx.BaroAlt_VS.vertical_speed = 0;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 3U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
 
     /* Check received frame(note: packed format may have precision loss) */
@@ -1688,11 +1688,11 @@ static void test_roundtrip_baroalt_vspeed(void** state) {
     tx.BaroAlt_VS.vertical_speed = 0;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 3U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
 
     /* Check received frame(note: packed format may have precision loss) */
@@ -1729,11 +1729,11 @@ static void test_roundtrip_airspeed(void** state) {
     tx.Airspeed.speed = (uint16_t)0xABCD; // Maximum airspeed
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_AIRSPEED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_AIRSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Airspeed_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_AIRSPEED);
 
     /* Check received frame */
@@ -1769,11 +1769,11 @@ static void test_roundtrip_heartbeat(void** state) {
     tx.Heartbeat.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_BROADCAST, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_BROADCAST, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Heartbeat_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_HEARTBEAT);
 
     /* Check received frame */
@@ -1813,11 +1813,11 @@ static void test_roundtrip_rpm(void** state) {
     tx.RPM.rpm_value[3] = -344866; // Maximum negative RPM
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 4, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 4, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 4 * 3 + 3U + 1U); // source_id + 4 * int24 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RPM);
 
     /* Check received frame */
@@ -1857,11 +1857,11 @@ static void test_roundtrip_rpm_single_motor(void** state) {
     tx.RPM.rpm_value[0] = -1;
 
     /* Test Build with 1 value */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 1, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 1, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 1 * 3 + 3U + 1U); // source_id + 1 * int24 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RPM);
 
     /* Check received frame */
@@ -1898,11 +1898,11 @@ static void test_roundtrip_rpm_zero_values(void** state) {
     tx.RPM.rpm_source_id = 3;
 
     /* Test Build with 0 values */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_RPM, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 3 + 3U + 1U); // source_id + min 3 bytes + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RPM);
 
     /* Check received frame */
@@ -1944,11 +1944,11 @@ static void test_roundtrip_temperature(void** state) {
     tx.Temperature.temperature[4] = (int16_t)0xABCD; // Minimum temperature
 
     /* Test Build with 5 values */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 5, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 5, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 5 * 2 + 3U + 1U); // source_id + 5 * int16 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_TEMPERATURE);
 
     /* Check received frame */
@@ -1990,11 +1990,11 @@ static void test_roundtrip_temperature_single_sensor(void** state) {
     tx.Temperature.temperature[0] = 200; // 20.0°C
 
     /* Test Build with 1 value */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 1, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 1, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 1 * 2 + 3U + 1U); // source_id + 1 * int16 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_TEMPERATURE);
 
     /* Check received frame */
@@ -2031,11 +2031,11 @@ static void test_roundtrip_temperature_zero_values(void** state) {
     tx.Temperature.temp_source_id = 2;
 
     /* Test Build with 0 values */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_TEMPERATURE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 2 + 3U + 1U); // source_id + min 2 bytes + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_TEMPERATURE);
 
     /* Check received frame */
@@ -2077,11 +2077,11 @@ static void test_roundtrip_voltages(void** state) {
     tx.Voltages.Voltage_values[4] = 0;      // Minimum voltage
 
     /* Test Build with 5 values */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 5, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 5, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 5 * 2U + 3U + 1U); // source_id + 5 * uint16 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VOLTAGES);
 
     /* Check received frame */
@@ -2123,11 +2123,11 @@ static void test_roundtrip_voltages_single_cell(void** state) {
     tx.Voltages.Voltage_values[0] = 3850; // 3.85V
 
     /* Test Build with 1 value */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 1, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 1, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 1 * 2U + 3U + 1U); // source_id + 1 * uint16 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VOLTAGES);
 
     /* Check received frame */
@@ -2164,11 +2164,11 @@ static void test_roundtrip_voltages_zero_values(void** state) {
     tx.Voltages.Voltage_source_id = 1;
 
     /* Test Build with 1 value */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CURRENT_SENSOR, CRSF_FRAMETYPE_VOLTAGES, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 1 + 1 * 2U + 3U + 1U); // source_id + 1 * uint16 + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VOLTAGES);
 
     /* Check received frame */
@@ -2210,11 +2210,11 @@ static void test_roundtrip_vtx(void** state) {
     tx.VTX.pitmode_switch = 8;   // Channel 9
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VTX, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_VTX, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_VTX_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_VTX);
 
     /* Check received frame */
@@ -2264,11 +2264,11 @@ static void test_roundtrip_link_statistics(void** state) {
     tx.LinkStatistics.down_snr = 5;           // 5 dB
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_LINK_STATISTICS, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_LINK_STATISTICS, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_LinkStatistics_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS);
 
     /* Check received frame */
@@ -2320,11 +2320,11 @@ static void test_roundtrip_rc_channels_packed(void** state) {
     }
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 22 + 3U + 1U); // 22 bytes for packed channels + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED);
 
     /* Check received frame(allow small tolerance due to packing / unpacking) */
@@ -2366,11 +2366,11 @@ static void test_roundtrip_link_statistics_rx(void** state) {
     tx.LinkStatisticsRX.rf_power_db = 20;  // 20 dBm
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_LINK_STATISTICS_RX, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_RECEIVER, CRSF_FRAMETYPE_LINK_STATISTICS_RX, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_LinkStatisticsRX_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS_RX);
 
     /* Check received frame */
@@ -2415,11 +2415,11 @@ static void test_roundtrip_link_statistics_tx(void** state) {
     tx.LinkStatisticsTX.fps = 150;          // 15.0 fps
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_TRANSMITTER, CRSF_FRAMETYPE_LINK_STATISTICS_TX, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_CRSF_TRANSMITTER, CRSF_FRAMETYPE_LINK_STATISTICS_TX, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_LinkStatisticsTX_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS_TX);
 
     /* Check received frame */
@@ -2462,11 +2462,11 @@ static void test_roundtrip_attitude(void** state) {
     tx.Attitude.yaw = 0;                // Zero yaw
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_ATTITUDE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_ATTITUDE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Attitude_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_ATTITUDE);
 
     /* Check received frame */
@@ -2508,11 +2508,11 @@ static void test_roundtrip_mavlink_fc(void** state) {
     tx.MAVLinkFC.firmware_type = 1;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_FC, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_FC, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_MAVLinkFC_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_FC);
 
     /* Check received frame */
@@ -2552,11 +2552,11 @@ static void test_roundtrip_flight_mode(void** state) {
     strcpy(tx.FlightMode.flight_mode, "ACRO_MODE_TEST_"); // 15 chars + null
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, strlen(tx.FlightMode.flight_mode) + 1 + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_FLIGHT_MODE);
 
     /* Check received frame */
@@ -2592,11 +2592,11 @@ static void test_roundtrip_flight_mode_short(void** state) {
     strcpy(tx.FlightMode.flight_mode, "A"); // Single character + null
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 2 + 3U + 1U); // "A" + null + header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_FLIGHT_MODE);
 
     /* Check received frame */
@@ -2636,11 +2636,11 @@ static void test_roundtrip_esp_now_messages(void** state) {
     strcpy(tx.ESPNowMessages.FREE_TEXT, "RACE MODE ACTIVE!!!");
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RACE_TAG, CRSF_FRAMETYPE_ESP_NOW_MESSAGES, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RACE_TAG, CRSF_FRAMETYPE_ESP_NOW_MESSAGES, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_ESPNowMessages_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_ESP_NOW_MESSAGES);
 
     /* Check received frame */
@@ -2681,11 +2681,11 @@ static void test_roundtrip_device_ping(void** state) {
     tx.Ping.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_BROADCAST, CRSF_FRAMETYPE_DEVICE_PING, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_BROADCAST, CRSF_FRAMETYPE_DEVICE_PING, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_Ping_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_DEVICE_PING);
 
     /* Check received frame */
@@ -2729,11 +2729,11 @@ static void test_roundtrip_device_info(void** state) {
     tx.DeviceInfo.Parameter_version_number = 42;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 23U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_DEVICE_INFO);
 
     /* Check received frame */
@@ -2791,11 +2791,11 @@ static void test_roundtrip_parameter_settings_entry(void** state) {
     memcpy(tx.ParamSettingsEntry.payload.f.units, "mVA", 4U);
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 40U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
 
     /* Check received frame */
@@ -2849,11 +2849,11 @@ static void test_roundtrip_parameter_read(void** state) {
     tx.ParamRead.Parameter_chunk_number = 0xCD;
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_READ, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_READ, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_ParamRead_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_READ);
 
     /* Check received frame */
@@ -2898,11 +2898,11 @@ static void test_roundtrip_parameter_write(void** state) {
     }
 
     /* Test Build with 15 data bytes */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, 15, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, 15, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 18U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_WRITE);
 
     /* Check received frame */
@@ -2949,11 +2949,11 @@ static void test_roundtrip_parameter_write_oversized(void** state) {
     memcpy(tx.ParamWrite.Data, testPattern, sizeof(testPattern));
 
     /* Test Build with oversized payload */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, sizeof(testPattern), frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, sizeof(testPattern), frame, &frameLength) == CRSF_SUCCESS);
     assert_true(frameLength == CRSF_MAX_PARAM_DATA_LEN + 3U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_WRITE);
 
     /* Verify payload was truncated to max size */
@@ -2990,11 +2990,11 @@ static void test_roundtrip_parameter_write_min_payload(void** state) {
     tx.ParamWrite.Parameter_number = 100;
 
     /* Test Build with minimal payload */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_PARAMETER_WRITE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 4U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_PARAMETER_WRITE);
 
     /* Check received frame */
@@ -3049,11 +3049,11 @@ static void test_roundtrip_command(void** state) {
     strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3");
 
     /* Test Build with 32 payload bytes */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 32U + 1U + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_COMMAND);
 
     /* Check received frame */
@@ -3120,14 +3120,14 @@ static void test_roundtrip_command_oversized(void** state) {
     strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "2;3;4;5;6;7;8;9;10");
 
     /* Test Build with oversized payload */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     assert_string_equal((char*)&frame[frameLength - 4U], "2");
 
     strcpy(tx.Command.payload.screen.popupMessageStart.Header, "Longer Test Header");
     strcpy(tx.Command.payload.screen.popupMessageStart.Info_message, "Information message");
     strcpy(tx.Command.payload.screen.popupMessageStart.add_data.selectionText, "SelectionTxt");
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_FRAMETYPE_COMMAND, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     assert_string_equal((char*)&frame[frameLength - 16U], "Selecti");
     assert_string_equal((char*)&frame[frameLength - 4U], "J");
@@ -3198,11 +3198,11 @@ static void test_roundtrip_mavlink_envelope(void** state) {
     }
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, 40U + 2U + 3U + 1U); // data_size + 2 header bytes + frame header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_ENVELOPE);
 
     /* Check received frame */
@@ -3249,11 +3249,11 @@ static void test_roundtrip_mavlink_envelope_max_data(void** state) {
     }
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_true(frameLength == CRSF_MAX_MAVLINK_PAYLOAD + 2 + 3U + 1U); // max data + 2 header bytes + frame header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_ENVELOPE);
 
     /* Check received frame */
@@ -3298,11 +3298,11 @@ static void test_roundtrip_mavlink_envelope_limited_size(void** state) {
     }
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_true(frameLength == CRSF_MAX_MAVLINK_PAYLOAD + 2 + 3U + 1U); // max data + 2 header bytes + frame header + CRC
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_ENVELOPE);
 
     /* Check received frame */
@@ -3347,11 +3347,11 @@ static void test_roundtrip_mavlink_status(void** state) {
     tx.MAVLinkStat.sensor_health = 0xAAAAAAAA;  // Alternating pattern
 
     /* Test Build */
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_STATUS, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_STATUS, 0, frame, &frameLength) == CRSF_SUCCESS);
     assert_int_equal(frameLength, sizeof(CRSF_MAVLinkStat_t) + 3U + 1U);
 
     /* Test Process */
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_STATUS);
 
     /* Check received frame */
@@ -3431,7 +3431,7 @@ static void test_build_param_float(void** state) {
     strcpy(tx.ParamSettingsEntry.payload.f.units, "mVA");
 
     uint8_t builtFrame[128], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[128], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -3496,7 +3496,7 @@ static void test_process_param_float(void** state) {
     }
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(frameType, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_FLOAT);
     assert_string_equal(rx.ParamSettingsEntry.name, "F2");
@@ -3548,8 +3548,8 @@ static void test_roundtrip_param_float(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(frameType, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY);
     assert_int_equal(rx.ParamSettingsEntry.payload.f.step, 5);
 
@@ -3587,7 +3587,7 @@ static void test_param_float_errors(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
 
     /* compute name end offset: payload start is at(STD_HDR_SIZE + 1 type byte); 
        within payload: first 6 bytes are dest,origin,param,chunks,parent,type; then name\0 */
@@ -3620,7 +3620,7 @@ static void test_build_param_string(void** state) {
     tx.ParamSettingsEntry.payload.str.max_len = 20;
 
     uint8_t builtFrame[128], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[128], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -3668,7 +3668,7 @@ static void test_process_param_string(void** state) {
     }
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_STRING);
     assert_string_equal(rx.ParamSettingsEntry.name, "Nm");
     assert_string_equal(rx.ParamSettingsEntry.payload.str.value, "World");
@@ -3707,8 +3707,8 @@ static void test_roundtrip_param_string(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_string_equal(rx.ParamSettingsEntry.payload.str.value, "abc");
     assert_int_equal(rx.ParamSettingsEntry.payload.str.max_len, 8);
 
@@ -3745,8 +3745,8 @@ static void test_roundtrip_param_string_oversize(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     /* value got truncated to MAX string */
     assert_true(strlen(rx.ParamSettingsEntry.payload.str.value) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
 }
@@ -3776,7 +3776,7 @@ static void test_build_param_textsel(void** state) {
     strcpy(tx.ParamSettingsEntry.payload.sel.units, "idx");
 
     uint8_t builtFrame[160], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[160], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -3830,7 +3830,7 @@ static void test_process_param_textsel(void** state) {
     }
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_TEXT_SELECTION);
     assert_string_equal(rx.ParamSettingsEntry.name, "Rates");
     assert_string_equal(rx.ParamSettingsEntry.payload.sel.options, "LO;HI");
@@ -3873,8 +3873,8 @@ static void test_roundtrip_param_textsel(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.payload.sel.value, 1);
 
 #if CRSF_ENABLE_STATS
@@ -3910,8 +3910,8 @@ static void test_rountrip_param_textsel_oversize(void** state) {
 
     uint8_t frame[160], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     /* options truncated; optional data may have been omitted by encoder */
     assert_int_equal(rx.ParamSettingsEntry.payload.sel.value, 0);
 }
@@ -3935,7 +3935,7 @@ static void test_error_param_textsel(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
 
     uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
     uint8_t off_after_name = (uint8_t)(6U + name_len);
@@ -3964,7 +3964,7 @@ static void test_build_param_folder(void** state) {
     tx.ParamSettingsEntry.payload.folder.children[1] = 2;
 
     uint8_t builtFrame[128], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[128], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -4013,7 +4013,7 @@ static void test_process_param_folder(void** state) {
     finalize_length_and_crc(goldenFrame, &p, &goldenLength);
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_FOLDER);
     assert_string_equal(rx.ParamSettingsEntry.name, "Ff");
     assert_int_equal(rx.ParamSettingsEntry.payload.folder.childrenCnt, 2);
@@ -4047,8 +4047,8 @@ static void test_roundtrip_param_folder(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.payload.folder.childrenCnt, 3);
 }
 
@@ -4073,7 +4073,7 @@ static void test_error_param_folder(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
 
     /* shorten by 1 to remove trailing 0xFF */
     set_declared_payload_length(frame, (uint8_t)((frame[1] - 1U) - 3U), &frameLength);
@@ -4099,7 +4099,7 @@ static void test_build_param_info(void** state) {
     strcpy(tx.ParamSettingsEntry.payload.info.text, "v1.2.3");
 
     uint8_t builtFrame[128], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[128], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -4146,7 +4146,7 @@ static void test_process_param_info(void** state) {
     }
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_INFO);
     assert_string_equal(rx.ParamSettingsEntry.name, "I");
     assert_string_equal(rx.ParamSettingsEntry.payload.info.text, "ok");
@@ -4182,8 +4182,8 @@ static void test_roundtrip_param_info(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_string_equal(rx.ParamSettingsEntry.payload.info.text, "hello");
 
 #if CRSF_ENABLE_FRESHNESS_CHECK
@@ -4218,8 +4218,8 @@ static void test_roundtrip_param_info_oversize(void** state) {
 
     uint8_t frame[160], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(strlen(rx.ParamSettingsEntry.payload.info.text) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
 }
 
@@ -4240,7 +4240,7 @@ static void test_error_param_info(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
     /* drop 2 bytes */
     set_declared_payload_length(frame, (uint8_t)((frame[1] - 1U) - 2U), &frameLength);
     assert_int_equal(CRSF_processFrame(&tx, frame, &frameType), CRSF_ERROR_TYPE_LENGTH);
@@ -4267,7 +4267,7 @@ static void test_build_param_command(void** state) {
     strcpy(tx.ParamSettingsEntry.payload.cmd.info, "OK");
 
     uint8_t builtFrame[160], builtLength = 0;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, builtFrame, &builtLength) == CRSF_SUCCESS);
 
     uint8_t goldenFrame[160], goldenLength = 0;
     uint8_t* p = goldenFrame;
@@ -4318,7 +4318,7 @@ static void test_process_param_command(void** state) {
     }
 
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.ParamSettingsEntry.type.v, CRSF_PARAM_COMMAND);
     assert_string_equal(rx.ParamSettingsEntry.name, "C");
     assert_int_equal(rx.ParamSettingsEntry.payload.cmd.status, READY);
@@ -4358,8 +4358,8 @@ static void test_roundtrip_param_command(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
 
 #if CRSF_ENABLE_STATS
     CRSF_getStats(&rx, &stats1);
@@ -4390,8 +4390,8 @@ static void test_roundtrip_param_command_oversize(void** state) {
 
     uint8_t frame[160], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
-    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
     assert_true(strlen(rx.ParamSettingsEntry.payload.cmd.info) <= (CRSF_MAX_PARAM_STRING_LENGTH - 1U));
 }
 
@@ -4414,7 +4414,7 @@ static void test_error_param_command(void** state) {
 
     uint8_t frame[128], frameLength = 0;
     CRSF_FrameType_t frameType;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
     uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
     uint8_t off_after_name = (uint8_t)(6U + name_len);
     set_declared_payload_length(frame, (uint8_t)(off_after_name + 1U), &frameLength); /* only 1 byte after name */
@@ -4460,7 +4460,7 @@ static void test_param_entry_general_errors(void** state) {
         strcpy(tx.ParamSettingsEntry.name, "Y");
         strcpy(tx.ParamSettingsEntry.payload.info.text, "ok"); // < - - 2 chars + NUL = 3 bytes >= guard
 
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
 
         /* Type byte sits at payload offset 5 (dest,origin,number,chunks,parent,TYPE) */
         frame[CRSF_STD_HDR_SIZE + 5U] = 0x7F; // unknown
@@ -4487,7 +4487,7 @@ static void test_param_entry_general_errors(void** state) {
         tx.ParamSettingsEntry.parent = 0x01;
         tx.ParamSettingsEntry.type.v = CRSF_PARAM_INT8; /* no payload */
         strcpy(tx.ParamSettingsEntry.name, "G");
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 0, frame, &frameLength) == CRSF_SUCCESS);
 
         /* Force(remaining bytes after name) < 1 by shrinking payload length */
         uint8_t name_len = (uint8_t)(strlen(tx.ParamSettingsEntry.name) + 1U);
@@ -4519,7 +4519,7 @@ static void test_build_cmd_ack_all(void** state) {
         crsf.Command.payload.ACK.SubCommand_ID = CRSF_CMD_FC_FORCE_DISARM;
         crsf.Command.payload.ACK.Action = 1;
         crsf.Command.payload.ACK.Information[0] = '\0';
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         p[0] = CRSF_CMDID_FC;
         p[1] = CRSF_CMD_FC_FORCE_DISARM;
         p[2] = 1;
@@ -4546,7 +4546,7 @@ static void test_build_cmd_ack_all(void** state) {
         crsf.Command.payload.ACK.Action = 1;
         strcpy(crsf.Command.payload.ACK.Information, info);
 
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
 
         /* goldenFrame */
         p[0] = CRSF_CMDID_FC;
@@ -4576,7 +4576,7 @@ static void test_process_cmd_ack_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_COMMAND_ACK, p,
                                     3, goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.ACK.Command_ID == CRSF_CMDID_LED);
         assert_true(crsf.Command.payload.ACK.SubCommand_ID == CRSF_CMD_LED_SET_TO_DEFAULT);
         assert_int_equal(crsf.Command.payload.ACK.Action, 0);
@@ -4598,7 +4598,7 @@ static void test_process_cmd_ack_all(void** state) {
                                     3 + 9, frame, &frameLength);
 
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.ACK.Command_ID == CRSF_CMDID_LED);
         assert_true(crsf.Command.payload.ACK.SubCommand_ID == CRSF_CMD_LED_SET_TO_DEFAULT);
         assert_int_equal(crsf.Command.payload.ACK.Action, 0);
@@ -4635,9 +4635,9 @@ static void test_roundtrip_cmd_ack(void** state) {
         tx.Command.payload.ACK.Command_ID = CRSF_CMDID_BLUETOOTH;
         tx.Command.payload.ACK.SubCommand_ID = CRSF_CMD_BT_ENABLE;
         tx.Command.payload.ACK.Action = 1;
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
         assert_true(rx.Command.payload.ACK.Command_ID == CRSF_CMDID_BLUETOOTH);
         assert_true(rx.Command.payload.ACK.SubCommand_ID == CRSF_CMD_BT_ENABLE);
         assert_int_equal(rx.Command.payload.ACK.Action, 1);
@@ -4657,10 +4657,10 @@ static void test_roundtrip_cmd_ack(void** state) {
         tx.Command.payload.ACK.Action = 1;
         strcpy(tx.Command.payload.ACK.Information, "OK");
 
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, buf, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, buf, &frameLength) == CRSF_SUCCESS);
 
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, buf, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, buf, &frameType) == CRSF_SUCCESS);
         assert_true(rx.Command.payload.ACK.Command_ID == CRSF_CMDID_BLUETOOTH);
         assert_true(rx.Command.payload.ACK.SubCommand_ID == CRSF_CMD_BT_ENABLE);
         assert_int_equal(rx.Command.payload.ACK.Action, 1);
@@ -4681,7 +4681,7 @@ static void test_build_cmd_fc(void** state) {
     crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     crsf.Command.Command_ID = CRSF_CMDID_FC;
     crsf.Command.payload.FC.subCommand = CRSF_CMD_FC_FORCE_DISARM;
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FC, p, 1,
                                 goldenFrame, &goldenLength);
     assert_int_equal(frameLength, goldenLength);
@@ -4698,7 +4698,7 @@ static void test_process_cmd_fc(void** state) {
     test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FC, p, 1,
                                 goldenFrame, &goldenLength);
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_true(crsf.Command.payload.FC.subCommand == CRSF_CMD_FC_SCALE_CHANNEL);
 }
 
@@ -4726,9 +4726,9 @@ static void test_roundtrip_cmd_fc(void** state) {
     tx.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
     tx.Command.Command_ID = CRSF_CMDID_FC;
     tx.Command.payload.FC.subCommand = CRSF_CMD_FC_SCALE_CHANNEL;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_true(rx.Command.payload.FC.subCommand == CRSF_CMD_FC_SCALE_CHANNEL);
 }
 #endif
@@ -4747,7 +4747,7 @@ static void test_build_cmd_bt_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_BLUETOOTH;
         crsf.Command.payload.Bluetooth.subCommand = CRSF_CMD_BT_RESET;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_BLUETOOTH, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4763,7 +4763,7 @@ static void test_build_cmd_bt_all(void** state) {
         crsf.Command.Command_ID = CRSF_CMDID_BLUETOOTH;
         crsf.Command.payload.Bluetooth.subCommand = CRSF_CMD_BT_ENABLE;
         crsf.Command.payload.Bluetooth.Enable = 1;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_BLUETOOTH, p, 2,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4783,7 +4783,7 @@ static void test_process_cmd_bt_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_BLUETOOTH, p, 2,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.Bluetooth.subCommand == CRSF_CMD_BT_ENABLE);
         assert_int_equal(crsf.Command.payload.Bluetooth.Enable, 0);
     }
@@ -4795,7 +4795,7 @@ static void test_process_cmd_bt_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_BLUETOOTH, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.Bluetooth.subCommand == CRSF_CMD_BT_RESET);
     }
 }
@@ -4825,9 +4825,9 @@ static void test_roundtrip_cmd_bt(void** state) {
     tx.Command.Command_ID = CRSF_CMDID_BLUETOOTH;
     tx.Command.payload.Bluetooth.subCommand = CRSF_CMD_BT_ENABLE;
     tx.Command.payload.Bluetooth.Enable = 1;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_true(rx.Command.payload.Bluetooth.subCommand == CRSF_CMD_BT_ENABLE);
     assert_int_equal(rx.Command.payload.Bluetooth.Enable, 1);
 }
@@ -4846,7 +4846,7 @@ static void test_build_cmd_osd_all(void** state) {
     crsf.Command.Command_ID = CRSF_CMDID_OSD;
     crsf.Command.payload.OSD.subCommand = CRSF_CMD_OSD_SEND_BUTTONS;
     crsf.Command.payload.OSD.buttons = p[1];
-    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_OSD, p, 2,
                                 goldenFrame, &goldenLength);
     assert_int_equal(frameLength, goldenLength);
@@ -4863,7 +4863,7 @@ static void test_process_cmd_osd_buttons(void** state) {
     test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_OSD, p, 2,
                                 goldenFrame, &goldenLength);
     CRSF_init(&crsf);
-    assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(crsf.Command.payload.OSD.buttons, p[1]);
 }
 
@@ -4892,9 +4892,9 @@ static void test_roundtrip_cmd_osd(void** state) {
     tx.Command.payload.OSD.subCommand = CRSF_CMD_OSD_SEND_BUTTONS;
     tx.Command.payload.OSD.enter = 1;
     tx.Command.payload.OSD.down = 1;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.Command.payload.OSD.enter, 1);
     assert_int_equal(rx.Command.payload.OSD.down, 1);
 }
@@ -4915,7 +4915,7 @@ static void test_build_cmd_vtx_all(void** state) {
         crsf.Command.Command_ID = CRSF_CMDID_VTX;
         crsf.Command.payload.VTX.subCommand = CRSF_CMD_VTX_SET_FREQUENCY;
         crsf.Command.payload.VTX.FrequencyMHz = 5800;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 3,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4934,7 +4934,7 @@ static void test_build_cmd_vtx_all(void** state) {
         crsf.Command.payload.VTX.PitMode = 1;
         crsf.Command.payload.VTX.pitmode_control = 2;
         crsf.Command.payload.VTX.pitmode_switch = 7;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 2,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4950,7 +4950,7 @@ static void test_build_cmd_vtx_all(void** state) {
         crsf.Command.Command_ID = CRSF_CMDID_VTX;
         crsf.Command.payload.VTX.subCommand = CRSF_CMD_VTX_SET_POWER;
         crsf.Command.payload.VTX.Power_dBm = 14;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 2,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4965,7 +4965,7 @@ static void test_build_cmd_vtx_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_VTX;
         crsf.Command.payload.VTX.subCommand = (CRSF_CommandVTX_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -4985,7 +4985,7 @@ static void test_process_cmd_vtx_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 3,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.VTX.FrequencyMHz, 5325);
     }
     /* power */
@@ -4996,7 +4996,7 @@ static void test_process_cmd_vtx_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 2,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.VTX.Power_dBm, 10);
     }
     /* default */
@@ -5007,7 +5007,7 @@ static void test_process_cmd_vtx_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_VTX, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.VTX.subCommand, 0x7E);
     }
 }
@@ -5073,9 +5073,9 @@ static void test_roundtrip_cmd_vtx(void** state) {
     tx.Command.payload.VTX.PitMode = 1;
     tx.Command.payload.VTX.pitmode_control = 3;
     tx.Command.payload.VTX.pitmode_switch = 15;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.Command.payload.VTX.PitMode, 1);
     assert_int_equal(rx.Command.payload.VTX.pitmode_control, 3);
     assert_int_equal(rx.Command.payload.VTX.pitmode_switch, 15);
@@ -5096,7 +5096,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_LED;
         crsf.Command.payload.LED.subCommand = CRSF_CMD_LED_SET_TO_DEFAULT;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5119,7 +5119,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.payload.LED.overrideColor.H = 300;
         crsf.Command.payload.LED.overrideColor.S = 100;
         crsf.Command.payload.LED.overrideColor.V = 200;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 4,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5145,7 +5145,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.payload.LED.overrideShift.H = 511;
         crsf.Command.payload.LED.overrideShift.S = 127;
         crsf.Command.payload.LED.overrideShift.V = 255;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 6,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5177,7 +5177,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.payload.LED.overridePulse.H_stop = 4;
         crsf.Command.payload.LED.overridePulse.S_stop = 5;
         crsf.Command.payload.LED.overridePulse.V_stop = 6;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 9,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5209,7 +5209,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.payload.LED.overrideBlink.H_stop = 255;
         crsf.Command.payload.LED.overrideBlink.S_stop = 100;
         crsf.Command.payload.LED.overrideBlink.V_stop = 200;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 9,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5224,7 +5224,7 @@ static void test_build_cmd_led_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_LED;
         crsf.Command.payload.LED.subCommand = (CRSF_CommandLED_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5249,7 +5249,7 @@ static void test_process_cmd_led_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 4,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.LED.overrideColor.H, 321);
         assert_int_equal(crsf.Command.payload.LED.overrideColor.S, 55);
         assert_int_equal(crsf.Command.payload.LED.overrideColor.V, 123);
@@ -5269,7 +5269,7 @@ static void test_process_cmd_led_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 6,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.LED.overrideShift.interval_ms, 200);
         assert_int_equal(crsf.Command.payload.LED.overrideShift.H, 100);
         assert_int_equal(crsf.Command.payload.LED.overrideShift.S, 20);
@@ -5293,7 +5293,7 @@ static void test_process_cmd_led_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 9,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.LED.overrideBlink.interval_ms, 1200);
     }
     /* DEFAULT */
@@ -5304,7 +5304,7 @@ static void test_process_cmd_led_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_LED, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.LED.subCommand, 0x7E);
     }
 }
@@ -5385,9 +5385,9 @@ static void test_roundtrip_cmd_led(void** state) {
     tx.Command.payload.LED.overridePulse.H_stop = 4;
     tx.Command.payload.LED.overridePulse.S_stop = 5;
     tx.Command.payload.LED.overridePulse.V_stop = 6;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.Command.payload.LED.overridePulse.duration_ms, 250);
 }
 #endif
@@ -5410,7 +5410,7 @@ static void test_build_cmd_general_all(void** state) {
         crsf.Command.payload.general.subCommand = CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL;
         crsf.Command.payload.general.protocolSpeedProposal.port_id = 2;
         crsf.Command.payload.general.protocolSpeedProposal.proposed_baudrate = 921600U;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 6,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5427,7 +5427,7 @@ static void test_build_cmd_general_all(void** state) {
         crsf.Command.payload.general.subCommand = CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE;
         crsf.Command.payload.general.protocolSpeedResponse.port_id = 1;
         crsf.Command.payload.general.protocolSpeedResponse.response = 1;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 3,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5442,7 +5442,7 @@ static void test_build_cmd_general_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_GENERAL;
         crsf.Command.payload.general.subCommand = (CRSF_CommandGen_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5469,7 +5469,7 @@ static void test_process_cmd_general_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 6,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.general.protocolSpeedProposal.port_id, 9);
         assert_int_equal(crsf.Command.payload.general.protocolSpeedProposal.proposed_baudrate, baud);
     }
@@ -5482,7 +5482,7 @@ static void test_process_cmd_general_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 3,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.general.protocolSpeedResponse.port_id, 3);
         assert_int_equal(crsf.Command.payload.general.protocolSpeedResponse.response, 0);
     }
@@ -5494,7 +5494,7 @@ static void test_process_cmd_general_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_GENERAL, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.general.subCommand, 0x7E);
     }
 }
@@ -5550,9 +5550,9 @@ static void test_roundtrip_cmd_general_all(void** state) {
         tx.Command.payload.general.subCommand = CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL;
         tx.Command.payload.general.protocolSpeedProposal.port_id = 4;
         tx.Command.payload.general.protocolSpeedProposal.proposed_baudrate = 230400U;
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(rx.Command.payload.general.protocolSpeedProposal.port_id, 4);
         assert_int_equal(rx.Command.payload.general.protocolSpeedProposal.proposed_baudrate, 230400U);
     }
@@ -5568,9 +5568,9 @@ static void test_roundtrip_cmd_general_all(void** state) {
         tx.Command.payload.general.subCommand = CRSF_CMD_GEN_CRSF_PROTOCOL_SPEED_PROPOSAL_RESPONSE;
         tx.Command.payload.general.protocolSpeedResponse.port_id = 5;
         tx.Command.payload.general.protocolSpeedResponse.response = 1;
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(rx.Command.payload.general.protocolSpeedResponse.port_id, 5);
         assert_int_equal(rx.Command.payload.general.protocolSpeedResponse.response, 1);
     }
@@ -5596,7 +5596,7 @@ static void test_build_cmd_cf_all(void** state) {
         crsf.Command.payload.crossfire.subCommand = CRSF_CMD_CF_SET_BIND_ID;
         crsf.Command.payload.crossfire.setBindId.len = 6;
         memcpy(crsf.Command.payload.crossfire.setBindId.bytes, id, 6);
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 7,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5612,7 +5612,7 @@ static void test_build_cmd_cf_all(void** state) {
         crsf.Command.Command_ID = CRSF_CMDID_CROSSFIRE;
         crsf.Command.payload.crossfire.subCommand = CRSF_CMD_CF_MODEL_SELECTION;
         crsf.Command.payload.crossfire.Model_Number = 3;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 2,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5627,7 +5627,7 @@ static void test_build_cmd_cf_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_CROSSFIRE;
         crsf.Command.payload.crossfire.subCommand = (CRSF_CommandCF_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5647,7 +5647,7 @@ static void test_process_cmd_cf_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 5,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.crossfire.setBindId.len, 4);
         assert_memory_equal(crsf.Command.payload.crossfire.setBindId.bytes, p + 1, 4);
     }
@@ -5659,7 +5659,7 @@ static void test_process_cmd_cf_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 2,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.crossfire.Model_Number, 9);
     }
     /* default */
@@ -5670,7 +5670,7 @@ static void test_process_cmd_cf_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_CROSSFIRE, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.crossfire.subCommand, 0x7E);
     }
 }
@@ -5712,9 +5712,9 @@ static void test_roundtrip_cmd_cf(void** state) {
     tx.Command.Command_ID = CRSF_CMDID_CROSSFIRE;
     tx.Command.payload.crossfire.subCommand = CRSF_CMD_CF_CURRENT_MODEL_REPLY;
     tx.Command.payload.crossfire.Model_Number = 11;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_int_equal(rx.Command.payload.crossfire.Model_Number, 11);
 }
 #endif
@@ -5735,7 +5735,7 @@ static void test_build_cmd_flow_all(void** state) {
         crsf.Command.payload.flow.subCommand = CRSF_CMD_FLOW_SUBSCRIBE;
         crsf.Command.payload.flow.Frame_type = CRSF_FRAMETYPE_GPS;
         crsf.Command.payload.flow.Max_interval_time_ms = 250;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 4,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5751,7 +5751,7 @@ static void test_build_cmd_flow_all(void** state) {
         crsf.Command.Command_ID = CRSF_CMDID_FLOW_CTRL;
         crsf.Command.payload.flow.subCommand = CRSF_CMD_FLOW_UNSUBSCRIBE;
         crsf.Command.payload.flow.Frame_type = CRSF_FRAMETYPE_VOLTAGES;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 2,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5766,7 +5766,7 @@ static void test_build_cmd_flow_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_FLOW_CTRL;
         crsf.Command.payload.flow.subCommand = (CRSF_CommandFlow_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -5786,7 +5786,7 @@ static void test_process_cmd_flow_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 4,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.flow.Frame_type == CRSF_FRAMETYPE_RPM);
         assert_int_equal(crsf.Command.payload.flow.Max_interval_time_ms, 1024);
     }
@@ -5798,7 +5798,7 @@ static void test_process_cmd_flow_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 2,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_true(crsf.Command.payload.flow.Frame_type == CRSF_FRAMETYPE_HEARTBEAT);
     }
     /* default */
@@ -5809,7 +5809,7 @@ static void test_process_cmd_flow_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_FLOW_CTRL, p, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.flow.subCommand, 0x7E);
     }
 }
@@ -5861,9 +5861,9 @@ static void test_roundtrip_cmd_flow(void** state) {
     tx.Command.payload.flow.subCommand = CRSF_CMD_FLOW_SUBSCRIBE;
     tx.Command.payload.flow.Frame_type = CRSF_FRAMETYPE_ATTITUDE;
     tx.Command.payload.flow.Max_interval_time_ms = 500;
-    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
     CRSF_init(&rx);
-    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
     assert_true(rx.Command.payload.flow.Frame_type == CRSF_FRAMETYPE_ATTITUDE);
     assert_int_equal(rx.Command.payload.flow.Max_interval_time_ms, 500);
 }
@@ -5889,7 +5889,7 @@ static void test_build_cmd_screen_all(void** state) {
         crsf.Command.payload.screen.popupMessageStart.Close_button_option = 1;
         crsf.Command.payload.screen.popupMessageStart.add_data.present = 0;
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         *p++ = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
         p = put_cstr(p, "H");
         p = put_cstr(p, "I");
@@ -5921,7 +5921,7 @@ static void test_build_cmd_screen_all(void** state) {
         crsf.Command.payload.screen.popupMessageStart.add_data.defaultValue = 5;
         strcpy(crsf.Command.payload.screen.popupMessageStart.add_data.unit, "u");
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         *p++ = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
         p = put_cstr(p, "T");
         p = put_cstr(p, "I");
@@ -5955,7 +5955,7 @@ static void test_build_cmd_screen_all(void** state) {
         crsf.Command.payload.screen.popupMessageStart.add_data.present = 0;
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 1;
         strcpy(crsf.Command.payload.screen.popupMessageStart.possible_values, "A;B");
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         *p++ = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
         p = put_cstr(p, "H2");
         p = put_cstr(p, "I2");
@@ -5990,7 +5990,7 @@ static void test_build_cmd_screen_all(void** state) {
         strcpy(crsf.Command.payload.screen.popupMessageStart.add_data.unit, "u");
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 1;
         strcpy(crsf.Command.payload.screen.popupMessageStart.possible_values, "A;B");
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         *p++ = CRSF_CMD_SCREEN_POPUP_MESSAGE_START;
         p = put_cstr(p, "H");
         p = put_cstr(p, "I");
@@ -6020,7 +6020,7 @@ static void test_build_cmd_screen_all(void** state) {
         crsf.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_SELECTION_RETURN;
         crsf.Command.payload.screen.selectionReturn.value = 7;
         crsf.Command.payload.screen.selectionReturn.response = 1;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_SCREEN, p, 3,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -6035,7 +6035,7 @@ static void test_build_cmd_screen_all(void** state) {
         crsf.Command.origin_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
         crsf.Command.Command_ID = CRSF_CMDID_SCREEN;
         crsf.Command.payload.screen.subCommand = (CRSF_CommandScreen_subCMD_t)0x7E;
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_SCREEN, p, 1,
                                     goldenFrame, &goldenLength);
         assert_int_equal(frameLength, goldenLength);
@@ -6066,7 +6066,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         crsf.Command.payload.screen.popupMessageStart.add_data.present = 0;
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
 
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
     /* additional data */
@@ -6104,7 +6104,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
 
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
 
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
 
@@ -6133,7 +6133,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 1;
         strcpy(crsf.Command.payload.screen.popupMessageStart.possible_values, pv);
 
-        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
 }
@@ -6155,7 +6155,7 @@ static void test_process_cmd_screen_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_SCREEN, tmp,
                                     (uint8_t)(p - tmp), goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_string_equal(crsf.Command.payload.screen.popupMessageStart.Header, "H");
         assert_string_equal(crsf.Command.payload.screen.popupMessageStart.Info_message, "I");
         assert_int_equal(crsf.Command.payload.screen.popupMessageStart.Max_timeout_interval, 7);
@@ -6169,7 +6169,7 @@ static void test_process_cmd_screen_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_SCREEN, p2, 3,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal(crsf.Command.payload.screen.selectionReturn.value, 7);
         assert_int_equal(crsf.Command.payload.screen.selectionReturn.response, 1);
     }
@@ -6181,7 +6181,7 @@ static void test_process_cmd_screen_all(void** state) {
         test_build_golden_CMD_frame(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_RADIO_TRANSMITTER, CRSF_CMDID_SCREEN, p3, 1,
                                     goldenFrame, &goldenLength);
         CRSF_init(&crsf);
-        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&crsf, goldenFrame, &frameType) == CRSF_SUCCESS);
         assert_int_equal((uint8_t)crsf.Command.payload.screen.subCommand, 0x7E);
     }
 }
@@ -6238,9 +6238,9 @@ static void test_roundtrip_cmd_screen(void** state) {
         strcpy(tx.Command.payload.screen.popupMessageStart.add_data.unit, "W");
         tx.Command.payload.screen.popupMessageStart.has_possible_values = 1;
         strcpy(tx.Command.payload.screen.popupMessageStart.possible_values, "3;5");
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
         assert_true(rx.Command.payload.screen.subCommand == CRSF_CMD_SCREEN_POPUP_MESSAGE_START);
         assert_string_equal(rx.Command.payload.screen.popupMessageStart.Header, "Head");
         assert_string_equal(rx.Command.payload.screen.popupMessageStart.Info_message, "Info");
@@ -6268,9 +6268,9 @@ static void test_roundtrip_cmd_screen(void** state) {
         tx.Command.payload.screen.subCommand = CRSF_CMD_SCREEN_SELECTION_RETURN;
         tx.Command.payload.screen.selectionReturn.value = 5;
         tx.Command.payload.screen.selectionReturn.response = 1;
-        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_OK);
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
         CRSF_init(&rx);
-        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_OK);
+        assert_true(CRSF_processFrame(&rx, builtFrame, &frameType) == CRSF_SUCCESS);
         assert_true(rx.Command.payload.screen.subCommand == CRSF_CMD_SCREEN_SELECTION_RETURN);
         assert_int_equal(rx.Command.payload.screen.selectionReturn.value, 5);
         assert_int_equal(rx.Command.payload.screen.selectionReturn.response, 1);
@@ -6304,7 +6304,7 @@ static void test_process_cmd_invalid_cmd_id(void** state) {
     CRSF_FrameType_t frameType = 0;
     CRSF_init(&crsf);
     /* Decoder default falls through and returns OK */
-    assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_OK);
+    assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_SUCCESS);
     assert_true(frameType == CRSF_FRAMETYPE_COMMAND);
 }
 #endif /* RX */

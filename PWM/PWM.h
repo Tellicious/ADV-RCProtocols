@@ -67,7 +67,7 @@ extern "C" {
  * Return values
  */
 typedef enum {
-    PWM_OK = 0,             /** Operation completed successfully */
+    PWM_SUCCESS = 0,        /** Operation completed successfully */
     PWM_ERROR_NULL_POINTER, /** Null pointer provided */
     PWM_WAIT,               /** Data reception in progress */
     PWM_ERROR,              /** Invalid packet length or format */
@@ -102,7 +102,7 @@ typedef struct {
  * \param[in]       timerFrequency: Timer frequency in Hz
  * \param[in]       timerAutoReload: Timer auto-reload value
  * 
- * \return          PWM_OK if initialization succesful, PWM_ERROR_NULL_POINTER if pointer is invalid, PWM_ERROR if timerFrequency in invalid
+ * \return          PWM_SUCCESS if initialization succesful, PWM_ERROR_NULL_POINTER if pointer is invalid, PWM_ERROR if timerFrequency in invalid
  */
 PWM_Status_t PWM_init(PWM_t* PWM, uint32_t timerFrequency, uint16_t timerAutoReload);
 
@@ -124,7 +124,7 @@ void PWM_setTimestampCallback(PWM_t* PWM, uint32_t (*getTimestamp_ms)(void));
  * \param[in]       rising: 1 if rising edge, 0 if falling edge
  * \param[in]       timerCounter: Current timer counter value at edge detection
  *
- * \return          PWM_OK if packet is valid, PWM_WAIT if reception is in progress, an error otherwise
+ * \return          PWM_SUCCESS if packet is valid, PWM_WAIT if reception is in progress, an error otherwise
  */
 PWM_Status_t PWM_processPacket(PWM_t* PWM, uint8_t channel, uint8_t rising, uint16_t timerCounter);
 

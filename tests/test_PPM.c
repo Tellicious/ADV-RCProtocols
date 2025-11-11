@@ -216,7 +216,7 @@ static void test_processPacket_packet_end_detection(void** state) {
     }
     counter += 1500;
     PPM_Status_t status = PPM_processPacket(&ppm, counter);
-    assert_int_equal(status, PPM_OK);
+    assert_int_equal(status, PPM_SUCCESS);
 
     // Now send a long pulse (packet end marker)
     counter += ppm._packetEndTicks + 100;
@@ -250,7 +250,7 @@ static void test_processPacket_partial_packet_then_end(void** state) {
     PPM_Status_t status = PPM_processPacket(&ppm, counter);
 
     // Should detect end, reset and return OK
-    assert_int_equal(status, PPM_OK);
+    assert_int_equal(status, PPM_SUCCESS);
     assert_int_equal(ppm._currentChannel, 0);
 
 #if PPM_ENABLE_STATS
@@ -273,7 +273,7 @@ static void test_processPacket_excess_channels(void** state) {
     }
     counter += 1500;
     PPM_Status_t status = PPM_processPacket(&ppm, counter);
-    assert_int_equal(status, PPM_OK);
+    assert_int_equal(status, PPM_SUCCESS);
 
     // Try to add more channels beyond the max
     counter += 1500;
@@ -326,7 +326,7 @@ static void test_processPacket_complete_frame(void** state) {
     // Last channel should complete the packet
     counter += pulse_width;
     PPM_Status_t status = PPM_processPacket(&ppm, counter);
-    assert_int_equal(status, PPM_OK);
+    assert_int_equal(status, PPM_SUCCESS);
     assert_int_equal(ppm._currentChannel, PPM_MAX_CHANNELS);
 
 #if PPM_ENABLE_STATS
@@ -547,7 +547,7 @@ static void test_freshness_multiple_packets(void** state) {
     // Send sync pulse (packet end marker)
     counter += ppm._packetEndTicks + 10;
     status = PPM_processPacket(&ppm, counter);
-    assert_int_equal(status, PPM_OK);
+    assert_int_equal(status, PPM_SUCCESS);
     assert_int_equal(ppm._currentChannel, 0); // Reset for next frame
 
     mock_timestamp += 2;
@@ -632,7 +632,7 @@ static void test_complete_ppm_frame_sequence(void** state) {
             if (ii < PPM_MAX_CHANNELS - 1) {
                 assert_int_equal(status, PPM_WAIT);
             } else {
-                assert_int_equal(status, PPM_OK);
+                assert_int_equal(status, PPM_SUCCESS);
             }
         }
 

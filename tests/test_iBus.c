@@ -180,7 +180,7 @@ static void test_register_sensor_basic(void** state) {
     iBus_init(&ibus);
 
     iBus_Status_t result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_TEMPERATURE);
-    assert_int_equal(result, IBUS_OK); // Should return the specified address
+    assert_int_equal(result, IBUS_SUCCESS); // Should return the specified address
     assert_int_equal(ibus.sensorCount, 2);
     assert_int_equal(ibus.sensors[0].type, IBUS_MEAS_TYPE_INTERNAL_VOLTAGE);
     assert_int_equal(ibus.sensors[0].size, 2);
@@ -197,20 +197,20 @@ static void test_register_sensor_auto_size(void** state) {
 
     // Test GPS coordinates (should auto-size to 4 bytes)
     iBus_Status_t result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_GPS_LAT);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
     assert_int_equal(ibus.sensors[1].size, 4);
 
     result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_GPS_LON);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
     assert_int_equal(ibus.sensors[2].size, 4);
 
     // Test temperature and RPM (should auto-size to 2 bytes)
     result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_TEMPERATURE);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
     assert_int_equal(ibus.sensors[3].size, 2);
 
     result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_RPM);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
     assert_int_equal(ibus.sensors[4].size, 2);
 }
 
@@ -225,8 +225,8 @@ static void test_register_sensor_type_collision(void** state) {
     assert_int_equal(ibus.sensorCount, 1);              // Should still be 1 sensor
 
     result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_TEMPERATURE);
-    assert_int_equal(result, IBUS_OK);     // Should succeed, different type
-    assert_int_equal(ibus.sensorCount, 2); // Now 2 sensors registered
+    assert_int_equal(result, IBUS_SUCCESS); // Should succeed, different type
+    assert_int_equal(ibus.sensorCount, 2);  // Now 2 sensors registered
 
     // Register another sensor of the same type
     result = iBus_registerSensor(&ibus, IBUS_MEAS_TYPE_TEMPERATURE);
@@ -249,7 +249,7 @@ static void test_register_sensor_max_limit(void** state) {
     // Fill up to maximum sensors
     for (uint8_t i = 0; i < IBUS_TEL_MAX_SENSORS - 1; i++) {
         iBus_Status_t result = iBus_registerSensor(&ibus, sensors[i]);
-        assert_int_equal(result, IBUS_OK);
+        assert_int_equal(result, IBUS_SUCCESS);
     }
 
     // Try to register one more (should fail)
@@ -293,7 +293,7 @@ static void test_sensor_write_function(void** state) {
 
     // Test writing to the sensor
     iBus_Status_t result = iBus_writeSensor(&ibus, IBUS_MEAS_TYPE_RPM, 5500);
-    assert_int_equal(result, IBUS_OK); // Should succeed
+    assert_int_equal(result, IBUS_SUCCESS); // Should succeed
     assert_int_equal(ibus.sensors[1].value, 5500);
 
 #if IBUS_ENABLE_FRESHNESS_CHECK
@@ -305,7 +305,7 @@ static void test_sensor_write_function(void** state) {
 
     // Test writing to the sensor
     result = iBus_writeSensor(&ibus, IBUS_MEAS_TYPE_TEMPERATURE, 50);
-    assert_int_equal(result, IBUS_OK); // Should succeed
+    assert_int_equal(result, IBUS_SUCCESS); // Should succeed
     assert_int_equal(ibus.sensors[2].value, 50);
 
     // Test writing to non-existent sensor (should not crash)
@@ -333,7 +333,7 @@ static void test_process_RC_frame_basic(void** state) {
     create_servo_frame(frame, test_channels);
 
     iBus_Status_t result = iBus_processFrame(&ibus, frame);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
 
     // Compare each channel
     for (uint8_t i = 0; i < IBUS_MAX_CHANNELS; i++) {
@@ -427,7 +427,7 @@ static void test_process_RC_frame_boundary_values(void** state) {
     create_servo_frame(frame, boundary_channels);
 
     int result = iBus_processFrame(&ibus, frame);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
 
     // Verify extreme values were handled correctly
     assert_int_equal(ibus.channels[0], 0);
@@ -993,7 +993,7 @@ static void test_complete_servo_telemetry_workflow(void** state) {
     create_servo_frame(servo_frame, test_channels);
 
     int result = iBus_processFrame(&ibus, servo_frame);
-    assert_int_equal(result, IBUS_OK);
+    assert_int_equal(result, IBUS_SUCCESS);
 
 #if IBUS_ENABLE_TELEMETRY
     // Test telemetry workflow for each sensor

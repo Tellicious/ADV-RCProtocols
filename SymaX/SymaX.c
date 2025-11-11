@@ -188,7 +188,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet) {
                 SymaX->link.packet_count = 0;
                 SymaX->link.current_channel_idx = (SymaX->link.current_channel_idx + 1) % 4;
             }
-            return SYMAX_OK;
+            return SYMAX_SUCCESS;
             break;
 
         default: break;
@@ -320,7 +320,7 @@ SymaX_Status_t SymaX_processPacket(SymaX_t* SymaX, const uint8_t* packet) {
                 SymaX->link.packet_count = 0;
                 SymaX->link.current_channel_idx = (SymaX->link.current_channel_idx + 1) % 4;
             }
-            return SYMAX_OK;
+            return SYMAX_SUCCESS;
         default:
             // Invalid phase, do nothing
             break;

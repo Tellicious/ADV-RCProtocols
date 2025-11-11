@@ -359,7 +359,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->ParamSettingsEntry.type.byte;
             off += CRSF_packString(payload + off, crsf->ParamSettingsEntry.name, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PAYLOAD_LEN - off - 8U);
             CRSF_Status_t retStatus = CRSF_encodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, &off);
-            if (retStatus != CRSF_OK) {
+            if (retStatus != CRSF_SUCCESS) {
                 return retStatus;
             }
             *frameLength += off;
@@ -386,7 +386,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             payload[off++] = crsf->Command.origin_address;
             payload[off++] = (uint8_t)crsf->Command.Command_ID;
             CRSF_Status_t retStatus = CRSF_encodeCommandPayload(crsf->Command.Command_ID, &(crsf->Command.payload), payload + off, &off);
-            if (retStatus != CRSF_OK) {
+            if (retStatus != CRSF_SUCCESS) {
                 return retStatus;
             }
             payload[off] = CRSF_calcChecksumCMD(frame + 2U, off + sizeof(uint8_t));
@@ -418,7 +418,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 
     frame[*frameLength + 1U] = CRSF_calcChecksum(frame + 2U, *frameLength - CRSF_CRC_SIZE);
     *frameLength += 2U; //Adding also address and length
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 
 CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameType_t* recType) {
@@ -645,7 +645,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             off += CRSF_unpackString(payload + off, crsf->ParamSettingsEntry.name, CRSF_MAX_PARAM_STRING_LENGTH, payloadLength - off);
             CRSF_Status_t retStatus =
                 CRSF_decodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, payloadLength - off);
-            if (retStatus != CRSF_OK) {
+            if (retStatus != CRSF_SUCCESS) {
                 return retStatus;
             };
             UPDATE_FRESHNESS(PARAMETER_SETTINGS_ENTRY);
@@ -666,7 +666,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             crsf->Command.dest_address = payload[off++];
             crsf->Command.origin_address = payload[off++];
             crsf->Command.Command_ID = (CRSF_CommandID_t)payload[off++];
-            if (CRSF_decodeCommandPayload(crsf->Command.Command_ID, &(crsf->Command.payload), payload + off, payloadLength - 4U) != CRSF_OK) {
+            if (CRSF_decodeCommandPayload(crsf->Command.Command_ID, &(crsf->Command.payload), payload + off, payloadLength - 4U) != CRSF_SUCCESS) {
                 return CRSF_ERROR_TYPE_LENGTH;
             };
 
@@ -697,7 +697,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
             return CRSF_ERROR_INVALID_FRAME;
     }
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 
 #if CRSF_ENABLE_STATS
@@ -828,7 +828,7 @@ CRSF_Status_t CRSF_isValidAddress(CRSF_Address_t addr) {
         case CRSF_ADDRESS_RACE_TAG:
         case CRSF_ADDRESS_RADIO_TRANSMITTER:
         case CRSF_ADDRESS_CRSF_RECEIVER:
-        case CRSF_ADDRESS_CRSF_TRANSMITTER: return CRSF_OK;
+        case CRSF_ADDRESS_CRSF_TRANSMITTER: return CRSF_SUCCESS;
         default: return CRSF_ERROR_ADDR;
     }
 }
@@ -982,7 +982,7 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
     }
 
     *length += off;
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 #endif
 
@@ -1074,7 +1074,7 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
 
         default: return CRSF_ERROR_INVALID_FRAME;
     }
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 #endif
 
@@ -1243,7 +1243,7 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
         default: return CRSF_ERROR_INVALID_FRAME;
     }
     *length += off;
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 #endif /* CRSF_ENABLE_COMMAND && && defined(CRSF_CONFIG_TX) */
 
@@ -1479,7 +1479,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
 
         default: break;
     }
-    return CRSF_OK;
+    return CRSF_SUCCESS;
 }
 #endif /* CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_RX) */
 

@@ -95,7 +95,7 @@ iBus_Status_t iBus_registerSensor(iBus_t* iBus, const iBus_SensorType_t sensor) 
 
     iBus->sensorCount++;
 
-    return IBUS_OK;
+    return IBUS_SUCCESS;
 }
 #endif /* IBUS_ENABLE_TELEMETRY */
 
@@ -131,7 +131,7 @@ iBus_Status_t iBus_processFrame(iBus_t* iBus, const uint8_t* frame) {
 #if IBUS_ENABLE_STATS
     iBus->stats.servo_frames_ok++;
 #endif
-    return IBUS_OK;
+    return IBUS_SUCCESS;
 }
 
 #if IBUS_ENABLE_TELEMETRY

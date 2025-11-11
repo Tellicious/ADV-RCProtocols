@@ -110,7 +110,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
         default: break;
     }
 
-    if (status == PWM_OK) {
+    if (status == PWM_SUCCESS) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken); //Process received date
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -122,7 +122,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
 ### PPM
 ```cpp
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim) {
-    if (PPM_processPacket(&_PPM, htim->Instance->CCR1) == PPM_OK) {
+    if (PPM_processPacket(&_PPM, htim->Instance->CCR1) == PPM_SUCCESS) {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         vTaskNotifyGiveFromISR(taskRC, &xHigherPriorityTaskWoken); //Process received date
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -148,7 +148,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size) {
 ```cpp
 utilsStatus_t RC_readHW(RC_t* RC) {
     utilsStatus_t status = UTILS_STATUS_SUCCESS;
-    if (iBus_processFrame(&_iBus, _RCRXBufferiBUS) == IBUS_OK) {
+    if (iBus_processFrame(&_iBus, _RCRXBufferiBUS) == IBUS_SUCCESS) {
         memcpy(RC->cmd, _iBus.channels, configRC_CHANNELS * sizeof(uint16_t));
     } else {
         HAL_UART_DMAStop(&huart2);
@@ -178,7 +178,7 @@ utilsStatus_t RC_readHW(RC_t* RC) {
     utilsStatus_t status = UTILS_STATUS_SUCCESS;
 #elif defined(REMOCON_CRSF)
     CRSF_FrameType_t frameType;
-    if (CRSF_processFrame(&_CRSF, _RCRXBufferCRSF, &frameType) == CRSF_OK) {
+    if (CRSF_processFrame(&_CRSF, _RCRXBufferCRSF, &frameType) == CRSF_SUCCESS) {
         if (frameType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) {
             memcpy(RC->cmd, _CRSF.RC.channels, configRC_CHANNELS * sizeof(uint16_t));
         } else {

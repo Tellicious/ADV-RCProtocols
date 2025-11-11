@@ -89,7 +89,7 @@ extern "C" {
  * Return values
  */
 typedef enum {
-    IBUS_OK = 0,                 /** Operation completed successfully */
+    IBUS_SUCCESS = 0,            /** Operation completed successfully */
     IBUS_ERROR_NULL_POINTER,     /** Null pointer provided */
     IBUS_ERROR_INVALID_FRAME,    /** Invalid packet length or format */
     IBUS_ERROR_CHECKSUM_FAIL,    /** Packet checksum verification failed */
@@ -214,7 +214,7 @@ void iBus_setTimestampCallback(iBus_t* iBus, uint32_t (*getTimestamp_ms)(void));
  * \param[in]       ibus: iBus decoder
  * \param[in]       sensor: Sensor type to be registered
  * 
- * \return          IBUS_OK if sensor registered successfully
+ * \return          IBUS_SUCCESS if sensor registered successfully
  *                  IBUS_ERROR_NULL_POINTER if ibus is NULL, 
  *                  IBUS_ERROR_BUFFER_OVERFLOW if max sensors reached,
  *                  IBUS_ERROR_SENSOR_EXISTS if sensor already registered
@@ -228,7 +228,7 @@ iBus_Status_t iBus_registerSensor(iBus_t* iBus, const iBus_SensorType_t sensor);
  * \param[in]       type: Sensor type to be updated
  * \param[in]       value: New sensor value in raw iBus units
  * 
- * \return          IBUS_OK if value updated successfully,
+ * \return          IBUS_SUCCESS if value updated successfully,
  *                  IBUS_ERROR_NULL_POINTER if ibus is NULL,
  *                  IBUS_ERROR_SENSOR_NOT_FOUND if sensor address not found
  */
@@ -245,7 +245,7 @@ static inline iBus_Status_t iBus_writeSensor(iBus_t* iBus, iBus_SensorType_t typ
                 iBus->sensors[i].updated_ms = iBus->getTimestamp_ms();
             }
 #endif
-            return IBUS_OK;
+            return IBUS_SUCCESS;
         }
     }
 
@@ -259,7 +259,7 @@ static inline iBus_Status_t iBus_writeSensor(iBus_t* iBus, iBus_SensorType_t typ
  * \param[in]       ibus: iBus decoder
  * \param[in]       frame: RF frame data
  *
- * \return          IBUS_OK if frame processed successfully,
+ * \return          IBUS_SUCCESS if frame processed successfully,
  *                  IBUS_ERROR_NULL_POINTER if pointers are NULL,
  *                  IBUS_ERROR_INVALID_FRAME if packet format is invalid,
  *                  IBUS_ERROR_CHECKSUM_FAIL if checksum verification fails

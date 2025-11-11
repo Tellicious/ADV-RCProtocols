@@ -61,7 +61,7 @@ PPM_Status_t PPM_init(PPM_t* PPM, uint32_t timerFrequency, uint16_t timerAutoRel
     PPM->_freqMultiplier = 1000000.f / timerFrequency;
     PPM->_packetEndTicks = PPM_PACKET_END_US / PPM->_freqMultiplier;
 
-    return PPM_OK;
+    return PPM_SUCCESS;
 }
 
 #if PPM_ENABLE_FRESHNESS_CHECK
@@ -92,7 +92,7 @@ PPM_Status_t PPM_processPacket(PPM_t* PPM, uint16_t timerCounter) {
 #if PPM_ENABLE_FRESHNESS_CHECK
             PPM_updateTimestamp(PPM);
 #endif
-            return PPM_OK;
+            return PPM_SUCCESS;
         }
         PPM->_currentChannel = 0;
         return PPM_WAIT;
@@ -111,7 +111,7 @@ PPM_Status_t PPM_processPacket(PPM_t* PPM, uint16_t timerCounter) {
 #if PPM_ENABLE_FRESHNESS_CHECK
         PPM_updateTimestamp(PPM);
 #endif
-        return PPM_OK;
+        return PPM_SUCCESS;
     }
 
     return PPM_WAIT;

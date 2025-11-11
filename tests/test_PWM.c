@@ -249,7 +249,7 @@ static void test_processPacket_multiple_channels_complete_frame(void** state) {
             PWM_Status_t status = PWM_processPacket(&pwm, ch, 0, 1000 + pulse_widths[ch]);
 
             if (ch == PWM_MAX_CHANNELS - 1 && ii == PWM_SAMPLES_NUM - 1) {
-                assert_int_equal(status, PWM_OK);
+                assert_int_equal(status, PWM_SUCCESS);
             } else {
                 assert_int_equal(status, PWM_WAIT);
             }
@@ -540,7 +540,7 @@ static void test_complete_pwm_frame_sequence(void** state) {
                 PWM_Status_t status = PWM_processPacket(&pwm, ch, 0, 1000 + channel_values[ch]);
 
                 if (ch == PWM_MAX_CHANNELS - 1 && ii == PWM_SAMPLES_NUM - 1) {
-                    assert_int_equal(status, PWM_OK);
+                    assert_int_equal(status, PWM_SUCCESS);
                 } else {
                     assert_int_equal(status, PWM_WAIT);
                 }

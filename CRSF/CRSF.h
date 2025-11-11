@@ -146,7 +146,7 @@ extern "C" {
 
 /* Status codes ---------------------------------------------------------------*/
 typedef enum {
-    CRSF_OK = 0,                  /** Operation completed successfully */
+    CRSF_SUCCESS = 0,             /** Operation completed successfully */
     CRSF_ERROR_NULL_POINTER,      /** Null pointer provided */
     CRSF_ERROR_INVALID_FRAME,     /** Invalid frame type */
     CRSF_ERROR_CHECKSUM_FAIL,     /** Frame checksum verification failed */
@@ -315,7 +315,7 @@ void CRSF_setTimestampCallback(CRSF_t* crsf, uint32_t (*get_ms)(void));
  * @param[out]      frame: output buffer with full frame
  * @param[out]      frameLength: written frame length
  * 
- * @return          CRSF_OK on success, error otherwise.
+ * @return          CRSF_SUCCESS on success, error otherwise.
  */
 CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t type, uint8_t values, uint8_t* frame, uint8_t* frameLength);
 
@@ -326,7 +326,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
  * \param[in]       frame: RF frame data
  * \param[out]      recType: type of frame received
  *
- * \return          CRSF_OK on success, error otherwise.
+ * \return          CRSF_SUCCESS on success, error otherwise.
  */
 CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameType_t* recType);
 
@@ -374,7 +374,7 @@ uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_a
  * @param[in]  cmd_len     Command payload length in bytes.
  * @param[out] out_payload Output buffer for command payload (+1 for inner CRC).
  * @param[out] out_len     Written payload length (cmd_len + 2 incl. cmd_id + inner CRC).
- * @return     CRSF_OK on success, error otherwise.
+ * @return     CRSF_SUCCESS on success, error otherwise.
  */
 // CRSF_Status_t CRSF_encodeDirectCommand(uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload, uint8_t cmd_len,
 //                                        uint8_t* out_payload, uint8_t* out_len);
@@ -389,7 +389,7 @@ uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_a
  * @param[in]  cmd_len     Command payload length in bytes.
  * @param[out] out         Output buffer for full CRSF frame (addr..crc).
  * @param[out] out_len     Written frame length.
- * @return     CRSF_OK on success, error otherwise.
+ * @return     CRSF_SUCCESS on success, error otherwise.
  */
 // CRSF_Status_t CRSF_buildDirectCommandFrame(uint8_t bus_addr, uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload,
 //                                            uint8_t cmd_len, uint8_t* out, uint8_t* out_len);

@@ -60,7 +60,7 @@ PWM_Status_t PWM_init(PWM_t* PWM, uint32_t timerFrequency, uint16_t timerAutoRel
     PWM->_timerAutoReload = timerAutoReload;
     PWM->_freqMultiplier = 1000000.f / timerFrequency;
 
-    return PWM_OK;
+    return PWM_SUCCESS;
 }
 
 #if PWM_ENABLE_FRESHNESS_CHECK
@@ -104,7 +104,7 @@ PWM_Status_t PWM_processPacket(PWM_t* PWM, uint8_t channel, uint8_t rising, uint
 #if PWM_ENABLE_FRESHNESS_CHECK
         PWM_updateTimestamp(PWM);
 #endif
-        return PWM_OK;
+        return PWM_SUCCESS;
     }
     return PWM_WAIT;
 }

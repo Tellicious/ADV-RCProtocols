@@ -107,7 +107,14 @@ extern "C" {
 /**
  * Return values
  */
-typedef enum { SYMAX_OK = 0, SYMAX_BIND_COMPLETE, SYMAX_WAIT, SYMAX_ERROR_NULL_POINTER, SYMAX_ERROR_INVALID_PACKET, SYMAX_ERROR_CHECKSUM_FAIL } SymaX_Status_t;
+typedef enum {
+    SYMAX_SUCCESS = 0,
+    SYMAX_BIND_COMPLETE,
+    SYMAX_WAIT,
+    SYMAX_ERROR_NULL_POINTER,
+    SYMAX_ERROR_INVALID_PACKET,
+    SYMAX_ERROR_CHECKSUM_FAIL
+} SymaX_Status_t;
 
 /**
  * RC channels struct
@@ -216,7 +223,7 @@ void SymaX_setTimestampCallback(SymaX_t* SymaX, uint32_t (*getTimestamp_ms)(void
  * \param[in]       SymaX: SymaX decoder
  * \param[out]      packet: Output packet buffer (10 bytes)
  * 
- * \return          SYMAX_OK if packet is valid, SYMAX_BIND_COMPLETE if it is needed to change channel and address, SYMAX_WAIT if binding is in progress, an error otherwise
+ * \return          SYMAX_SUCCESS if packet is valid, SYMAX_BIND_COMPLETE if it is needed to change channel and address, SYMAX_WAIT if binding is in progress, an error otherwise
  */
 SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet);
 #endif
@@ -228,7 +235,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet);
  * \param[in]       SymaX: SymaX decoder
  * \param[in]       packet: RF packet data (10 bytes)
  *
- * \return          SYMAX_OK if packet is valid, SYMAX_BIND_COMPLETE if it is needed to change channel and address, SYMAX_WAIT if binding is in progress, an error otherwise
+ * \return          SYMAX_SUCCESS if packet is valid, SYMAX_BIND_COMPLETE if it is needed to change channel and address, SYMAX_WAIT if binding is in progress, an error otherwise
  */
 SymaX_Status_t SymaX_processPacket(SymaX_t* SymaX, const uint8_t* packet);
 #endif
@@ -260,7 +267,7 @@ uint8_t SymaX_isBound(const SymaX_t* SymaX);
  * \param[in]       SymaX: SymaX structure
  * \param[out]      address: Output buffer for RF address (5 bytes)
  * 
- * \return          SYMAX_OK if address is valid, SYMAX_ERROR_NULL_POINTER if SymaX or address is NULL
+ * \return          SYMAX_SUCCESS if address is valid, SYMAX_ERROR_NULL_POINTER if SymaX or address is NULL
  */
 #define SymaX_getAddress(SymaX, address) memcpy(address, (SymaX)->link.rf_address, 5)
 
