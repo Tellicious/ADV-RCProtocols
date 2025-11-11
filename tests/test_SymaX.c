@@ -44,7 +44,8 @@
 #include "SymaX.h"
 
 /* Test Constants and Helpers */
-#define SYMAX_PREBIND_PACKET_EXPECTED {0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF}
+#define SYMAX_PREBIND_PACKET_EXPECTED                                                                                                                          \
+    { 0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF }
 
 #if SYMAX_ENABLE_FRESHNESS_CHECK
 static uint32_t mock_timestamp = 12345;
