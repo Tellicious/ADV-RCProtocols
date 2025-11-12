@@ -3740,7 +3740,7 @@ static void test_roundtrip_param_string_oversize(void** state) {
     char big[80];
     memset(big, 'X', sizeof(big) - 1);
     big[sizeof(big) - 1] = 0;
-    strcpy(tx.ParamSettingsEntry.payload.str.value, big);
+    strncpy(tx.ParamSettingsEntry.payload.str.value, big, sizeof(tx.ParamSettingsEntry.payload.str.value));
     tx.ParamSettingsEntry.payload.str.has_max_len = 0;
 
     uint8_t frame[128], frameLength = 0;
@@ -3900,7 +3900,7 @@ static void test_rountrip_param_textsel_oversize(void** state) {
     char longopt[100];
     memset(longopt, 'A', sizeof(longopt) - 1);
     longopt[sizeof(longopt) - 1] = 0;
-    strcpy(tx.ParamSettingsEntry.payload.sel.options, longopt);
+    strncpy(tx.ParamSettingsEntry.payload.sel.options, longopt, sizeof(tx.ParamSettingsEntry.payload.sel.options));
     tx.ParamSettingsEntry.payload.sel.value = 0;
     tx.ParamSettingsEntry.payload.sel.hasOptData = 1;
     tx.ParamSettingsEntry.payload.sel.min = 0;
@@ -4214,7 +4214,7 @@ static void test_roundtrip_param_info_oversize(void** state) {
     char longtxt[100];
     memset(longtxt, 'z', sizeof(longtxt) - 1);
     longtxt[sizeof(longtxt) - 1] = 0;
-    strcpy(tx.ParamSettingsEntry.payload.info.text, longtxt);
+    strncpy(tx.ParamSettingsEntry.payload.info.text, longtxt, sizeof(tx.ParamSettingsEntry.payload.info.text));
 
     uint8_t frame[160], frameLength = 0;
     CRSF_FrameType_t frameType;
@@ -4386,7 +4386,7 @@ static void test_roundtrip_param_command_oversize(void** state) {
     char longtxt[100];
     memset(longtxt, 'y', sizeof(longtxt) - 1);
     longtxt[sizeof(longtxt) - 1] = 0;
-    strcpy(tx.ParamSettingsEntry.payload.cmd.info, longtxt);
+    strncpy(tx.ParamSettingsEntry.payload.cmd.info, longtxt, sizeof(tx.ParamSettingsEntry.payload.cmd.info));
 
     uint8_t frame[160], frameLength = 0;
     CRSF_FrameType_t frameType;
