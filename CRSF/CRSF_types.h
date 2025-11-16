@@ -373,8 +373,8 @@ typedef struct {
  * CRSF_FRAMETYPE_BATTERY payload
  */
 typedef struct {
-    int16_t voltage; // Voltage (LSB = 10 µV)
-    int16_t current; // Current (LSB = 10 µA)
+    int16_t voltage; // Voltage (LSB = 0.1 V)
+    int16_t current; // Current (LSB = 0.1 A)
     //uint24_t capacity_used; // Capacity used (mAh) - as per specs
     uint32_t capacity_used; // Capacity used (mAh)
     uint8_t remaining;      // Battery remaining (percent)
