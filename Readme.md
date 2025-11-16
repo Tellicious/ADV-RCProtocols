@@ -149,7 +149,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size) {
 utilsStatus_t RC_readHW(RC_t* RC) {
     utilsStatus_t status = UTILS_STATUS_SUCCESS;
     if (iBus_processFrame(&_iBus, _RCRXBufferiBUS) == IBUS_SUCCESS) {
-        memcpy(RC->cmd, _iBus.channels, configRC_CHANNELS * sizeof(uint16_t));
+        memcpy(RC->cmd, _iBus.channels, 8 * sizeof(uint16_t));
     } else {
         HAL_UART_DMAStop(&huart2);
         memset(_RCRXBufferiBUS, 0x00, IBUS_SERVO_FRAME_LEN);
@@ -180,7 +180,7 @@ utilsStatus_t RC_readHW(RC_t* RC) {
     CRSF_FrameType_t frameType;
     if (CRSF_processFrame(&_CRSF, _RCRXBufferCRSF, &frameType) == CRSF_SUCCESS) {
         if (frameType == CRSF_FRAMETYPE_RC_CHANNELS_PACKED) {
-            memcpy(RC->cmd, _CRSF.RC.channels, configRC_CHANNELS * sizeof(uint16_t));
+            memcpy(RC->cmd, _CRSF.RC.channels, 8 * sizeof(uint16_t));
         } else {
             status = UTILS_STATUS_WARNING; // Frame processed but not RC
         }
