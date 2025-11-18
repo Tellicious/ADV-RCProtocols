@@ -41,6 +41,10 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 
+#if defined(__linux__)
+#include <endian.h>
+#endif
+
 /* Configuration -------------------------------------------------------------*/
 
 #define CRSF_MAX_RPM_VALUES         19 /* Max RPM values */
@@ -914,17 +918,22 @@ typedef struct {
 #define BSWAP16(x) ((((x) & 0xFF00U) >> 8) | (((x) & 0x00FFU) << 8))
 #endif
 
-#if !defined(__linux__)
 #if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #define HTOBE16(VAL) (VAL)
 #define HTOBE32(VAL) (VAL)
 #define BE16TOH(VAL) (VAL)
 #define BE32TOH(VAL) (VAL)
 #else
+#if !defined(__linux__)
 #define HTOBE16(VAL) BSWAP16(VAL)
 #define HTOBE32(VAL) BSWAP32(VAL)
 #define BE16TOH(VAL) BSWAP16(VAL)
 #define BE32TOH(VAL) BSWAP32(VAL)
+#else
+#define HTOBE16(VAL) htobe16(VAL)
+#define HTOBE32(VAL) htobe32(VAL)
+#define BE16TOH(VAL) be16toh(VAL)
+#define BE32TOH(VAL) be32toh(VAL)
 #endif
 #endif
 

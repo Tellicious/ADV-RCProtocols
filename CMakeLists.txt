@@ -48,6 +48,7 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set(compiler_OPTS
         #-fdiagnostics-color=always
         -fno-builtin
+        -fstack-protector-all
         -Wall
         -Wextra
         -Wpedantic
