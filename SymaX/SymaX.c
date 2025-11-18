@@ -114,8 +114,7 @@ SymaX_Status_t SymaX_buildPacket(SymaX_t* SymaX, uint8_t* packet) {
             break;
 #endif
         case SYMAX_BIND_IN_PROGRESS:
-            if (SymaX->link.rf_address[0] == 0xAB && SymaX->link.rf_address[1] == 0xAC && SymaX->link.rf_address[2] == 0xAD && SymaX->link.rf_address[3] == 0xAE
-                && SymaX->link.rf_address[4] == 0xAF) {
+            if (memcmp(SymaX->link.rf_address, (uint8_t[]){0xAB, 0xAC, 0xAD, 0xAE, 0xAF}, 5) == 0) {
                 SymaX_calcTXAddr(SymaX);
             }
             packet[0] = SymaX->link.rf_address[4];

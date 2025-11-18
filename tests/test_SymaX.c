@@ -45,7 +45,7 @@
 #include "SymaX.h"
 
 /* Test Constants and Helpers */
-#define SYMAX_PREBIND_PACKET_EXPECTED                                                                                                                          \
+#define SYMAX_PREBIND_PACKET_EXPECTED                                                                                                                                              \
     { 0xF9, 0x96, 0x82, 0x1B, 0x20, 0x08, 0x08, 0xF2, 0x7D, 0xEF }
 
 #if SYMAX_ENABLE_FRESHNESS_CHECK
@@ -1738,8 +1738,7 @@ static void test_bind_packet_address_extraction_edge_cases(void** state) {
     st.link.phase = SYMAX_BIND_IN_PROGRESS;
 
     // Test with all possible byte values in address
-    uint8_t test_addresses[][5] = {
-        {0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
+    uint8_t test_addresses[][5] = {{0x00, 0x00, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, {0x01, 0x23, 0x45, 0x67, 0x89}, {0xFE, 0xDC, 0xBA, 0x98, 0x76}};
 
     for (size_t i = 0; i < sizeof(test_addresses) / sizeof(test_addresses[0]); i++) {
         uint8_t bind_packet[SYMAX_PACKET_SIZE];

@@ -46,18 +46,18 @@
 #define ABS(value)             (((value) >= 0) ? (value) : (-value))
 #define SIGN(value)            (((value) > 0) - ((value) < 0))
 
-#define BUILD_FRAME(TYPE, VAR)                                                                                                                                 \
+#define BUILD_FRAME(TYPE, VAR)                                                                                                                                                     \
     case CRSF_FRAMETYPE_##TYPE: memcpy(payload, &(crsf->VAR), sizeof(CRSF_##VAR##_t))
-#define UPDATE_LENGTH(VAR)                                                                                                                                     \
-    *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                    \
+#define UPDATE_LENGTH(VAR)                                                                                                                                                         \
+    *frameLength += sizeof(CRSF_##VAR##_t);                                                                                                                                        \
     break
 
-#define PROCESS_FRAME(TYPE, VAR)                                                                                                                               \
+#define PROCESS_FRAME(TYPE, VAR)                                                                                                                                                   \
     case CRSF_FRAMETYPE_##TYPE: memcpy(&(crsf->VAR), payload, sizeof(CRSF_##VAR##_t))
-#define UPDATE_FRESHNESS(TYPE)                                                                                                                                 \
-    if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                   \
-        CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                 \
-    }                                                                                                                                                          \
+#define UPDATE_FRESHNESS(TYPE)                                                                                                                                                     \
+    if (CRSF_ENABLE_FRESHNESS_CHECK && (CRSF_TRK_FRAMETYPE_##TYPE < 0xFF)) {                                                                                                       \
+        CRSF_updateTimestamp(crsf, CRSF_TRK_FRAMETYPE_##TYPE);                                                                                                                     \
+    }                                                                                                                                                                              \
     break
 
 #define CHECK_LENGTH(LEN, TYPE, VAR) ((LEN) >= sizeof(CRSF_##VAR##_t))
@@ -225,7 +225,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         case CRSF_FRAMETYPE_RPM: {
             payload[off++] = crsf->RPM.rpm_source_id;
 
-            for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_RPM_VALUES; ii++) {
+            values = (values > CRSF_MAX_RPM_VALUES) ? CRSF_MAX_RPM_VALUES : values;
+            for (uint8_t ii = 0; ii < values; ii++) {
                 uint32_t val = (uint32_t)(crsf->RPM.rpm_value[ii] & 0xFFFFFFU);
                 payload[off++] = (uint8_t)((val >> 16) & 0xFFU);
                 payload[off++] = (uint8_t)((val >> 8) & 0xFFU);
@@ -247,7 +248,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         case CRSF_FRAMETYPE_TEMPERATURE:
             payload[off++] = crsf->Temperature.temp_source_id;
 
-            for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
+            values = (values > CRSF_MAX_TEMPERATURE_VALUES) ? CRSF_MAX_TEMPERATURE_VALUES : values;
+            for (uint8_t ii = 0; ii < values; ii++) {
                 off += CRSF_packBE16(payload + off, crsf->Temperature.temperature[ii]);
             }
 
@@ -264,7 +266,8 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         case CRSF_FRAMETYPE_VOLTAGES:
             payload[off++] = crsf->Voltages.Voltage_source_id;
 
-            for (uint8_t ii = 0; ii < values && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
+            values = (values > CRSF_MAX_VOLTAGE_VALUES) ? CRSF_MAX_VOLTAGE_VALUES : values;
+            for (uint8_t ii = 0; ii < values; ii++) {
                 off += CRSF_packBE16(payload + off, crsf->Voltages.Voltage_values[ii]);
             }
 
@@ -324,9 +327,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #endif
 
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
-        case CRSF_FRAMETYPE_FLIGHT_MODE:
-            *frameLength += CRSF_packString(payload + off, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN);
-            break;
+        case CRSF_FRAMETYPE_FLIGHT_MODE: *frameLength += CRSF_packString(payload + off, crsf->FlightMode.flight_mode, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN); break;
 #endif
 
 #if CRSF_TEL_ENABLE_ESP_NOW_MESSAGES
@@ -535,8 +536,9 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_RPM: {
             uint8_t rpmCount = (payloadLength - sizeof(crsf->RPM.rpm_source_id)) / 3U;
+            rpmCount = (rpmCount > CRSF_MAX_RPM_VALUES) ? CRSF_MAX_RPM_VALUES : rpmCount;
             crsf->RPM.rpm_source_id = payload[off++];
-            for (uint8_t ii = 0; ii < rpmCount && ii < CRSF_MAX_RPM_VALUES; ii++) {
+            for (uint8_t ii = 0; ii < rpmCount; ii++) {
                 uint32_t val = ((uint32_t)payload[off] << 16) | ((uint32_t)payload[off + 1U] << 8) | ((uint32_t)payload[off + 2U]);
                 crsf->RPM.rpm_value[ii] = val & 0x800000 ? (int32_t)(val | 0xFF000000) : (int32_t)val; // Sign extend if negative
                 off += 3U;
@@ -548,8 +550,9 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #if CRSF_TEL_ENABLE_TEMPERATURE && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_TEMPERATURE: {
             uint8_t tempCount = (payloadLength - sizeof(crsf->Temperature.temp_source_id)) / sizeof(uint16_t);
+            tempCount = (tempCount > CRSF_MAX_TEMPERATURE_VALUES) ? CRSF_MAX_TEMPERATURE_VALUES : tempCount;
             crsf->Temperature.temp_source_id = payload[off++];
-            for (uint8_t ii = 0; ii < tempCount && ii < CRSF_MAX_TEMPERATURE_VALUES; ii++) {
+            for (uint8_t ii = 0; ii < tempCount; ii++) {
                 off += CRSF_unpackBE16(payload + off, &(crsf->Temperature.temperature)[ii]);
             }
             UPDATE_FRESHNESS(TEMPERATURE);
@@ -558,9 +561,10 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 
 #if CRSF_TEL_ENABLE_VOLTAGES && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_VOLTAGES: {
-            uint8_t voltCount = (payloadLength - sizeof(crsf->Voltages.Voltage_source_id)) / 2;
+            uint8_t voltCount = (payloadLength - sizeof(crsf->Voltages.Voltage_source_id)) / sizeof(uint16_t);
+            voltCount = (voltCount > CRSF_MAX_VOLTAGE_VALUES) ? CRSF_MAX_VOLTAGE_VALUES : voltCount;
             crsf->Voltages.Voltage_source_id = payload[off++];
-            for (uint8_t ii = 0; ii < voltCount && ii < CRSF_MAX_VOLTAGE_VALUES; ii++) {
+            for (uint8_t ii = 0; ii < voltCount; ii++) {
                 off += CRSF_unpackBE16(payload + off, &(crsf->Voltages.Voltage_values)[ii]);
             }
             UPDATE_FRESHNESS(VOLTAGES);
@@ -643,8 +647,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             crsf->ParamSettingsEntry.parent = payload[off++];
             crsf->ParamSettingsEntry.type.byte = payload[off++];
             off += CRSF_unpackString(payload + off, crsf->ParamSettingsEntry.name, CRSF_MAX_PARAM_STRING_LENGTH, payloadLength - off);
-            CRSF_Status_t retStatus =
-                CRSF_decodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, payloadLength - off);
+            CRSF_Status_t retStatus = CRSF_decodeParamEntry(crsf->ParamSettingsEntry.type.v, &(crsf->ParamSettingsEntry.payload), payload + off, payloadLength - off);
             if (retStatus != CRSF_SUCCESS) {
                 return retStatus;
             };
@@ -679,9 +682,7 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
-            memcpy(&(crsf->MAVLinkEnv), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U);
-            UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy(&(crsf->MAVLinkEnv), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
@@ -804,7 +805,7 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
         case CRSF_FRAMETYPE_COMMAND: return (payloadLength >= 3U);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= CRSF_MIN_FRAME_LEN && payloadLength <= CRSF_MAX_PAYLOAD_LEN);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= 1U);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
         case CRSF_FRAMETYPE_MAVLINK_STATUS: return CHECK_LENGTH(payloadLength, type, MAVLinkStat);
@@ -925,12 +926,6 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
     uint8_t off = 0;
 
     switch (type) {
-        case CRSF_PARAM_INT8:
-        case CRSF_PARAM_UINT8:
-        case CRSF_PARAM_INT16:
-        case CRSF_PARAM_UINT16:
-        case CRSF_PARAM_INT32:
-        case CRSF_PARAM_UINT32: break;
 
         case CRSF_PARAM_FLOAT: {
             off += CRSF_packBE32(payload + off, in->f.value);
@@ -978,6 +973,12 @@ static CRSF_Status_t CRSF_encodeParamEntry(CRSF_ParamType_t type, const CRSF_Par
             off += CRSF_packString(payload + off, in->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, CRSF_MAX_PARAM_SETTINGS_PAYLOAD - off);
             break;
 
+        /*case CRSF_PARAM_INT8:
+        case CRSF_PARAM_UINT8:
+        case CRSF_PARAM_INT16:
+        case CRSF_PARAM_UINT16:
+        case CRSF_PARAM_INT32:
+        case CRSF_PARAM_UINT32:*/
         default: return CRSF_ERROR_INVALID_FRAME;
     }
 
@@ -993,12 +994,6 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
     }
     uint8_t off = 0;
     switch (type) {
-        case CRSF_PARAM_INT8:
-        case CRSF_PARAM_UINT8:
-        case CRSF_PARAM_INT16:
-        case CRSF_PARAM_UINT16:
-        case CRSF_PARAM_INT32:
-        case CRSF_PARAM_UINT32: break;
 
         case CRSF_PARAM_FLOAT: {
             if (length < off + 4 * 4 + 1 + 4) {
@@ -1072,6 +1067,12 @@ static CRSF_Status_t CRSF_decodeParamEntry(CRSF_ParamType_t type, CRSF_ParamEntr
             off += CRSF_unpackString(payload + off, out->cmd.info, CRSF_MAX_PARAM_STRING_LENGTH, length - off);
             break;
 
+        /*case CRSF_PARAM_INT8:
+        case CRSF_PARAM_UINT8:
+        case CRSF_PARAM_INT16:
+        case CRSF_PARAM_UINT16:
+        case CRSF_PARAM_INT32:
+        case CRSF_PARAM_UINT32:*/
         default: return CRSF_ERROR_INVALID_FRAME;
     }
     return CRSF_SUCCESS;
@@ -1197,13 +1198,12 @@ static CRSF_Status_t CRSF_encodeCommandPayload(CRSF_CommandID_t commandID, const
                 case CRSF_CMD_SCREEN_POPUP_MESSAGE_START: {
                     uint8_t reqNextValues = CRSF_MIN_STRING_LENGTH + 2U * sizeof(uint8_t);
                     // Pack header string
-                    off += CRSF_packString(payload + off, in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                           CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
+                    off += CRSF_packString(payload + off, in->screen.popupMessageStart.Header, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
 
                     // Pack info message string
                     reqNextValues -= CRSF_MIN_STRING_LENGTH;
-                    off += CRSF_packString(payload + off, in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                           CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
+                    off +=
+                        CRSF_packString(payload + off, in->screen.popupMessageStart.Info_message, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, CRSF_MAX_COMMAND_PAYLOAD - off - reqNextValues);
 
                     // Pack timeout and close button option
                     payload[off++] = in->screen.popupMessageStart.Max_timeout_interval;
@@ -1448,8 +1448,7 @@ static CRSF_Status_t CRSF_decodeCommandPayload(CRSF_CommandID_t commandID, CRSF_
                     out->screen.popupMessageStart.add_data.present = 0;
                     if (length >= strLen + off + 4U) { // If additional data is present, it must contain value, minValue,maxValue and defaultValue
                         out->screen.popupMessageStart.add_data.present = 1U;
-                        off += CRSF_unpackString(payload + off, out->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS,
-                                                 length - off - 4U);
+                        off += CRSF_unpackString(payload + off, out->screen.popupMessageStart.add_data.selectionText, CRSF_MAX_COMMAND_PAYLOAD_STRINGS, length - off - 4U);
                         out->screen.popupMessageStart.add_data.value = payload[off++];
                         out->screen.popupMessageStart.add_data.minValue = payload[off++];
                         out->screen.popupMessageStart.add_data.maxValue = payload[off++];

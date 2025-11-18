@@ -972,8 +972,7 @@ static void test_complete_servo_telemetry_workflow(void** state) {
 
 #if IBUS_ENABLE_TELEMETRY
     // Register multiple sensors
-    iBus_SensorType_t sensors[] = {IBUS_MEAS_TYPE_INTERNAL_VOLTAGE, IBUS_MEAS_TYPE_TEMPERATURE, IBUS_MEAS_TYPE_RPM, IBUS_MEAS_TYPE_GPS_LAT,
-                                   IBUS_MEAS_TYPE_CURRENT};
+    iBus_SensorType_t sensors[] = {IBUS_MEAS_TYPE_INTERNAL_VOLTAGE, IBUS_MEAS_TYPE_TEMPERATURE, IBUS_MEAS_TYPE_RPM, IBUS_MEAS_TYPE_GPS_LAT, IBUS_MEAS_TYPE_CURRENT};
 
     int32_t value[] = {4, 450, 5500, -123456789, -12345};
 

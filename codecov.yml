@@ -12,7 +12,7 @@ parsers:
     gcov:
         branch_detection:
             conditional: no
-            loop: yes
+            loop: no
             method: no
             macro: yes
 ignore:
@@ -27,6 +27,12 @@ component_management:
               branches:
                 - '!main'
     individual_components:
+        - component_id: PWM
+          paths:
+            - "**/PWM.*"
+        - component_id: PPM
+          paths:
+            - "**/PPM.*"
         - component_id: SymaX
           paths:
             - "**/SymaX.*"

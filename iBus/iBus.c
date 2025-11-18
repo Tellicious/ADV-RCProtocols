@@ -112,15 +112,14 @@ iBus_Status_t iBus_processFrame(iBus_t* iBus, const uint8_t* frame) {
         return IBUS_ERROR_INVALID_FRAME;
     }
 
-    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2))
-        != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
+    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2)) != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
 #if IBUS_ENABLE_STATS
         iBus->stats.frames_bad_crc++;
 #endif
         return IBUS_ERROR_CHECKSUM_FAIL;
     }
 
-    for (uint8_t ch = 0, i = 2; ch < 14 && ch < IBUS_MAX_CHANNELS; ch++, i += 2) {
+    for (uint8_t ch = 0, i = 2; ch < IBUS_MAX_CHANNELS; ch++, i += 2) {
         iBus->channels[ch] = (uint16_t)(frame[i] | ((uint16_t)frame[i + 1] << 8));
     }
 #if IBUS_ENABLE_FRESHNESS_CHECK

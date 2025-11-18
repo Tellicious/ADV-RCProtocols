@@ -2,7 +2,7 @@
 
 # Collection of various RC Frame Decoders/Encoders
 
-[![Unit tests](https://github.com/Tellicious/ADV-RCProtocols/actions/workflows/runTests.yml/badge.svg?branch=main&event=push&event=workflow_dispatch)](https://github.com/Tellicious/ADV-RCProtocols/actions/workflows/runTests.yml)
+[![Unit tests](https://github.com/Tellicious/ADV-RCProtocols/actions/workflows/runTests.yml/badge.svg?event=push)](https://github.com/Tellicious/ADV-RCProtocols/actions/workflows/runTests.yml)
 [![Codecov](https://codecov.io/gh/Tellicious/ADV-RCProtocols/graph/badge.svg?token=OJG3076HXJ)](https://codecov.io/gh/Tellicious/ADV-RCProtocols)
 
 ## Libraries included:

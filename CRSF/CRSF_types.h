@@ -428,9 +428,8 @@ typedef struct {
  * CRSF_FRAMETYPE_TEMPERATURE payload
  */
 typedef struct {
-    uint8_t temp_source_id; // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
-    int16_t
-        temperature[CRSF_MAX_TEMPERATURE_VALUES]; // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
+    uint8_t temp_source_id;                           // Identifies the source of the temperature data (e.g., 0 = FC including all ESCs, 1 = Ambient, etc.)
+    int16_t temperature[CRSF_MAX_TEMPERATURE_VALUES]; // up to 20 temperature values in deci-degree (tenths of a degree) Celsius (e.g., 250 = 25.0°C, -50 = -5.0°C)
 } CRSF_Temperature_t;
 
 /** 
