@@ -817,19 +817,36 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
 
 #if CRSF_ENABLE_ADDRESS_VALIDATION
 CRSF_Status_t CRSF_isValidAddress(CRSF_Address_t addr) {
-    // Check specific known addresses
     switch (addr) {
         case CRSF_ADDRESS_BROADCAST:
+        case CRSF_ADDRESS_CLOUD:
         case CRSF_ADDRESS_USB:
+        case CRSF_ADDRESS_BLUETOOTH_MODULE:
+        case CRSF_ADDRESS_WIFI_RECEIVER:
+        case CRSF_ADDRESS_VIDEO_RECEIVER:
         case CRSF_ADDRESS_TBS_CORE_PNP_PRO:
+        case CRSF_ADDRESS_RESERVED1:
+        case CRSF_ADDRESS_ESC_1:
+        case CRSF_ADDRESS_ESC_2:
+        case CRSF_ADDRESS_ESC_3:
+        case CRSF_ADDRESS_ESC_4:
+        case CRSF_ADDRESS_ESC_5:
+        case CRSF_ADDRESS_ESC_6:
+        case CRSF_ADDRESS_ESC_7:
+        case CRSF_ADDRESS_ESC_8:
+        case CRSF_ADDRESS_CROSSFIRE_RESERVED1:
+        case CRSF_ADDRESS_CROSSFIRE_RESERVED2:
         case CRSF_ADDRESS_CURRENT_SENSOR:
         case CRSF_ADDRESS_GPS:
         case CRSF_ADDRESS_TBS_BLACKBOX:
         case CRSF_ADDRESS_FLIGHT_CONTROLLER:
+        case CRSF_ADDRESS_RESERVED2:
         case CRSF_ADDRESS_RACE_TAG:
+        case CRSF_ADDRESS_VTX:
         case CRSF_ADDRESS_RADIO_TRANSMITTER:
         case CRSF_ADDRESS_CRSF_RECEIVER:
-        case CRSF_ADDRESS_CRSF_TRANSMITTER: return CRSF_SUCCESS;
+        case CRSF_ADDRESS_CRSF_TRANSMITTER:
+        case CRSF_ADDRESS_ELRS_LUA: return CRSF_SUCCESS;
         default: return CRSF_ERROR_ADDR;
     }
 }
