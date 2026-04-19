@@ -883,6 +883,26 @@ static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* 
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
 static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
+#if CRSF_USE_PACKED_RC_BITFIELDS
+    CRSF_RC_Packed_t packed;
+    packed.ch0 = CRSF_RC_US_TO_TICKS(channels[0]);
+    packed.ch1 = CRSF_RC_US_TO_TICKS(channels[1]);
+    packed.ch2 = CRSF_RC_US_TO_TICKS(channels[2]);
+    packed.ch3 = CRSF_RC_US_TO_TICKS(channels[3]);
+    packed.ch4 = CRSF_RC_US_TO_TICKS(channels[4]);
+    packed.ch5 = CRSF_RC_US_TO_TICKS(channels[5]);
+    packed.ch6 = CRSF_RC_US_TO_TICKS(channels[6]);
+    packed.ch7 = CRSF_RC_US_TO_TICKS(channels[7]);
+    packed.ch8 = CRSF_RC_US_TO_TICKS(channels[8]);
+    packed.ch9 = CRSF_RC_US_TO_TICKS(channels[9]);
+    packed.ch10 = CRSF_RC_US_TO_TICKS(channels[10]);
+    packed.ch11 = CRSF_RC_US_TO_TICKS(channels[11]);
+    packed.ch12 = CRSF_RC_US_TO_TICKS(channels[12]);
+    packed.ch13 = CRSF_RC_US_TO_TICKS(channels[13]);
+    packed.ch14 = CRSF_RC_US_TO_TICKS(channels[14]);
+    packed.ch15 = CRSF_RC_US_TO_TICKS(channels[15]);
+    memcpy(payload, &packed, sizeof(packed));
+#else
     uint32_t bitBuf = 0;
     uint8_t bitCnt = 0;
     uint8_t* p = payload;
@@ -899,11 +919,32 @@ static void CRSF_packRC(uint8_t* payload, const uint16_t* channels) {
             bitCnt -= 8;
         }
     }
+#endif /* CRSF_USE_PACKED_RC_BITFIELDS */
 }
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
 static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
+#if CRSF_USE_PACKED_RC_BITFIELDS
+    CRSF_RC_Packed_t packed;
+    memcpy(&packed, payload, sizeof(packed));
+    channels[0] = CRSF_RC_TICKS_TO_US(packed.ch0);
+    channels[1] = CRSF_RC_TICKS_TO_US(packed.ch1);
+    channels[2] = CRSF_RC_TICKS_TO_US(packed.ch2);
+    channels[3] = CRSF_RC_TICKS_TO_US(packed.ch3);
+    channels[4] = CRSF_RC_TICKS_TO_US(packed.ch4);
+    channels[5] = CRSF_RC_TICKS_TO_US(packed.ch5);
+    channels[6] = CRSF_RC_TICKS_TO_US(packed.ch6);
+    channels[7] = CRSF_RC_TICKS_TO_US(packed.ch7);
+    channels[8] = CRSF_RC_TICKS_TO_US(packed.ch8);
+    channels[9] = CRSF_RC_TICKS_TO_US(packed.ch9);
+    channels[10] = CRSF_RC_TICKS_TO_US(packed.ch10);
+    channels[11] = CRSF_RC_TICKS_TO_US(packed.ch11);
+    channels[12] = CRSF_RC_TICKS_TO_US(packed.ch12);
+    channels[13] = CRSF_RC_TICKS_TO_US(packed.ch13);
+    channels[14] = CRSF_RC_TICKS_TO_US(packed.ch14);
+    channels[15] = CRSF_RC_TICKS_TO_US(packed.ch15);
+#else
     uint32_t bitBuf = 0;
     uint8_t bitCnt = 0;
     const uint8_t* p = payload;
@@ -918,6 +959,7 @@ static void CRSF_unpackRC(const uint8_t* payload, uint16_t* channels) {
         bitBuf >>= 11U;
         bitCnt -= 11U;
     }
+#endif /* CRSF_USE_PACKED_RC_BITFIELDS */
 }
 #endif
 

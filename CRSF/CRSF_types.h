@@ -321,6 +321,16 @@ typedef enum {
 
 /* Payloads ------------------------------------------------------------------*/
 
+
+/* Packed bitfield support detection ---------------------------------------- */
+#ifndef CRSF_USE_PACKED_RC_BITFIELDS
+#if (defined(__GNUC__) || defined(__clang__)) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define CRSF_USE_PACKED_RC_BITFIELDS 1
+#else
+#define CRSF_USE_PACKED_RC_BITFIELDS 0
+#endif
+#endif
+
 #pragma pack(push, 1)
 
 /**
@@ -468,6 +478,29 @@ typedef struct {
     uint8_t down_link_quality; // Downlink Package success rate / Link quality (%)
     int8_t down_snr;           // Downlink SNR (dB)
 } CRSF_LinkStatistics_t;
+
+#if CRSF_USE_PACKED_RC_BITFIELDS
+typedef struct __attribute__((packed)) {
+    uint32_t ch0  : 11;
+    uint32_t ch1  : 11;
+    uint32_t ch2  : 11;
+    uint32_t ch3  : 11;
+    uint32_t ch4  : 11;
+    uint32_t ch5  : 11;
+    uint32_t ch6  : 11;
+    uint32_t ch7  : 11;
+    uint32_t ch8  : 11;
+    uint32_t ch9  : 11;
+    uint32_t ch10 : 11;
+    uint32_t ch11 : 11;
+    uint32_t ch12 : 11;
+    uint32_t ch13 : 11;
+    uint32_t ch14 : 11;
+    uint32_t ch15 : 11;
+} CRSF_RC_Packed_t;
+
+_Static_assert(sizeof(CRSF_RC_Packed_t) == 22, "CRSF_RC_Packed_t must be exactly 22 bytes");
+#endif /* CRSF_USE_PACKED_RC_BITFIELDS */
 
 /**
  * CRSF_FRAMETYPE_CHANNELS_PACKED payload
