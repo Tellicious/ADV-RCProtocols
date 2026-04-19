@@ -929,6 +929,61 @@ static void test_build_rc_channels(void** state) {
 }
 #endif
 
+#if CRSF_USE_PACKED_RC_BITFIELDS && CRSF_ENABLE_RC_CHANNELS
+/**
+ * Verify that CRSF_RC_Packed_t bitfield layout matches the CRSF wire format.
+ * ch0 = 0x7FF (all 11 bits set) must produce: byte[0] = 0xFF, byte[1] = 0x07.
+ * ch1 = 0x555 must produce its bits starting at bit offset 11.
+ */
+static void test_rc_packed_bitfield_layout(void** state) {
+    (void)state;
+
+    /* Test 1: single channel — verify bit position of ch0 */
+    CRSF_RC_Packed_t p;
+    uint8_t buf[22];
+    memset(&p, 0, sizeof(p));
+    p.ch0 = 0x7FFU;
+    memcpy(buf, &p, sizeof(p));
+    /* ch0 occupies bits 0..10: byte 0 = all 8 lower bits = 0xFF, byte 1 low 3 bits = 0x07 */
+    assert_int_equal(buf[0], 0xFF);
+    assert_int_equal(buf[1], 0x07);
+
+    /* Test 2: second channel — verify bit position of ch1 */
+    memset(&p, 0, sizeof(p));
+    p.ch1 = 0x7FFU;
+    memcpy(buf, &p, sizeof(p));
+    /* ch1 occupies bits 11..21: byte 1 high 5 bits = 0xF8, byte 2 all = 0x3F */
+    assert_int_equal(buf[0], 0x00);
+    assert_int_equal(buf[1], 0xF8);
+    assert_int_equal(buf[2], 0x3F);
+
+    /* Test 3: full roundtrip — all channels at center (992 ticks) must match
+     * the known-good test_rc_channels_packet payload bytes (offset 3..24).
+     * This is the same golden vector used by test_build_rc_channels. */
+    memset(&p, 0, sizeof(p));
+    p.ch0 = 992;
+    p.ch1 = 992;
+    p.ch2 = 992;
+    p.ch3 = 992;
+    p.ch4 = 992;
+    p.ch5 = 992;
+    p.ch6 = 992;
+    p.ch7 = 992;
+    p.ch8 = 992;
+    p.ch9 = 992;
+    p.ch10 = 992;
+    p.ch11 = 992;
+    p.ch12 = 992;
+    p.ch13 = 992;
+    p.ch14 = 992;
+    p.ch15 = 992;
+    memcpy(buf, &p, sizeof(p));
+    for (uint8_t ii = 0; ii < 22; ii++) {
+        assert_int_equal(buf[ii], test_rc_channels_packet[3 + ii]);
+    }
+}
+#endif /* CRSF_USE_PACKED_RC_BITFIELDS && CRSF_ENABLE_RC_CHANNELS */
+
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_RX
 static void test_build_link_rx_id(void** state) {
     (void)state;
@@ -6056,7 +6111,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
 
         assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
-        assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
+        assert_uint_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
     /* additional data */
 
@@ -6094,7 +6149,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         crsf.Command.payload.screen.popupMessageStart.has_possible_values = 0;
 
         assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
-        assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
+        assert_uint_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
 
     /* possible values */
@@ -6123,7 +6178,7 @@ static void test_build_cmd_screen_overflow_invalid_len(void** state) {
         strncpy(crsf.Command.payload.screen.popupMessageStart.possible_values, pv, sizeof(crsf.Command.payload.screen.popupMessageStart.possible_values));
 
         assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_COMMAND, 0, builtFrame, &frameLength) == CRSF_SUCCESS);
-        assert_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
+        assert_uint_in_range(frameLength, 0, CRSF_MAX_COMMAND_PAYLOAD + 8U);
     }
 }
 #endif
@@ -6374,6 +6429,9 @@ int main(void) {
 #endif
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_build_rc_channels),
+#endif
+#if CRSF_USE_PACKED_RC_BITFIELDS && CRSF_ENABLE_RC_CHANNELS
+        cmocka_unit_test(test_rc_packed_bitfield_layout),
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_RX
         cmocka_unit_test(test_build_link_rx_id),
