@@ -32,10 +32,12 @@
 /* END Header */
 
 #include "CRSF.h"
-#include <math.h>
 #include <string.h>
 #include "CRSF_CRC.h"
 #include "CRSF_types.h"
+#if !CRSF_USE_BAROALT_LUT
+#include <math.h>
+#endif
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -852,31 +854,76 @@ CRSF_Status_t CRSF_isValidAddress(CRSF_Address_t addr) {
 }
 #endif
 
+#if CRSF_USE_BAROALT_LUT && CRSF_TEL_ENABLE_BAROALT_VSPEED
+/**
+ * Vertical speed unpack LUT: index = abs(packed), value = abs(cm/s).
+ * Generated from: round((exp(i * 0.026) - 1.0) * 100) for i = 0..127.
+ * Kl = 100, Kr = 0.026 (matches spec constants).
+ */
+static const uint16_t CRSF_VSPEED_LUT[128] = {0,    3,    5,    8,    11,   14,   17,   20,   23,   26,   30,   33,   37,   40,   44,   48,   52,   56,   60,   64,   68,   73,
+                                              77,   82,   87,   92,   97,   102,  107,  113,  118,  124,  130,  136,  142,  148,  155,  162,  169,  176,  183,  190,  198,  206,
+                                              214,  222,  231,  239,  248,  258,  267,  277,  287,  297,  307,  318,  329,  340,  352,  364,  376,  388,  401,  414,  428,  442,
+                                              456,  471,  486,  501,  517,  533,  550,  567,  585,  603,  621,  640,  660,  680,  700,  722,  743,  765,  788,  812,  836,  860,
+                                              886,  911,  938,  965,  994,  1022, 1052, 1082, 1113, 1145, 1178, 1212, 1246, 1282, 1318, 1356, 1394, 1433, 1474, 1515, 1558, 1601,
+                                              1646, 1692, 1739, 1788, 1838, 1889, 1941, 1995, 2050, 2107, 2165, 2224, 2286, 2348, 2413, 2479, 2547, 2617};
+
+/**
+ * Binary search on CRSF_VSPEED_LUT for the nearest packed value.
+ * Returns the index (0–127) whose LUT entry is closest to abs_vs.
+ */
+static uint8_t CRSF_findPackedVSpeed(uint16_t abs_vs) {
+    if (abs_vs == 0U) {
+        return 0U;
+    }
+    if (abs_vs >= CRSF_VSPEED_LUT[127]) {
+        return 127U;
+    }
+    uint8_t lo = 0U, hi = 127U;
+    while ((uint8_t)(lo + 1U) < hi) {
+        uint8_t mid = (uint8_t)((lo + hi) / 2U);
+        if (CRSF_VSPEED_LUT[mid] <= abs_vs) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return ((abs_vs - CRSF_VSPEED_LUT[lo]) <= (CRSF_VSPEED_LUT[hi] - abs_vs)) ? lo : hi;
+}
+#endif /* CRSF_USE_BAROALT_LUT && CRSF_TEL_ENABLE_BAROALT_VSPEED */
+
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_RX)
 static void CRSF_packBaroAltVSpeed(uint8_t* payload, const CRSF_BaroAlt_VS_t* baroAltVS) {
 
-    const int Kl = 100;    // linearity constant;
-    const float Kr = .026; // range constant;
-
-    // Pack altitude
+    // Pack altitude (integer-only, unchanged)
     uint16_t altPacked;
-    if (baroAltVS->altitude < -10000) {       //less than minimum altitude
-        altPacked = 0;                        //minimum
-    } else if (baroAltVS->altitude < 22768) { //dm-resolution range
+    if (baroAltVS->altitude < -10000) {
+        altPacked = 0;
+    } else if (baroAltVS->altitude < 22768) {
         altPacked = baroAltVS->altitude + 10000;
-    } else if (baroAltVS->altitude > 327655) { //more than maximum
-        altPacked = 0xFFFE;                    //maximum
+    } else if (baroAltVS->altitude > 327655) {
+        altPacked = 0xFFFE;
     } else {
-        altPacked = ((baroAltVS->altitude + 5) / 10) | 0x8000; //meter-resolution range
+        altPacked = ((baroAltVS->altitude + 5) / 10) | 0x8000;
     }
 
     // Pack vertical speed
     int8_t vsPacked;
+#if CRSF_USE_BAROALT_LUT
+    if (baroAltVS->vertical_speed == 0) {
+        vsPacked = 0;
+    } else {
+        uint8_t idx = CRSF_findPackedVSpeed((uint16_t)ABS(baroAltVS->vertical_speed));
+        vsPacked = (int8_t)idx * SIGN(baroAltVS->vertical_speed);
+    }
+#else
+    const int Kl = 100;
+    const float Kr = .026;
     if (baroAltVS->vertical_speed == 0) {
         vsPacked = 0;
     } else {
         vsPacked = (int8_t)roundf(logf((float)ABS(baroAltVS->vertical_speed) / Kl + 1) / Kr) * SIGN(baroAltVS->vertical_speed);
     }
+#endif /* CRSF_USE_BAROALT_LUT */
 
     payload[0] = (uint8_t)((altPacked >> 8U) & 0xFFU);
     payload[1] = (uint8_t)(altPacked & 0xFFU);
@@ -887,15 +934,25 @@ static void CRSF_packBaroAltVSpeed(uint8_t* payload, const CRSF_BaroAlt_VS_t* ba
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_TX)
 static void CRSF_unpackBaroAltVSpeed(const uint8_t* payload, CRSF_BaroAlt_VS_t* baroAltVS) {
 
-    const int Kl = 100;    // linearity constant;
-    const float Kr = .026; // range constant;
-
     uint16_t altPacked = (uint16_t)(payload[1] | (payload[0] << 8U));
     int8_t vsPacked = (int8_t)payload[2];
-    baroAltVS->altitude = (altPacked & 0x8000) ? (altPacked & 0x7FFF) * 10 : (altPacked - 10000);
-    baroAltVS->vertical_speed = (expf((float)ABS(vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
-}
 
+    // Unpack altitude (integer-only, unchanged)
+    baroAltVS->altitude = (altPacked & 0x8000) ? (altPacked & 0x7FFF) * 10 : (altPacked - 10000);
+
+    // Unpack vertical speed
+#if CRSF_USE_BAROALT_LUT
+    if (vsPacked == 0) {
+        baroAltVS->vertical_speed = 0;
+    } else {
+        baroAltVS->vertical_speed = (int16_t)CRSF_VSPEED_LUT[ABS(vsPacked)] * SIGN(vsPacked);
+    }
+#else
+    const int Kl = 100;
+    const float Kr = .026;
+    baroAltVS->vertical_speed = (expf((float)ABS(vsPacked) * Kr) - 1.0f) * Kl * SIGN(vsPacked);
+#endif /* CRSF_USE_BAROALT_LUT */
+}
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
