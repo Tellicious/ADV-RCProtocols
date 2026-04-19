@@ -71,6 +71,10 @@ extern "C" {
 #define CRSF_USE_CRC_CALCULATION 0 /* Use CRC calculation instead of lookup tables (saves flash). */
 #endif
 
+#ifndef CRSF_USE_BAROALT_LUT
+#define CRSF_USE_BAROALT_LUT 0 /* Use LUT instead of float math for BaroAlt VSpeed (saves flash on FPU-less MCUs). */
+#endif
+
 #ifndef CRSF_TEL_ENABLE_GPS
 #define CRSF_TEL_ENABLE_GPS 1
 #endif

@@ -1781,6 +1781,62 @@ static void test_roundtrip_baroalt_vspeed(void** state) {
     }
 #endif
 }
+
+#if CRSF_USE_BAROALT_LUT
+/**
+ * Exercise all code paths in the LUT-based BaroAlt VSpeed pack/unpack
+ * via the public build/process API.
+ */
+static void test_baroalt_lut_edge_cases(void** state) {
+    (void)state;
+
+    CRSF_t tx, rx;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_FrameType_t frameType;
+
+    /* Test vectors: {input vs, expected sign of output, max absolute error} */
+    struct {
+        int16_t vs_in;
+        int8_t expected_sign; /* -1, 0, +1 */
+        int16_t max_error;
+    } vectors[] = {
+        {0, 0, 0},        /* Zero: early return path */
+        {3, 1, 5},        /* Tiny positive: bottom of LUT */
+        {-5, -1, 5},      /* Tiny negative: bottom of LUT + sign */
+        {150, 1, 10},     /* Normal: mid-LUT binary search (golden vector) */
+        {-150, -1, 10},   /* Normal negative */
+        {500, 1, 20},     /* Medium */
+        {1500, 1, 50},    /* Large */
+        {-1500, -1, 50},  /* Large negative */
+        {2700, 1, 150},   /* Beyond LUT max: triggers clamp to index 127 */
+        {-2700, -1, 150}, /* Negative clamp */
+    };
+
+    for (uint8_t ii = 0; ii < sizeof(vectors) / sizeof(vectors[0]); ii++) {
+        CRSF_init(&tx);
+        CRSF_init(&rx);
+        tx.BaroAlt_VS.altitude = 5000; /* Fixed, not the focus of this test */
+        tx.BaroAlt_VS.vertical_speed = vectors[ii].vs_in;
+
+        assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROALT_VSPEED, 0, frame, &frameLength) == CRSF_SUCCESS);
+        assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
+        assert_true(frameType == CRSF_FRAMETYPE_BAROALT_VSPEED);
+
+        /* Verify sign */
+        if (vectors[ii].expected_sign > 0) {
+            assert_true(rx.BaroAlt_VS.vertical_speed > 0);
+        } else if (vectors[ii].expected_sign < 0) {
+            assert_true(rx.BaroAlt_VS.vertical_speed < 0);
+        } else {
+            assert_int_equal(rx.BaroAlt_VS.vertical_speed, 0);
+        }
+
+        /* Verify magnitude within tolerance */
+        assert_true(abs(rx.BaroAlt_VS.vertical_speed - vectors[ii].vs_in) <= vectors[ii].max_error);
+    }
+}
+#endif
 #endif
 
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_AIRSPEED
@@ -6545,6 +6601,9 @@ int main(void) {
 #endif
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED
         cmocka_unit_test(test_roundtrip_baroalt_vspeed),
+#if CRSF_USE_BAROALT_LUT
+        cmocka_unit_test(test_baroalt_lut_edge_cases),
+#endif
 #endif
 #if CRSF_TEL_ENABLE_AIRSPEED
         cmocka_unit_test(test_roundtrip_airspeed),
