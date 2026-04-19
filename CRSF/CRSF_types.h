@@ -336,7 +336,6 @@ typedef enum {
 
 /* Payloads ------------------------------------------------------------------*/
 
-
 /* Packed bitfield support detection ---------------------------------------- */
 #ifndef CRSF_USE_PACKED_RC_BITFIELDS
 #if (defined(__GNUC__) || defined(__clang__)) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -360,6 +359,8 @@ typedef struct {
     uint8_t satellites;   // # of sats in view
 } CRSF_GPS_t;
 
+_Static_assert(sizeof(CRSF_GPS_t) == 15, "CRSF_GPS_t must be 15 bytes");
+
 /**
  * CRSF_FRAMETYPE_GPS_TIME payload
  */
@@ -372,6 +373,8 @@ typedef struct {
     uint8_t second;
     uint16_t millisecond;
 } CRSF_GPS_Time_t;
+
+_Static_assert(sizeof(CRSF_GPS_Time_t) == 9, "CRSF_GPS_Time_t must be 9 bytes");
 
 /**
  * CRSF_FRAMETYPE_GPS_EXTENDED payload
@@ -391,12 +394,16 @@ typedef struct {
     uint8_t vDOP; // vertical dilution of precision, Dimensionless in nits of .1.
 } CRSF_GPS_Ext_t;
 
+_Static_assert(sizeof(CRSF_GPS_Ext_t) == 20, "CRSF_GPS_Ext_t must be 20 bytes");
+
 /**
  * CRSF_FRAMETYPE_VARIO payload
  */
 typedef struct {
     int16_t v_speed; // Vertical speed cm/s
 } CRSF_Vario_t;
+
+_Static_assert(sizeof(CRSF_Vario_t) == 2, "CRSF_Vario_t must be 2 bytes");
 
 /**
  * CRSF_FRAMETYPE_BATTERY payload
@@ -433,12 +440,16 @@ typedef struct {
     uint16_t speed; // Airspeed in 0.1 * km/h (hectometers/h)
 } CRSF_Airspeed_t;
 
+_Static_assert(sizeof(CRSF_Airspeed_t) == 2, "CRSF_Airspeed_t must be 2 bytes");
+
 /** 
  * CRSF_FRAMETYPE_HEARTBEAT payload
  */
 typedef struct {
     int16_t origin_address; // Origin Device address
 } CRSF_Heartbeat_t;
+
+_Static_assert(sizeof(CRSF_Heartbeat_t) == 2, "CRSF_Heartbeat_t must be 2 bytes");
 
 /** 
  * CRSF_FRAMETYPE_RPM payload
@@ -477,6 +488,8 @@ typedef struct {
     uint8_t pitmode_switch  : 4; // 0=Ch5, 1=Ch5 Inv, … , 15=Ch12 Inv
 } CRSF_VTX_t;
 
+_Static_assert(sizeof(CRSF_VTX_t) == 5, "CRSF_VTX_t must be 5 bytes");
+
 /**
  * CRSF_FRAMETYPE_LINK_STATISTICS payload
  */
@@ -493,6 +506,8 @@ typedef struct {
     uint8_t down_link_quality; // Downlink Package success rate / Link quality (%)
     int8_t down_snr;           // Downlink SNR (dB)
 } CRSF_LinkStatistics_t;
+
+_Static_assert(sizeof(CRSF_LinkStatistics_t) == 10, "CRSF_LinkStatistics_t must be 10 bytes");
 
 #if CRSF_USE_PACKED_RC_BITFIELDS
 typedef struct __attribute__((packed)) {
@@ -573,6 +588,8 @@ typedef struct {
     uint8_t rf_power_db;  // rf power in dBm
 } CRSF_LinkStatisticsRX_t;
 
+_Static_assert(sizeof(CRSF_LinkStatisticsRX_t) == 5, "CRSF_LinkStatisticsRX_t must be 5 bytes");
+
 /**
  * CRSF_FRAMETYPE_LINK_STATISTICS_TX payload
  */
@@ -585,6 +602,8 @@ typedef struct {
     uint8_t fps;          // rf frames per second (fps / 10)
 } CRSF_LinkStatisticsTX_t;
 
+_Static_assert(sizeof(CRSF_LinkStatisticsTX_t) == 6, "CRSF_LinkStatisticsTX_t must be 6 bytes");
+
 /**
  * CRSF_FRAMETYPE_ATTITUDE payload
  */
@@ -593,6 +612,8 @@ typedef struct {
     int16_t roll;  // Roll angle  (LSB = 100 µrad)
     int16_t yaw;   // Yaw angle   (LSB = 100 µrad)
 } CRSF_Attitude_t;
+
+_Static_assert(sizeof(CRSF_Attitude_t) == 6, "CRSF_Attitude_t must be 6 bytes");
 
 /**
  * CRSF_FRAMETYPE_MAVLINK_FC payload
@@ -604,6 +625,8 @@ typedef struct {
     uint8_t autopilot_type; // FC type; defined in MAV_AUTOPILOT enum
     uint8_t firmware_type;  // vehicle type; defined in MAV_TYPE enum
 } CRSF_MAVLinkFC_t;
+
+_Static_assert(sizeof(CRSF_MAVLinkFC_t) == 9, "CRSF_MAVLinkFC_t must be 9 bytes");
 
 /**
  * CRSF_FRAMETYPE_FLIGHT_MODE payload
@@ -623,6 +646,8 @@ typedef struct {
     char FREE_TEXT[20]; // Free text of 20 character at the bottom of the screen
 } CRSF_ESPNowMessages_t;
 
+_Static_assert(sizeof(CRSF_ESPNowMessages_t) == 52, "CRSF_ESPNowMessages_t must be 52 bytes");
+
 /**
  * CRSF_FRAMETYPE_DEVICE_PING payload
  */
@@ -630,6 +655,8 @@ typedef struct {
     uint8_t dest_address;
     uint8_t origin_address;
 } CRSF_Ping_t;
+
+_Static_assert(sizeof(CRSF_Ping_t) == 2, "CRSF_Ping_t must be 2 bytes");
 
 /**
  * CRSF_FRAMETYPE_DEVICE_INFO payload
@@ -734,6 +761,8 @@ typedef struct {
     uint8_t Parameter_number;
     uint8_t Parameter_chunk_number; // Chunk number to request, starts with 0
 } CRSF_ParamRead_t;
+
+_Static_assert(sizeof(CRSF_ParamRead_t) == 4, "CRSF_ParamRead_t must be 4 bytes");
 
 /**
  * CRSF_FRAMETYPE_PARAMETER_WRITE payload
@@ -948,6 +977,8 @@ typedef struct {
     uint32_t sensor_enabled;
     uint32_t sensor_health;
 } CRSF_MAVLinkStat_t;
+
+_Static_assert(sizeof(CRSF_MAVLinkStat_t) == 12, "CRSF_MAVLinkStat_t must be 12 bytes");
 
 #pragma pack(pop)
 
