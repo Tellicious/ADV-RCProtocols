@@ -97,11 +97,44 @@ extern "C" {
 
 /* Characteristics -----------------------------------------------------------*/
 
-#define CRSF_MIN_FRAME_LEN   4U  // Including addr byte and Frame Length
-#define CRSF_MAX_FRAME_LEN   64U // Including addr byte and Frame Length
-#define CRSF_STD_HDR_SIZE    3U  /* addr,len,type */
-#define CRSF_CRC_SIZE        1U
-#define CRSF_MAX_PAYLOAD_LEN (CRSF_MAX_FRAME_LEN - CRSF_CRC_SIZE - CRSF_STD_HDR_SIZE)
+#define CRSF_MIN_FRAME_LEN                4U  // Including addr byte and Frame Length
+#define CRSF_MAX_FRAME_LEN                64U // Including addr byte and Frame Length
+#define CRSF_STD_HDR_SIZE                 3U  /* addr,len,type */
+#define CRSF_CRC_SIZE                     1U
+#define CRSF_MAX_PAYLOAD_LEN              (CRSF_MAX_FRAME_LEN - CRSF_CRC_SIZE - CRSF_STD_HDR_SIZE)
+
+/* Wire payload sizes (bytes) ----------------------------------------------- */
+/* Fixed-size frames: exact payload size on the wire.                         */
+/* Variable-length frames: minimum valid payload size (suffixed _MIN).        */
+
+#define CRSF_WIRE_SIZE_GPS                15U
+#define CRSF_WIRE_SIZE_GPS_TIME           9U
+#define CRSF_WIRE_SIZE_GPS_EXTENDED       20U
+#define CRSF_WIRE_SIZE_VARIO              2U
+#define CRSF_WIRE_SIZE_BATTERY_SENSOR     8U /* uint24 capacity on wire (sizeof struct = 9) */
+#define CRSF_WIRE_SIZE_BAROALT_VSPEED     3U /* packed representation (sizeof struct = 6) */
+#define CRSF_WIRE_SIZE_AIRSPEED           2U
+#define CRSF_WIRE_SIZE_HEARTBEAT          2U
+#define CRSF_WIRE_SIZE_RPM_MIN            4U /* source_id(1) + at least 1 × int24(3) */
+#define CRSF_WIRE_SIZE_TEMPERATURE_MIN    3U /* source_id(1) + at least 1 × int16(2) */
+#define CRSF_WIRE_SIZE_VOLTAGES_MIN       3U /* source_id(1) + at least 1 × uint16(2) */
+#define CRSF_WIRE_SIZE_VTX                5U
+#define CRSF_WIRE_SIZE_LINK_STATISTICS    10U
+#define CRSF_WIRE_SIZE_RC_CHANNELS_PACKED 22U /* 16 × 11 bits = 176 bits = 22 bytes */
+#define CRSF_WIRE_SIZE_LINK_STATISTICS_RX 5U
+#define CRSF_WIRE_SIZE_LINK_STATISTICS_TX 6U
+#define CRSF_WIRE_SIZE_ATTITUDE           6U
+#define CRSF_WIRE_SIZE_MAVLINK_FC         9U
+#define CRSF_WIRE_SIZE_FLIGHT_MODE_MIN    1U /* at least NUL terminator */
+#define CRSF_WIRE_SIZE_ESP_NOW_MESSAGES   52U
+#define CRSF_WIRE_SIZE_PING               2U
+#define CRSF_WIRE_SIZE_DEVICE_INFO_MIN    15U /* dest(1)+orig(1)+name(1 NUL min)+serial(4)+hw(4)+fw(4) */
+#define CRSF_WIRE_SIZE_PARAM_ENTRY_MIN    5U  /* dest+orig+num+chunks+parent */
+#define CRSF_WIRE_SIZE_PARAM_READ         4U
+#define CRSF_WIRE_SIZE_PARAM_WRITE_MIN    4U /* dest+orig+param_num + at least 1 data byte */
+#define CRSF_WIRE_SIZE_COMMAND_MIN        3U /* dest+orig+cmd_id (minimum, before inner CRC) */
+#define CRSF_WIRE_SIZE_MAVLINK_ENV_MIN    1U /* chunks byte minimum */
+#define CRSF_WIRE_SIZE_MAVLINK_STATUS     12U
 
 /* Typedefs ------------------------------------------------------------------*/
 
@@ -359,7 +392,7 @@ typedef struct {
     uint8_t satellites;   // # of sats in view
 } CRSF_GPS_t;
 
-_Static_assert(sizeof(CRSF_GPS_t) == 15, "CRSF_GPS_t must be 15 bytes");
+_Static_assert(sizeof(CRSF_GPS_t) == CRSF_WIRE_SIZE_GPS, "CRSF_GPS_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_GPS_TIME payload
@@ -374,7 +407,7 @@ typedef struct {
     uint16_t millisecond;
 } CRSF_GPS_Time_t;
 
-_Static_assert(sizeof(CRSF_GPS_Time_t) == 9, "CRSF_GPS_Time_t must be 9 bytes");
+_Static_assert(sizeof(CRSF_GPS_Time_t) == CRSF_WIRE_SIZE_GPS_TIME, "CRSF_GPS_Time_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_GPS_EXTENDED payload
@@ -394,7 +427,7 @@ typedef struct {
     uint8_t vDOP; // vertical dilution of precision, Dimensionless in nits of .1.
 } CRSF_GPS_Ext_t;
 
-_Static_assert(sizeof(CRSF_GPS_Ext_t) == 20, "CRSF_GPS_Ext_t must be 20 bytes");
+_Static_assert(sizeof(CRSF_GPS_Ext_t) == CRSF_WIRE_SIZE_GPS_EXTENDED, "CRSF_GPS_Ext_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_VARIO payload
@@ -403,7 +436,7 @@ typedef struct {
     int16_t v_speed; // Vertical speed cm/s
 } CRSF_Vario_t;
 
-_Static_assert(sizeof(CRSF_Vario_t) == 2, "CRSF_Vario_t must be 2 bytes");
+_Static_assert(sizeof(CRSF_Vario_t) == CRSF_WIRE_SIZE_VARIO, "CRSF_Vario_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_BATTERY payload
@@ -440,7 +473,7 @@ typedef struct {
     uint16_t speed; // Airspeed in 0.1 * km/h (hectometers/h)
 } CRSF_Airspeed_t;
 
-_Static_assert(sizeof(CRSF_Airspeed_t) == 2, "CRSF_Airspeed_t must be 2 bytes");
+_Static_assert(sizeof(CRSF_Airspeed_t) == CRSF_WIRE_SIZE_AIRSPEED, "CRSF_Airspeed_t wire size mismatch");
 
 /** 
  * CRSF_FRAMETYPE_HEARTBEAT payload
@@ -449,7 +482,7 @@ typedef struct {
     int16_t origin_address; // Origin Device address
 } CRSF_Heartbeat_t;
 
-_Static_assert(sizeof(CRSF_Heartbeat_t) == 2, "CRSF_Heartbeat_t must be 2 bytes");
+_Static_assert(sizeof(CRSF_Heartbeat_t) == CRSF_WIRE_SIZE_HEARTBEAT, "CRSF_Heartbeat_t wire size mismatch");
 
 /** 
  * CRSF_FRAMETYPE_RPM payload
@@ -488,7 +521,7 @@ typedef struct {
     uint8_t pitmode_switch  : 4; // 0=Ch5, 1=Ch5 Inv, … , 15=Ch12 Inv
 } CRSF_VTX_t;
 
-_Static_assert(sizeof(CRSF_VTX_t) == 5, "CRSF_VTX_t must be 5 bytes");
+_Static_assert(sizeof(CRSF_VTX_t) == CRSF_WIRE_SIZE_VTX, "CRSF_VTX_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_LINK_STATISTICS payload
@@ -507,7 +540,7 @@ typedef struct {
     int8_t down_snr;           // Downlink SNR (dB)
 } CRSF_LinkStatistics_t;
 
-_Static_assert(sizeof(CRSF_LinkStatistics_t) == 10, "CRSF_LinkStatistics_t must be 10 bytes");
+_Static_assert(sizeof(CRSF_LinkStatistics_t) == CRSF_WIRE_SIZE_LINK_STATISTICS, "CRSF_LinkStatistics_t wire size mismatch");
 
 #if CRSF_USE_PACKED_RC_BITFIELDS
 typedef struct __attribute__((packed)) {
@@ -529,7 +562,7 @@ typedef struct __attribute__((packed)) {
     uint32_t ch15 : 11;
 } CRSF_RC_Packed_t;
 
-_Static_assert(sizeof(CRSF_RC_Packed_t) == 22, "CRSF_RC_Packed_t must be exactly 22 bytes");
+_Static_assert(sizeof(CRSF_RC_Packed_t) == CRSF_WIRE_SIZE_RC_CHANNELS_PACKED, "CRSF_RC_Packed_t wire size mismatch");
 #endif /* CRSF_USE_PACKED_RC_BITFIELDS */
 
 /**
@@ -588,7 +621,7 @@ typedef struct {
     uint8_t rf_power_db;  // rf power in dBm
 } CRSF_LinkStatisticsRX_t;
 
-_Static_assert(sizeof(CRSF_LinkStatisticsRX_t) == 5, "CRSF_LinkStatisticsRX_t must be 5 bytes");
+_Static_assert(sizeof(CRSF_LinkStatisticsRX_t) == CRSF_WIRE_SIZE_LINK_STATISTICS_RX, "CRSF_LinkStatisticsRX_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_LINK_STATISTICS_TX payload
@@ -602,7 +635,7 @@ typedef struct {
     uint8_t fps;          // rf frames per second (fps / 10)
 } CRSF_LinkStatisticsTX_t;
 
-_Static_assert(sizeof(CRSF_LinkStatisticsTX_t) == 6, "CRSF_LinkStatisticsTX_t must be 6 bytes");
+_Static_assert(sizeof(CRSF_LinkStatisticsTX_t) == CRSF_WIRE_SIZE_LINK_STATISTICS_TX, "CRSF_LinkStatisticsTX_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_ATTITUDE payload
@@ -613,7 +646,7 @@ typedef struct {
     int16_t yaw;   // Yaw angle   (LSB = 100 µrad)
 } CRSF_Attitude_t;
 
-_Static_assert(sizeof(CRSF_Attitude_t) == 6, "CRSF_Attitude_t must be 6 bytes");
+_Static_assert(sizeof(CRSF_Attitude_t) == CRSF_WIRE_SIZE_ATTITUDE, "CRSF_Attitude_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_MAVLINK_FC payload
@@ -626,7 +659,7 @@ typedef struct {
     uint8_t firmware_type;  // vehicle type; defined in MAV_TYPE enum
 } CRSF_MAVLinkFC_t;
 
-_Static_assert(sizeof(CRSF_MAVLinkFC_t) == 9, "CRSF_MAVLinkFC_t must be 9 bytes");
+_Static_assert(sizeof(CRSF_MAVLinkFC_t) == CRSF_WIRE_SIZE_MAVLINK_FC, "CRSF_MAVLinkFC_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_FLIGHT_MODE payload
@@ -646,7 +679,7 @@ typedef struct {
     char FREE_TEXT[20]; // Free text of 20 character at the bottom of the screen
 } CRSF_ESPNowMessages_t;
 
-_Static_assert(sizeof(CRSF_ESPNowMessages_t) == 52, "CRSF_ESPNowMessages_t must be 52 bytes");
+_Static_assert(sizeof(CRSF_ESPNowMessages_t) == CRSF_WIRE_SIZE_ESP_NOW_MESSAGES, "CRSF_ESPNowMessages_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_DEVICE_PING payload
@@ -656,7 +689,7 @@ typedef struct {
     uint8_t origin_address;
 } CRSF_Ping_t;
 
-_Static_assert(sizeof(CRSF_Ping_t) == 2, "CRSF_Ping_t must be 2 bytes");
+_Static_assert(sizeof(CRSF_Ping_t) == CRSF_WIRE_SIZE_PING, "CRSF_Ping_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_DEVICE_INFO payload
@@ -762,7 +795,7 @@ typedef struct {
     uint8_t Parameter_chunk_number; // Chunk number to request, starts with 0
 } CRSF_ParamRead_t;
 
-_Static_assert(sizeof(CRSF_ParamRead_t) == 4, "CRSF_ParamRead_t must be 4 bytes");
+_Static_assert(sizeof(CRSF_ParamRead_t) == CRSF_WIRE_SIZE_PARAM_READ, "CRSF_ParamRead_t wire size mismatch");
 
 /**
  * CRSF_FRAMETYPE_PARAMETER_WRITE payload
@@ -978,7 +1011,7 @@ typedef struct {
     uint32_t sensor_health;
 } CRSF_MAVLinkStat_t;
 
-_Static_assert(sizeof(CRSF_MAVLinkStat_t) == 12, "CRSF_MAVLinkStat_t must be 12 bytes");
+_Static_assert(sizeof(CRSF_MAVLinkStat_t) == CRSF_WIRE_SIZE_MAVLINK_STATUS, "CRSF_MAVLinkStat_t wire size mismatch");
 
 #pragma pack(pop)
 

@@ -62,7 +62,6 @@
     }                                                                                                                                                                              \
     break
 
-#define CHECK_LENGTH(LEN, TYPE, VAR) ((LEN) >= sizeof(CRSF_##VAR##_t))
 /* Private Function Prototypes -----------------------------------------------*/
 
 static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLength);
@@ -211,7 +210,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_BAROALT_VSPEED:
             CRSF_packBaroAltVSpeed(payload, &(crsf->BaroAlt_VS));
-            *frameLength += sizeof(uint16_t) + sizeof(uint8_t);
+            *frameLength += CRSF_WIRE_SIZE_BAROALT_VSPEED;
             break;
 #endif
 
@@ -297,7 +296,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
             CRSF_packRC(payload, crsf->RC.channels);
-            *frameLength += 22;
+            *frameLength += CRSF_WIRE_SIZE_RC_CHANNELS_PACKED;
             break;
 #endif
 
@@ -737,80 +736,80 @@ uint8_t CRSF_isFrameFresh(const CRSF_t* crsf, uint8_t frame_type, uint32_t max_a
 static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLength) {
     switch (type) {
 #if CRSF_TEL_ENABLE_GPS && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_GPS: return CHECK_LENGTH(payloadLength, type, GPS);
+        case CRSF_FRAMETYPE_GPS: return (payloadLength >= CRSF_WIRE_SIZE_GPS);
 #endif
 #if CRSF_TEL_ENABLE_GPS_TIME && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_GPS_TIME: return CHECK_LENGTH(payloadLength, type, GPS_Time);
+        case CRSF_FRAMETYPE_GPS_TIME: return (payloadLength >= CRSF_WIRE_SIZE_GPS_TIME);
 #endif
 #if CRSF_TEL_ENABLE_GPS_EXTENDED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_GPS_EXTENDED: return CHECK_LENGTH(payloadLength, type, GPS_Ext);
+        case CRSF_FRAMETYPE_GPS_EXTENDED: return (payloadLength >= CRSF_WIRE_SIZE_GPS_EXTENDED);
 #endif
 #if CRSF_TEL_ENABLE_VARIO && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_VARIO: return CHECK_LENGTH(payloadLength, type, Vario);
+        case CRSF_FRAMETYPE_VARIO: return (payloadLength >= CRSF_WIRE_SIZE_VARIO);
 #endif
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_BATTERY_SENSOR: return ((payloadLength) >= sizeof(CRSF_Battery_t) - 1U);
+        case CRSF_FRAMETYPE_BATTERY_SENSOR: return (payloadLength >= CRSF_WIRE_SIZE_BATTERY_SENSOR);
 #endif
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_BAROALT_VSPEED: return ((payloadLength) >= 3);
+        case CRSF_FRAMETYPE_BAROALT_VSPEED: return (payloadLength >= CRSF_WIRE_SIZE_BAROALT_VSPEED);
 #endif
 #if CRSF_TEL_ENABLE_AIRSPEED && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_AIRSPEED: return CHECK_LENGTH(payloadLength, type, Airspeed);
+        case CRSF_FRAMETYPE_AIRSPEED: return (payloadLength >= CRSF_WIRE_SIZE_AIRSPEED);
 #endif
 #if CRSF_TEL_ENABLE_HEARTBEAT
-        case CRSF_FRAMETYPE_HEARTBEAT: return CHECK_LENGTH(payloadLength, type, Heartbeat);
+        case CRSF_FRAMETYPE_HEARTBEAT: return (payloadLength >= CRSF_WIRE_SIZE_HEARTBEAT);
 #endif
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_RPM: return (payloadLength >= 4U);
+        case CRSF_FRAMETYPE_RPM: return (payloadLength >= CRSF_WIRE_SIZE_RPM_MIN);
 #endif
 #if CRSF_TEL_ENABLE_TEMPERATURE && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_TEMPERATURE: return (payloadLength >= 3U);
+        case CRSF_FRAMETYPE_TEMPERATURE: return (payloadLength >= CRSF_WIRE_SIZE_TEMPERATURE_MIN);
 #endif
 #if CRSF_TEL_ENABLE_VOLTAGES && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_VOLTAGES: return (payloadLength >= 3U);
+        case CRSF_FRAMETYPE_VOLTAGES: return (payloadLength >= CRSF_WIRE_SIZE_VOLTAGES_MIN);
 #endif
 #if CRSF_TEL_ENABLE_VTX && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_VTX: return CHECK_LENGTH(payloadLength, type, VTX);
+        case CRSF_FRAMETYPE_VTX: return (payloadLength >= CRSF_WIRE_SIZE_VTX);
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_LINK_STATISTICS: return CHECK_LENGTH(payloadLength, type, LinkStatistics);
+        case CRSF_FRAMETYPE_LINK_STATISTICS: return (payloadLength >= CRSF_WIRE_SIZE_LINK_STATISTICS);
 #endif
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
-        case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: return (payloadLength >= 22U);
+        case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: return (payloadLength >= CRSF_WIRE_SIZE_RC_CHANNELS_PACKED);
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_RX
-        case CRSF_FRAMETYPE_LINK_STATISTICS_RX: return CHECK_LENGTH(payloadLength, type, LinkStatisticsRX);
+        case CRSF_FRAMETYPE_LINK_STATISTICS_RX: return (payloadLength >= CRSF_WIRE_SIZE_LINK_STATISTICS_RX);
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_TX
-        case CRSF_FRAMETYPE_LINK_STATISTICS_TX: return CHECK_LENGTH(payloadLength, type, LinkStatisticsTX);
+        case CRSF_FRAMETYPE_LINK_STATISTICS_TX: return (payloadLength >= CRSF_WIRE_SIZE_LINK_STATISTICS_TX);
 #endif
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_TX)
-        case CRSF_FRAMETYPE_ATTITUDE: return CHECK_LENGTH(payloadLength, type, Attitude);
+        case CRSF_FRAMETYPE_ATTITUDE: return (payloadLength >= CRSF_WIRE_SIZE_ATTITUDE);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_FC
-        case CRSF_FRAMETYPE_MAVLINK_FC: return CHECK_LENGTH(payloadLength, type, MAVLinkFC);
+        case CRSF_FRAMETYPE_MAVLINK_FC: return (payloadLength >= CRSF_WIRE_SIZE_MAVLINK_FC);
 #endif
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
-        case CRSF_FRAMETYPE_FLIGHT_MODE: return (payloadLength >= 1U);
+        case CRSF_FRAMETYPE_FLIGHT_MODE: return (payloadLength >= CRSF_WIRE_SIZE_FLIGHT_MODE_MIN);
 #endif
 #if CRSF_TEL_ENABLE_ESP_NOW_MESSAGES
-        case CRSF_FRAMETYPE_ESP_NOW_MESSAGES: return CHECK_LENGTH(payloadLength, type, ESPNowMessages);
+        case CRSF_FRAMETYPE_ESP_NOW_MESSAGES: return (payloadLength >= CRSF_WIRE_SIZE_ESP_NOW_MESSAGES);
 #endif
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
-        case CRSF_FRAMETYPE_DEVICE_PING: return CHECK_LENGTH(payloadLength, type, Ping);
-        case CRSF_FRAMETYPE_DEVICE_INFO: return (payloadLength >= 15U);
-        case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: return (payloadLength >= 5U);
-        case CRSF_FRAMETYPE_PARAMETER_READ: return CHECK_LENGTH(payloadLength, type, ParamRead);
-        case CRSF_FRAMETYPE_PARAMETER_WRITE: return (payloadLength >= CRSF_MIN_FRAME_LEN);
+        case CRSF_FRAMETYPE_DEVICE_PING: return (payloadLength >= CRSF_WIRE_SIZE_PING);
+        case CRSF_FRAMETYPE_DEVICE_INFO: return (payloadLength >= CRSF_WIRE_SIZE_DEVICE_INFO_MIN);
+        case CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY: return (payloadLength >= CRSF_WIRE_SIZE_PARAM_ENTRY_MIN);
+        case CRSF_FRAMETYPE_PARAMETER_READ: return (payloadLength >= CRSF_WIRE_SIZE_PARAM_READ);
+        case CRSF_FRAMETYPE_PARAMETER_WRITE: return (payloadLength >= CRSF_WIRE_SIZE_PARAM_WRITE_MIN);
 #endif
 #if CRSF_ENABLE_COMMAND
-        case CRSF_FRAMETYPE_COMMAND: return (payloadLength >= 3U);
+        case CRSF_FRAMETYPE_COMMAND: return (payloadLength >= CRSF_WIRE_SIZE_COMMAND_MIN);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= 1U);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: return (payloadLength >= CRSF_WIRE_SIZE_MAVLINK_ENV_MIN);
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
-        case CRSF_FRAMETYPE_MAVLINK_STATUS: return CHECK_LENGTH(payloadLength, type, MAVLinkStat);
+        case CRSF_FRAMETYPE_MAVLINK_STATUS: return (payloadLength >= CRSF_WIRE_SIZE_MAVLINK_STATUS);
 #endif
         default: break;
     }
