@@ -452,34 +452,36 @@ static void test_valid_lengths(void** state) {
         CRSF_FrameType_t type;
         uint8_t min_payload_len;
         uint8_t valid_payload_len;
-    } frame_tests[] = {{CRSF_FRAMETYPE_GPS, sizeof(CRSF_GPS_t), sizeof(CRSF_GPS_t)},
-                       {CRSF_FRAMETYPE_GPS_TIME, sizeof(CRSF_GPS_Time_t), sizeof(CRSF_GPS_Time_t)},
-                       {CRSF_FRAMETYPE_GPS_EXTENDED, sizeof(CRSF_GPS_Ext_t), sizeof(CRSF_GPS_Ext_t)},
-                       {CRSF_FRAMETYPE_VARIO, sizeof(CRSF_Vario_t), sizeof(CRSF_Vario_t)},
-                       {CRSF_FRAMETYPE_BATTERY_SENSOR, sizeof(CRSF_Battery_t) - 1U, sizeof(CRSF_Battery_t) - 1U},
-                       {CRSF_FRAMETYPE_BAROALT_VSPEED, 3, 3},
-                       {CRSF_FRAMETYPE_AIRSPEED, sizeof(CRSF_Airspeed_t), sizeof(CRSF_Airspeed_t)},
-                       {CRSF_FRAMETYPE_HEARTBEAT, sizeof(CRSF_Heartbeat_t), sizeof(CRSF_Heartbeat_t)},
-                       {CRSF_FRAMETYPE_RPM, 4, 7},         /* minimum: id + 1 rpm value */
-                       {CRSF_FRAMETYPE_TEMPERATURE, 3, 5}, /* minimum: id + 1 temp value */
-                       {CRSF_FRAMETYPE_VOLTAGES, 3, 5},    /* minimum: id + 1 voltage value */
-                       {CRSF_FRAMETYPE_VTX, sizeof(CRSF_VTX_t), sizeof(CRSF_VTX_t)},
-                       {CRSF_FRAMETYPE_LINK_STATISTICS, sizeof(CRSF_LinkStatistics_t), sizeof(CRSF_LinkStatistics_t)},
-                       {CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 22, 22},
-                       {CRSF_FRAMETYPE_LINK_STATISTICS_RX, sizeof(CRSF_LinkStatisticsRX_t), sizeof(CRSF_LinkStatisticsRX_t)},
-                       {CRSF_FRAMETYPE_LINK_STATISTICS_TX, sizeof(CRSF_LinkStatisticsTX_t), sizeof(CRSF_LinkStatisticsTX_t)},
-                       {CRSF_FRAMETYPE_ATTITUDE, sizeof(CRSF_Attitude_t), sizeof(CRSF_Attitude_t)},
-                       {CRSF_FRAMETYPE_MAVLINK_FC, sizeof(CRSF_MAVLinkFC_t), sizeof(CRSF_MAVLinkFC_t)},
-                       {CRSF_FRAMETYPE_FLIGHT_MODE, 1, 16},
-                       {CRSF_FRAMETYPE_ESP_NOW_MESSAGES, sizeof(CRSF_ESPNowMessages_t), sizeof(CRSF_ESPNowMessages_t)},
-                       {CRSF_FRAMETYPE_DEVICE_PING, sizeof(CRSF_Ping_t), sizeof(CRSF_Ping_t)},
-                       {CRSF_FRAMETYPE_DEVICE_INFO, 15, 20},
-                       {CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, 5, 10},
-                       {CRSF_FRAMETYPE_PARAMETER_READ, sizeof(CRSF_ParamRead_t), sizeof(CRSF_ParamRead_t)},
-                       {CRSF_FRAMETYPE_PARAMETER_WRITE, 2, 5},
-                       {CRSF_FRAMETYPE_COMMAND, 3, 6},
-                       {CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 1, 10},
-                       {CRSF_FRAMETYPE_MAVLINK_STATUS, sizeof(CRSF_MAVLinkStat_t), sizeof(CRSF_MAVLinkStat_t)}};
+    } frame_tests[] = {
+        {CRSF_FRAMETYPE_GPS, CRSF_WIRE_SIZE_GPS, CRSF_WIRE_SIZE_GPS},
+        {CRSF_FRAMETYPE_GPS_TIME, CRSF_WIRE_SIZE_GPS_TIME, CRSF_WIRE_SIZE_GPS_TIME},
+        {CRSF_FRAMETYPE_GPS_EXTENDED, CRSF_WIRE_SIZE_GPS_EXTENDED, CRSF_WIRE_SIZE_GPS_EXTENDED},
+        {CRSF_FRAMETYPE_VARIO, CRSF_WIRE_SIZE_VARIO, CRSF_WIRE_SIZE_VARIO},
+        {CRSF_FRAMETYPE_BATTERY_SENSOR, CRSF_WIRE_SIZE_BATTERY_SENSOR, CRSF_WIRE_SIZE_BATTERY_SENSOR},
+        {CRSF_FRAMETYPE_BAROALT_VSPEED, CRSF_WIRE_SIZE_BAROALT_VSPEED, CRSF_WIRE_SIZE_BAROALT_VSPEED},
+        {CRSF_FRAMETYPE_AIRSPEED, CRSF_WIRE_SIZE_AIRSPEED, CRSF_WIRE_SIZE_AIRSPEED},
+        {CRSF_FRAMETYPE_HEARTBEAT, CRSF_WIRE_SIZE_HEARTBEAT, CRSF_WIRE_SIZE_HEARTBEAT},
+        {CRSF_FRAMETYPE_RPM, CRSF_WIRE_SIZE_RPM_MIN, 7},
+        {CRSF_FRAMETYPE_TEMPERATURE, CRSF_WIRE_SIZE_TEMPERATURE_MIN, 5},
+        {CRSF_FRAMETYPE_VOLTAGES, CRSF_WIRE_SIZE_VOLTAGES_MIN, 5},
+        {CRSF_FRAMETYPE_VTX, CRSF_WIRE_SIZE_VTX, CRSF_WIRE_SIZE_VTX},
+        {CRSF_FRAMETYPE_LINK_STATISTICS, CRSF_WIRE_SIZE_LINK_STATISTICS, CRSF_WIRE_SIZE_LINK_STATISTICS},
+        {CRSF_FRAMETYPE_RC_CHANNELS_PACKED, CRSF_WIRE_SIZE_RC_CHANNELS_PACKED, CRSF_WIRE_SIZE_RC_CHANNELS_PACKED},
+        {CRSF_FRAMETYPE_LINK_STATISTICS_RX, CRSF_WIRE_SIZE_LINK_STATISTICS_RX, CRSF_WIRE_SIZE_LINK_STATISTICS_RX},
+        {CRSF_FRAMETYPE_LINK_STATISTICS_TX, CRSF_WIRE_SIZE_LINK_STATISTICS_TX, CRSF_WIRE_SIZE_LINK_STATISTICS_TX},
+        {CRSF_FRAMETYPE_ATTITUDE, CRSF_WIRE_SIZE_ATTITUDE, CRSF_WIRE_SIZE_ATTITUDE},
+        {CRSF_FRAMETYPE_MAVLINK_FC, CRSF_WIRE_SIZE_MAVLINK_FC, CRSF_WIRE_SIZE_MAVLINK_FC},
+        {CRSF_FRAMETYPE_FLIGHT_MODE, CRSF_WIRE_SIZE_FLIGHT_MODE_MIN, 16},
+        {CRSF_FRAMETYPE_ESP_NOW_MESSAGES, CRSF_WIRE_SIZE_ESP_NOW_MESSAGES, CRSF_WIRE_SIZE_ESP_NOW_MESSAGES},
+        {CRSF_FRAMETYPE_DEVICE_PING, CRSF_WIRE_SIZE_PING, CRSF_WIRE_SIZE_PING},
+        {CRSF_FRAMETYPE_DEVICE_INFO, CRSF_WIRE_SIZE_DEVICE_INFO_MIN, 20},
+        {CRSF_FRAMETYPE_PARAMETER_SETTINGS_ENTRY, CRSF_WIRE_SIZE_PARAM_ENTRY_MIN, 10},
+        {CRSF_FRAMETYPE_PARAMETER_READ, CRSF_WIRE_SIZE_PARAM_READ, CRSF_WIRE_SIZE_PARAM_READ},
+        {CRSF_FRAMETYPE_PARAMETER_WRITE, CRSF_WIRE_SIZE_PARAM_WRITE_MIN, 5},
+        {CRSF_FRAMETYPE_COMMAND, CRSF_WIRE_SIZE_COMMAND_MIN, 6},
+        {CRSF_FRAMETYPE_MAVLINK_ENVELOPE, CRSF_WIRE_SIZE_MAVLINK_ENV_MIN, 10},
+        {CRSF_FRAMETYPE_MAVLINK_STATUS, CRSF_WIRE_SIZE_MAVLINK_STATUS, CRSF_WIRE_SIZE_MAVLINK_STATUS},
+    };
 
     for (uint8_t ii = 0; ii < sizeof(frame_tests) / sizeof(frame_tests[0]); ii++) {
         /* Test frame too short */
