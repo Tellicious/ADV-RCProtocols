@@ -63,38 +63,40 @@ Configuration options passed via `RCProtocols_COMPILE_DEFS` CMake variable
 | `IBUS_MAX_CHANNELS`           | Unsigned Int | 0<x<14                | `14`                                      | Max number of channels parsed              |
 
 ### CRSF:
-| Parameter                            | Type   | Options/Values        | Default Value                                       | Description                                                       |
-| ------------------------------------ | ------ | --------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
-| `CRSF_CONFIG_RX`                     | Define | `Enabled`, `Disabled` | `Enabled` if `CRSF_CONFIG_TX` not defined           | Enable receiver-specific basic features                           |
-| `CRSF_CONFIG_TX`                     | Define | `Enabled`, `Disabled` | `Disabled`                                          | Enable transmitter-specific basic features                        |
-| `CRSF_ENABLE_STATS`                  | Bool   | `1`,`0`               | `0`                                                 | Enable protocol statistics                                        |
-| `CRSF_ENABLE_FRESHNESS_CHECK`        | Bool   | `1`,`0`               | `0`, forced to `0` if only `CRSF_CONFIG_TX` defined | Enable packet freshness check                                     |
-| `CRSF_ENABLE_ADDRESS_VALIDATION`     | Bool   | `1`,`0`               | `1`                                                 | Enable frame destination address check against valid ones         |
-| `CRSF_USE_CRC_CALCULATION`           | Bool   | `1`,`0`               | `0`                                                 | Use CRC calculation instead of lookup tables (saves flash)        |
-| `CRSF_TEL_ENABLE_GPS`                | Bool   | `1`,`0`               | `1`                                                 | Enable GPS frame encoding / decoding                              |
-| `CRSF_TEL_ENABLE_GPS_TIME`           | Bool   | `1`,`0`               | `1`                                                 | Enable GPS Time frame encoding / decoding                         |
-| `CRSF_TEL_ENABLE_GPS_EXTENDED`       | Bool   | `1`,`0`               | `1`                                                 | Enable GPS Extended frame encoding / decoding                     |
-| `CRSF_TEL_ENABLE_VARIO`              | Bool   | `1`,`0`               | `1`                                                 | Enable Vario frame encoding / decoding                            |
-| `CRSF_TEL_ENABLE_BATTERY_SENSOR`     | Bool   | `1`,`0`               | `1`                                                 | Enable Battery frame encoding / decoding                          |
-| `CRSF_TEL_ENABLE_BAROALT_VSPEED`     | Bool   | `1`,`0`               | `1`                                                 | Enable Baro Altitude and Vertical Speed frame encoding / decoding |
-| `CRSF_TEL_ENABLE_AIRSPEED`           | Bool   | `1`,`0`               | `1`                                                 | Enable Airspeed frame encoding / decoding                         |
-| `CRSF_TEL_ENABLE_HEARTBEAT`          | Bool   | `1`,`0`               | `1`                                                 | Enable Heartbeat frame encoding / decoding                        |
-| `CRSF_TEL_ENABLE_RPM`                | Bool   | `1`,`0`               | `1`                                                 | Enable RPM frame encoding / decoding                              |
-| `CRSF_TEL_ENABLE_TEMPERATURE`        | Bool   | `1`,`0`               | `1`                                                 | Enable Temperature frame encoding / decoding                      |
-| `CRSF_TEL_ENABLE_VOLTAGES`           | Bool   | `1`,`0`               | `1`                                                 | Enable Voltages frame encoding / decoding                         |
-| `CRSF_TEL_ENABLE_VTX`                | Bool   | `1`,`0`               | `1`                                                 | Enable VTX frame encoding / decoding                              |
-| `CRSF_TEL_ENABLE_LINK_STATISTICS`    | Bool   | `1`,`0`               | `1`                                                 | Enable Link Statistics frame encoding / decoding                  |
-| `CRSF_ENABLE_RC_CHANNELS`            | Bool   | `1`,`0`               | `1`                                                 | Enable RC Channels frame encoding / decoding                      |
-| `CRSF_TEL_ENABLE_LINK_STATISTICS_RX` | Bool   | `1`,`0`               | `1`                                                 | Enable RX Link Statistics frame encoding / decoding               |
-| `CRSF_TEL_ENABLE_LINK_STATISTICS_TX` | Bool   | `1`,`0`               | `1`                                                 | Enable TX Link Statistics frame encoding / decoding               |
-| `CRSF_TEL_ENABLE_ATTITUDE`           | Bool   | `1`,`0`               | `1`                                                 | Enable Attitude frame encoding / decoding                         |
-| `CRSF_TEL_ENABLE_MAVLINK_FC`         | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink FC frame encoding / decoding                       |
-| `CRSF_TEL_ENABLE_FLIGHT_MODE`        | Bool   | `1`,`0`               | `1`                                                 | Enable Flight Mode frame encoding / decoding                      |
-| `CRSF_TEL_ENABLE_ESP_NOW_MESSAGES`   | Bool   | `1`,`0`               | `1`                                                 | Enable ESP Now Messages frame encoding / decoding                 |
-| `CRSF_TEL_ENABLE_PARAMETER_GROUP`    | Bool   | `1`,`0`               | `1`                                                 | Enable Paramer group of frames encoding / decoding                |
-| `CRSF_ENABLE_COMMAND`                | Bool   | `1`,`0`               | `1`                                                 | Enable Command frame encoding / decoding                          |
-| `CRSF_TEL_ENABLE_MAVLINK_ENVELOPE`   | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Envelope frame encoding / decoding                 |
-| `CRSF_TEL_ENABLE_MAVLINK_STATUS`     | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Status frame encoding / decoding                   |
+| Parameter                            | Type   | Options/Values        | Default Value                                       | Description                                                              |
+| ------------------------------------ | ------ | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------ |
+| `CRSF_CONFIG_RX`                     | Define | `Enabled`, `Disabled` | `Enabled` if `CRSF_CONFIG_TX` not defined           | Enable receiver-specific basic features                                  |
+| `CRSF_CONFIG_TX`                     | Define | `Enabled`, `Disabled` | `Disabled`                                          | Enable transmitter-specific basic features                               |
+| `CRSF_ENABLE_STATS`                  | Bool   | `1`,`0`               | `0`                                                 | Enable protocol statistics                                               |
+| `CRSF_ENABLE_FRESHNESS_CHECK`        | Bool   | `1`,`0`               | `0`, forced to `0` if only `CRSF_CONFIG_TX` defined | Enable packet freshness check                                            |
+| `CRSF_ENABLE_ADDRESS_VALIDATION`     | Bool   | `1`,`0`               | `1`                                                 | Enable frame destination address check against valid ones                |
+| `CRSF_USE_CRC_CALCULATION`           | Bool   | `1`,`0`               | `0`                                                 | Use CRC calculation instead of lookup tables (saves flash)               |
+| `CRSF_TEL_ENABLE_GPS`                | Bool   | `1`,`0`               | `1`                                                 | Enable GPS frame encoding / decoding                                     |
+| `CRSF_TEL_ENABLE_GPS_TIME`           | Bool   | `1`,`0`               | `1`                                                 | Enable GPS Time frame encoding / decoding                                |
+| `CRSF_TEL_ENABLE_GPS_EXTENDED`       | Bool   | `1`,`0`               | `1`                                                 | Enable GPS Extended frame encoding / decoding                            |
+| `CRSF_TEL_ENABLE_VARIO`              | Bool   | `1`,`0`               | `1`                                                 | Enable Vario frame encoding / decoding                                   |
+| `CRSF_TEL_ENABLE_BATTERY_SENSOR`     | Bool   | `1`,`0`               | `1`                                                 | Enable Battery frame encoding / decoding                                 |
+| `CRSF_TEL_ENABLE_BAROALT_VSPEED`     | Bool   | `1`,`0`               | `1`                                                 | Enable Baro Altitude and Vertical Speed frame encoding / decoding        |
+| `CRSF_USE_BAROALT_LUT`               | Bool   | `1`,`0`               | `1`                                                 | Use Baro Altitude and Vertical Speed lookup table instead of calculation |
+| `CRSF_TEL_ENABLE_AIRSPEED`           | Bool   | `1`,`0`               | `1`                                                 | Enable Airspeed frame encoding / decoding                                |
+| `CRSF_TEL_ENABLE_HEARTBEAT`          | Bool   | `1`,`0`               | `1`                                                 | Enable Heartbeat frame encoding / decoding                               |
+| `CRSF_TEL_ENABLE_RPM`                | Bool   | `1`,`0`               | `1`                                                 | Enable RPM frame encoding / decoding                                     |
+| `CRSF_TEL_ENABLE_TEMPERATURE`        | Bool   | `1`,`0`               | `1`                                                 | Enable Temperature frame encoding / decoding                             |
+| `CRSF_TEL_ENABLE_VOLTAGES`           | Bool   | `1`,`0`               | `1`                                                 | Enable Voltages frame encoding / decoding                                |
+| `CRSF_TEL_ENABLE_VTX`                | Bool   | `1`,`0`               | `1`                                                 | Enable VTX frame encoding / decoding                                     |
+| `CRSF_TEL_ENABLE_LINK_STATISTICS`    | Bool   | `1`,`0`               | `1`                                                 | Enable Link Statistics frame encoding / decoding                         |
+| `CRSF_ENABLE_RC_CHANNELS`            | Bool   | `1`,`0`               | `1`                                                 | Enable RC Channels frame encoding / decoding                             |
+| `CRSF_USE_PACKED_RC_BITFIELDS`       | Bool   | `1`,`0`               | `1`                                                 | Use bitfields to speed-up RC Channels parsing                            |
+| `CRSF_TEL_ENABLE_LINK_STATISTICS_RX` | Bool   | `1`,`0`               | `1`                                                 | Enable RX Link Statistics frame encoding / decoding                      |
+| `CRSF_TEL_ENABLE_LINK_STATISTICS_TX` | Bool   | `1`,`0`               | `1`                                                 | Enable TX Link Statistics frame encoding / decoding                      |
+| `CRSF_TEL_ENABLE_ATTITUDE`           | Bool   | `1`,`0`               | `1`                                                 | Enable Attitude frame encoding / decoding                                |
+| `CRSF_TEL_ENABLE_MAVLINK_FC`         | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink FC frame encoding / decoding                              |
+| `CRSF_TEL_ENABLE_FLIGHT_MODE`        | Bool   | `1`,`0`               | `1`                                                 | Enable Flight Mode frame encoding / decoding                             |
+| `CRSF_TEL_ENABLE_ESP_NOW_MESSAGES`   | Bool   | `1`,`0`               | `1`                                                 | Enable ESP Now Messages frame encoding / decoding                        |
+| `CRSF_TEL_ENABLE_PARAMETER_GROUP`    | Bool   | `1`,`0`               | `1`                                                 | Enable Paramer group of frames encoding / decoding                       |
+| `CRSF_ENABLE_COMMAND`                | Bool   | `1`,`0`               | `1`                                                 | Enable Command frame encoding / decoding                                 |
+| `CRSF_TEL_ENABLE_MAVLINK_ENVELOPE`   | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Envelope frame encoding / decoding                        |
+| `CRSF_TEL_ENABLE_MAVLINK_STATUS`     | Bool   | `1`,`0`               | `1`                                                 | Enable MAVLink Status frame encoding / decoding                          |
 
 ## Usage Example
 
