@@ -678,7 +678,6 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             crsf->Stats.commands_rx++;
 #endif
             UPDATE_FRESHNESS(COMMAND);
-            break;
 
 #endif
 
