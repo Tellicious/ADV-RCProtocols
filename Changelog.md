@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.0
+**New features:**
+- Added new Barometer, Magnetometer, Accel_Gyro and Link Statistics Repeater frame types to CRSF with tests
+ 
 ## v1.1.0
 
 **New features:**

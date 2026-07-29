@@ -114,12 +114,35 @@ const uint8_t test_rpm_packet[] = {0xC8, 0x09, 0x0C, 0x01, 0x00, 0x3A, 0x98, 0xF
  */
 const uint8_t test_temp_packet[] = {0xC8, 0x07, 0x0D, 0x0B, 0x00, 0xFD, 0xFF, 0x87, 0x7F};
 
+/* 0x11 Barometer
+ * pressure = 101325 Pa (int32, BE) → 0x00018BCD
+ * baro_temp = 2550 centidegrees (int32, BE) → 0x000009F6
+ */
+const uint8_t test_barometer_packet[] = {0xC8, 0x0A, 0x11, 0x00, 0x01, 0x8B, 0xCD, 0x00, 0x00, 0x09, 0xF6, 0xC6};
+
+/* 0x12 Magnetometer
+ * field_x = 1500 (0x05DC), field_y = -2000 (0xF830), field_z = 32000 (0x7D00) (int16, BE)
+ */
+const uint8_t test_magnetometer_packet[] = {0xC8, 0x08, 0x12, 0x05, 0xDC, 0xF8, 0x30, 0x7D, 0x00, 0x71};
+
+/* 0x13 Accel Gyro
+ * sample_time = 123456 us (0x0001E240, BE)
+ * gyro = {100, -200, 300} -> 0x0064, 0xFF38, 0x012C
+ * acc  = {1000, -2000, 16000} -> 0x03E8, 0xF830, 0x3E80
+ * gyro_temp = 2530 centidegrees -> 0x09E2
+ */
+const uint8_t test_accel_gyro_packet[] = {0xC8, 0x14, 0x13, 0x00, 0x01, 0xE2, 0x40, 0x00, 0x64, 0xFF, 0x38, 0x01,
+                                          0x2C, 0x03, 0xE8, 0xF8, 0x30, 0x3E, 0x80, 0x09, 0xE2, 0x99};
+
 /* 0x14 Link Statistics
  * upRSSI1=0x41 (−65 dBm), upRSSI2=0x42 (−66 dBm), upLQ=98% (0x62), upSNR=−7 dB(0xF9)
  * ant=1, rfMode=3, upTxPwr=5
  * dnRSSI=0x46 (−70 dBm), dnLQ=99% (0x63), dnSNR=−9 dB(0xF7)
  */
 const uint8_t test_linkstats_packet[] = {0xC8, 0x0C, 0x14, 0x41, 0x42, 0x62, 0xF9, 0x01, 0x03, 0x05, 0x46, 0x63, 0xF7, 0xEB};
+
+/* 0x15 Link Statistics Repeater (identical layout to 0x14) */
+const uint8_t test_linkstats_repeater_packet[] = {0xC8, 0x0C, 0x15, 0x41, 0x42, 0x62, 0xF9, 0x01, 0x03, 0x05, 0x46, 0x63, 0xF7, 0xDF};
 
 /* 0x16 RC Channels Packed(16ch @ 1500)
  * ch0..15 = 1500 (11 - bit, LSB - first across 22 bytes)
@@ -379,7 +402,9 @@ static void test_all_valid_addresses(void** state) {
         CRSF_ADDRESS_RACE_TAG,
         CRSF_ADDRESS_VTX,
         CRSF_ADDRESS_RADIO_TRANSMITTER,
+        CRSF_ADDRESS_REPEATER_RECEIVER,
         CRSF_ADDRESS_CRSF_RECEIVER,
+        CRSF_ADDRESS_REPEATER_TRANSMITTER,
         CRSF_ADDRESS_CRSF_TRANSMITTER,
         CRSF_ADDRESS_ELRS_LUA,
     };
@@ -389,8 +414,8 @@ static void test_all_valid_addresses(void** state) {
         assert_int_not_equal(CRSF_buildFrame(&crsf, valid_addresses[ii], CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, buf, &frameLength), CRSF_ERROR_ADDR);
     }
 
-    /* Test some invalid addresses */
-    uint8_t invalid_addresses[] = {0x01, 0x02, 0x50, 0xAA, 0xFF};
+    /* Test some invalid addresses (0x01/0x02 below NAT range, 0x88/0xAA/0xFF outside it) */
+    uint8_t invalid_addresses[] = {0x01, 0x02, 0x88, 0xAA, 0xFF};
     for (uint8_t ii = 0; ii < sizeof(invalid_addresses) / sizeof(invalid_addresses[0]); ii++) {
         frameLength = 0;
         assert_true(CRSF_buildFrame(&crsf, invalid_addresses[ii], CRSF_FRAMETYPE_RC_CHANNELS_PACKED, 0, buf, &frameLength) == CRSF_ERROR_ADDR);
@@ -465,7 +490,11 @@ static void test_valid_lengths(void** state) {
         {CRSF_FRAMETYPE_TEMPERATURE, CRSF_WIRE_SIZE_TEMPERATURE_MIN, 5},
         {CRSF_FRAMETYPE_VOLTAGES, CRSF_WIRE_SIZE_VOLTAGES_MIN, 5},
         {CRSF_FRAMETYPE_VTX, CRSF_WIRE_SIZE_VTX, CRSF_WIRE_SIZE_VTX},
+        {CRSF_FRAMETYPE_BAROMETER, CRSF_WIRE_SIZE_BAROMETER, CRSF_WIRE_SIZE_BAROMETER},
+        {CRSF_FRAMETYPE_MAGNETOMETER, CRSF_WIRE_SIZE_MAGNETOMETER, CRSF_WIRE_SIZE_MAGNETOMETER},
+        {CRSF_FRAMETYPE_ACCEL_GYRO, CRSF_WIRE_SIZE_ACCEL_GYRO, CRSF_WIRE_SIZE_ACCEL_GYRO},
         {CRSF_FRAMETYPE_LINK_STATISTICS, CRSF_WIRE_SIZE_LINK_STATISTICS, CRSF_WIRE_SIZE_LINK_STATISTICS},
+        {CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER, CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER, CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER},
         {CRSF_FRAMETYPE_RC_CHANNELS_PACKED, CRSF_WIRE_SIZE_RC_CHANNELS_PACKED, CRSF_WIRE_SIZE_RC_CHANNELS_PACKED},
         {CRSF_FRAMETYPE_LINK_STATISTICS_RX, CRSF_WIRE_SIZE_LINK_STATISTICS_RX, CRSF_WIRE_SIZE_LINK_STATISTICS_RX},
         {CRSF_FRAMETYPE_LINK_STATISTICS_TX, CRSF_WIRE_SIZE_LINK_STATISTICS_TX, CRSF_WIRE_SIZE_LINK_STATISTICS_TX},
@@ -1043,6 +1072,89 @@ static void test_build_link_tx_id(void** state) {
 }
 #endif
 
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_RX)
+static void test_build_barometer(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_init(&crsf);
+    crsf.Barometer.pressure_pa = 101325;
+    crsf.Barometer.baro_temp = 2550;
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BAROMETER, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_int_equal(frameLength, sizeof(test_barometer_packet));
+    for (uint8_t ii = 0; ii < frameLength; ii++) {
+        assert_int_equal(frame[ii], test_barometer_packet[ii]);
+    }
+}
+#endif
+
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_RX)
+static void test_build_magnetometer(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_init(&crsf);
+    crsf.Magnetometer.field_x = 1500;
+    crsf.Magnetometer.field_y = -2000;
+    crsf.Magnetometer.field_z = 32000;
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAGNETOMETER, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_int_equal(frameLength, sizeof(test_magnetometer_packet));
+    for (uint8_t ii = 0; ii < frameLength; ii++) {
+        assert_int_equal(frame[ii], test_magnetometer_packet[ii]);
+    }
+}
+#endif
+
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_RX)
+static void test_build_accel_gyro(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_init(&crsf);
+    crsf.AccelGyro.sample_time = 123456;
+    crsf.AccelGyro.gyro_x = 100;
+    crsf.AccelGyro.gyro_y = -200;
+    crsf.AccelGyro.gyro_z = 300;
+    crsf.AccelGyro.acc_x = 1000;
+    crsf.AccelGyro.acc_y = -2000;
+    crsf.AccelGyro.acc_z = 16000;
+    crsf.AccelGyro.gyro_temp = 2530;
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_ACCEL_GYRO, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_int_equal(frameLength, sizeof(test_accel_gyro_packet));
+    for (uint8_t ii = 0; ii < frameLength; ii++) {
+        assert_int_equal(frame[ii], test_accel_gyro_packet[ii]);
+    }
+}
+#endif
+
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+static void test_build_linkstats_repeater(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_init(&crsf);
+    crsf.LinkStatisticsRepeater.up_rssi_ant1 = 0x41;
+    crsf.LinkStatisticsRepeater.up_rssi_ant2 = 0x42;
+    crsf.LinkStatisticsRepeater.up_link_quality = 0x62;
+    crsf.LinkStatisticsRepeater.up_snr = (int8_t)0xF9;
+    crsf.LinkStatisticsRepeater.active_antenna = 1;
+    crsf.LinkStatisticsRepeater.rf_profile = 3;
+    crsf.LinkStatisticsRepeater.up_rf_power = 5;
+    crsf.LinkStatisticsRepeater.down_rssi = 0x46;
+    crsf.LinkStatisticsRepeater.down_link_quality = 0x63;
+    crsf.LinkStatisticsRepeater.down_snr = (int8_t)0xF7;
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_int_equal(frameLength, sizeof(test_linkstats_repeater_packet));
+    for (uint8_t ii = 0; ii < frameLength; ii++) {
+        assert_int_equal(frame[ii], test_linkstats_repeater_packet[ii]);
+    }
+}
+#endif
+
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_RX)
 static void test_build_attitude(void** state) {
     (void)state;
@@ -1292,6 +1404,23 @@ static void test_process_linkstats(void** state) {
     assert_int_equal(crsf.LinkStatistics.down_link_quality, 0x63);
     assert_int_equal(crsf.LinkStatistics.down_snr, (int8_t)0xF7);
 }
+
+/* 0x14 length validation must run regardless of TX/RX config (aligned with 0x15):
+ * a frame one byte short of the 10-byte payload is rejected before the fixed-size copy. */
+static void test_process_linkstats_short(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_init(&crsf);
+    CRSF_FrameType_t frameType = 0;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t payloadLen = CRSF_WIRE_SIZE_LINK_STATISTICS - 1U;
+    frame[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    frame[1] = payloadLen + 2U;
+    frame[2] = CRSF_FRAMETYPE_LINK_STATISTICS;
+    memset(&frame[3], 0x00, payloadLen);
+    frame[payloadLen + 3U] = test_calc_checksum(&frame[2], payloadLen + 1U, 0xD5U);
+    assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_ERROR_TYPE_LENGTH);
+}
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
@@ -1338,6 +1467,73 @@ static void test_process_link_tx_id(void** state) {
     assert_int_equal(crsf.LinkStatisticsTX.snr, -7);
     assert_int_equal(crsf.LinkStatisticsTX.rf_power_db, 12);
     assert_int_equal(crsf.LinkStatisticsTX.fps, 30);
+}
+#endif
+
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_TX)
+static void test_process_barometer(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&crsf);
+    assert_true(CRSF_processFrame(&crsf, test_barometer_packet, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_BAROMETER);
+    assert_int_equal(crsf.Barometer.pressure_pa, 101325);
+    assert_int_equal(crsf.Barometer.baro_temp, 2550);
+}
+#endif
+
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_TX)
+static void test_process_magnetometer(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&crsf);
+    assert_true(CRSF_processFrame(&crsf, test_magnetometer_packet, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_MAGNETOMETER);
+    assert_int_equal(crsf.Magnetometer.field_x, 1500);
+    assert_int_equal(crsf.Magnetometer.field_y, -2000);
+    assert_int_equal(crsf.Magnetometer.field_z, 32000);
+}
+#endif
+
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_TX)
+static void test_process_accel_gyro(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&crsf);
+    assert_true(CRSF_processFrame(&crsf, test_accel_gyro_packet, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_ACCEL_GYRO);
+    assert_int_equal(crsf.AccelGyro.sample_time, 123456);
+    assert_int_equal(crsf.AccelGyro.gyro_x, 100);
+    assert_int_equal(crsf.AccelGyro.gyro_y, -200);
+    assert_int_equal(crsf.AccelGyro.gyro_z, 300);
+    assert_int_equal(crsf.AccelGyro.acc_x, 1000);
+    assert_int_equal(crsf.AccelGyro.acc_y, -2000);
+    assert_int_equal(crsf.AccelGyro.acc_z, 16000);
+    assert_int_equal(crsf.AccelGyro.gyro_temp, 2530);
+}
+#endif
+
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+static void test_process_linkstats_repeater(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&crsf);
+    assert_true(CRSF_processFrame(&crsf, test_linkstats_repeater_packet, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER);
+    assert_int_equal(crsf.LinkStatisticsRepeater.up_rssi_ant1, 0x41);
+    assert_int_equal(crsf.LinkStatisticsRepeater.up_rssi_ant2, 0x42);
+    assert_int_equal(crsf.LinkStatisticsRepeater.up_link_quality, 0x62);
+    assert_int_equal(crsf.LinkStatisticsRepeater.up_snr, (int8_t)0xF9);
+    assert_int_equal(crsf.LinkStatisticsRepeater.active_antenna, 1);
+    assert_int_equal(crsf.LinkStatisticsRepeater.rf_profile, 3);
+    assert_int_equal(crsf.LinkStatisticsRepeater.up_rf_power, 5);
+    assert_int_equal(crsf.LinkStatisticsRepeater.down_rssi, 0x46);
+    assert_int_equal(crsf.LinkStatisticsRepeater.down_link_quality, 0x63);
+    assert_int_equal(crsf.LinkStatisticsRepeater.down_snr, (int8_t)0xF7);
 }
 #endif
 
@@ -3352,6 +3548,122 @@ static void test_roundtrip_mavlink_envelope(void** state) {
         mock_timestamp -= 10;
     }
 #endif
+}
+#endif
+
+/* Bug #1 regression: MAVLink envelope header byte must carry total_chunks in the
+ * high nibble (bits 4-7) and current_chunk in the low nibble (bits 0-3) - see crsf.md. */
+#if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
+static void test_mavlink_envelope_nibble_order(void** state) {
+    (void)state;
+    CRSF_t tx, rx;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&tx);
+    CRSF_init(&rx);
+
+    tx.MAVLinkEnv.total_chunks = 2;
+    tx.MAVLinkEnv.current_chunk = 1;
+    tx.MAVLinkEnv.data_size = 3;
+    tx.MAVLinkEnv.data[0] = 0xAA;
+    tx.MAVLinkEnv.data[1] = 0xBB;
+    tx.MAVLinkEnv.data[2] = 0xCC;
+
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_MAVLINK_ENVELOPE, 0, frame, &frameLength) == CRSF_SUCCESS);
+    /* payload starts at frame[3]: header byte then data_size */
+    assert_int_equal(frame[3], 0x21); /* high nibble = total (2), low nibble = current (1) */
+    assert_int_equal(frame[4], 3);
+
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_MAVLINK_ENVELOPE);
+    assert_int_equal(rx.MAVLinkEnv.total_chunks, 2);
+    assert_int_equal(rx.MAVLinkEnv.current_chunk, 1);
+    assert_int_equal(rx.MAVLinkEnv.data_size, 3);
+}
+#endif
+
+/* Bug #2 regression: DEVICE_INFO frames shorter than the fields the decoder reads
+ * (dest+orig+name+serial+hw+fw+params_total+param_ver = 17) must be rejected. */
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+static void test_process_device_info_min_length(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_init(&crsf);
+    CRSF_FrameType_t frameType = 0;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+
+    for (uint8_t payloadLen = 15; payloadLen <= 16; payloadLen++) {
+        frame[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+        frame[1] = payloadLen + 2U;
+        frame[2] = CRSF_FRAMETYPE_DEVICE_INFO;
+        memset(&frame[3], 0x00, payloadLen);
+        frame[payloadLen + 3U] = test_calc_checksum(&frame[2], payloadLen + 1U, 0xD5U);
+        assert_true(CRSF_processFrame(&crsf, frame, &frameType) == CRSF_ERROR_TYPE_LENGTH);
+    }
+
+    /* 17-byte payload (empty name) must pass length validation */
+    uint8_t payloadLen = CRSF_WIRE_SIZE_DEVICE_INFO_MIN;
+    frame[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    frame[1] = payloadLen + 2U;
+    frame[2] = CRSF_FRAMETYPE_DEVICE_INFO;
+    memset(&frame[3], 0x00, payloadLen);
+    frame[payloadLen + 3U] = test_calc_checksum(&frame[2], payloadLen + 1U, 0xD5U);
+    assert_true(CRSF_processFrame(&crsf, frame, &frameType) != CRSF_ERROR_TYPE_LENGTH);
+}
+#endif
+
+/* Device name buffer extended to 32: a >16-char name must survive a round-trip
+ * (also exercises bug #5: DeviceInfo name packed with the correct length macro). */
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP && defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX)
+static void test_device_name_long(void** state) {
+    (void)state;
+    CRSF_t tx, rx;
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+    CRSF_FrameType_t frameType;
+    CRSF_init(&tx);
+    CRSF_init(&rx);
+
+    const char* name = "ABCDEFGHIJKLMNOPQRSTUVW"; /* 23 chars, > old 16-byte limit */
+    strncpy((char*)tx.DeviceInfo.Device_name, name, CRSF_MAX_DEVICE_NAME_LEN - 1U);
+    tx.DeviceInfo.dest_address = CRSF_ADDRESS_RADIO_TRANSMITTER;
+    tx.DeviceInfo.origin_address = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    tx.DeviceInfo.Serial_number = 0x11223344;
+    tx.DeviceInfo.Hardware_ID = 0x55667788;
+    tx.DeviceInfo.Firmware_ID = 0x99AABBCC;
+    tx.DeviceInfo.Parameters_total = 7;
+    tx.DeviceInfo.Parameter_version_number = 1;
+
+    assert_true(CRSF_buildFrame(&tx, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_SUCCESS);
+    assert_true(CRSF_processFrame(&rx, frame, &frameType) == CRSF_SUCCESS);
+    assert_true(frameType == CRSF_FRAMETYPE_DEVICE_INFO);
+    assert_string_equal((char*)rx.DeviceInfo.Device_name, name);
+    assert_int_equal(rx.DeviceInfo.Serial_number, 0x11223344);
+    assert_int_equal(rx.DeviceInfo.Parameter_version_number, 1);
+}
+#endif
+
+/* Bug #3 regression: Repeater RX/TX (0xEB/0xED) and the NAT dynamic range
+ * (0x20-0x7F) must be accepted; unknown addresses still rejected. */
+#if CRSF_ENABLE_ADDRESS_VALIDATION
+static void test_address_validation_repeater_nat(void** state) {
+    (void)state;
+    CRSF_t crsf;
+    CRSF_init(&crsf);
+    uint8_t frame[CRSF_MAX_FRAME_LEN];
+    uint8_t frameLength = 0;
+
+    /* Accepted addresses: build must not fail with CRSF_ERROR_ADDR
+     * (it may return CRSF_ERROR_INVALID_FRAME if the type is disabled, which is fine). */
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_REPEATER_RECEIVER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_REPEATER_TRANSMITTER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
+    assert_true(CRSF_buildFrame(&crsf, 0x40, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);        /* NAT range */
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_NAT_MIN, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
+    assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_NAT_MAX, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
+
+    /* Rejected: 0x8B is neither a known device address nor within the NAT range */
+    assert_true(CRSF_buildFrame(&crsf, 0x8B, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_ERROR_ADDR);
 }
 #endif
 
@@ -6450,6 +6762,7 @@ int main(void) {
         cmocka_unit_test(test_all_valid_addresses),
         cmocka_unit_test(test_build_invalid_address),
         cmocka_unit_test(test_process_invalid_address),
+        cmocka_unit_test(test_address_validation_repeater_nat),
 #endif
         cmocka_unit_test(test_build_invalid_frame),
         cmocka_unit_test(test_process_invalid_frame),
@@ -6515,6 +6828,18 @@ int main(void) {
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_TX
         cmocka_unit_test(test_build_link_tx_id),
 #endif
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_RX)
+        cmocka_unit_test(test_build_barometer),
+#endif
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_RX)
+        cmocka_unit_test(test_build_magnetometer),
+#endif
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_RX)
+        cmocka_unit_test(test_build_accel_gyro),
+#endif
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+        cmocka_unit_test(test_build_linkstats_repeater),
+#endif
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_attitude),
 #endif
@@ -6558,6 +6883,7 @@ int main(void) {
 #endif
 #if CRSF_TEL_ENABLE_LINK_STATISTICS
         cmocka_unit_test(test_process_linkstats),
+        cmocka_unit_test(test_process_linkstats_short),
 #endif
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_process_rc_channels),
@@ -6568,6 +6894,18 @@ int main(void) {
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_TX
         cmocka_unit_test(test_process_link_tx_id),
 #endif
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_TX)
+        cmocka_unit_test(test_process_barometer),
+#endif
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_TX)
+        cmocka_unit_test(test_process_magnetometer),
+#endif
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_TX)
+        cmocka_unit_test(test_process_accel_gyro),
+#endif
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+        cmocka_unit_test(test_process_linkstats_repeater),
+#endif
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_process_attitude),
 #endif
@@ -6577,6 +6915,7 @@ int main(void) {
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_process_device_ping),
         cmocka_unit_test(test_process_device_info),
+        cmocka_unit_test(test_process_device_info_min_length),
         cmocka_unit_test(test_process_param_read),
         cmocka_unit_test(test_process_param_write),
 #endif
@@ -6675,6 +7014,10 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_mavlink_envelope),
         cmocka_unit_test(test_roundtrip_mavlink_envelope_max_data),
         cmocka_unit_test(test_roundtrip_mavlink_envelope_limited_size),
+        cmocka_unit_test(test_mavlink_envelope_nibble_order),
+#endif
+#if CRSF_TEL_ENABLE_PARAMETER_GROUP
+        cmocka_unit_test(test_device_name_long),
 #endif
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
         cmocka_unit_test(test_roundtrip_mavlink_status),

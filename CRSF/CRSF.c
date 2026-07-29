@@ -288,9 +288,42 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
             UPDATE_LENGTH(VTX);
 #endif
 
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_RX)
+        case CRSF_FRAMETYPE_BAROMETER:
+            off += CRSF_packBE32(payload + off, crsf->Barometer.pressure_pa);
+            off += CRSF_packBE32(payload + off, crsf->Barometer.baro_temp);
+            UPDATE_LENGTH(Barometer);
+#endif
+
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_RX)
+        case CRSF_FRAMETYPE_MAGNETOMETER:
+            off += CRSF_packBE16(payload + off, crsf->Magnetometer.field_x);
+            off += CRSF_packBE16(payload + off, crsf->Magnetometer.field_y);
+            off += CRSF_packBE16(payload + off, crsf->Magnetometer.field_z);
+            UPDATE_LENGTH(Magnetometer);
+#endif
+
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_RX)
+        case CRSF_FRAMETYPE_ACCEL_GYRO:
+            off += CRSF_packBE32(payload + off, crsf->AccelGyro.sample_time);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.gyro_x);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.gyro_y);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.gyro_z);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.acc_x);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.acc_y);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.acc_z);
+            off += CRSF_packBE16(payload + off, crsf->AccelGyro.gyro_temp);
+            UPDATE_LENGTH(AccelGyro);
+#endif
+
 #if CRSF_TEL_ENABLE_LINK_STATISTICS
             BUILD_FRAME(LINK_STATISTICS, LinkStatistics);
             UPDATE_LENGTH(LinkStatistics);
+#endif
+
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+            BUILD_FRAME(LINK_STATISTICS_REPEATER, LinkStatisticsRepeater);
+            UPDATE_LENGTH(LinkStatisticsRepeater);
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
@@ -343,7 +376,7 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
         case CRSF_FRAMETYPE_DEVICE_INFO:
             payload[off++] = crsf->DeviceInfo.dest_address;
             payload[off++] = crsf->DeviceInfo.origin_address;
-            off += CRSF_packString(payload + off, crsf->DeviceInfo.Device_name, CRSF_MAX_FLIGHT_MODE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN - off - 14U);
+            off += CRSF_packString(payload + off, crsf->DeviceInfo.Device_name, CRSF_MAX_DEVICE_NAME_LEN, CRSF_MAX_PAYLOAD_LEN - off - 14U);
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Serial_number);
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Hardware_ID);
             off += CRSF_packBE32(payload + off, crsf->DeviceInfo.Firmware_ID);
@@ -400,7 +433,11 @@ CRSF_Status_t CRSF_buildFrame(CRSF_t* crsf, uint8_t bus_addr, CRSF_FrameType_t t
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
         case CRSF_FRAMETYPE_MAVLINK_ENVELOPE:
             crsf->MAVLinkEnv.data_size = crsf->MAVLinkEnv.data_size > CRSF_MAX_MAVLINK_PAYLOAD ? CRSF_MAX_MAVLINK_PAYLOAD : crsf->MAVLinkEnv.data_size;
-            memcpy(payload, &(crsf->MAVLinkEnv), crsf->MAVLinkEnv.data_size + 2U);
+            /* Header byte: total_chunks in high nibble (bits 4-7), current_chunk in low nibble (bits 0-3)
+               Packed explicitly (not via bitfield memcpy) to stay endianness/compiler independent */
+            payload[0] = (uint8_t)(((crsf->MAVLinkEnv.total_chunks & 0x0FU) << 4U) | (crsf->MAVLinkEnv.current_chunk & 0x0FU));
+            payload[1] = crsf->MAVLinkEnv.data_size;
+            memcpy(payload + 2U, crsf->MAVLinkEnv.data, crsf->MAVLinkEnv.data_size);
             *frameLength += crsf->MAVLinkEnv.data_size + 2U;
             break;
 #endif
@@ -579,9 +616,42 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
             UPDATE_FRESHNESS(VTX);
 #endif
 
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_BAROMETER:
+            off += CRSF_unpackBE32(payload + off, &(crsf->Barometer.pressure_pa));
+            off += CRSF_unpackBE32(payload + off, &(crsf->Barometer.baro_temp));
+            UPDATE_FRESHNESS(BAROMETER);
+#endif
+
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_MAGNETOMETER:
+            off += CRSF_unpackBE16(payload + off, &(crsf->Magnetometer.field_x));
+            off += CRSF_unpackBE16(payload + off, &(crsf->Magnetometer.field_y));
+            off += CRSF_unpackBE16(payload + off, &(crsf->Magnetometer.field_z));
+            UPDATE_FRESHNESS(MAGNETOMETER);
+#endif
+
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_ACCEL_GYRO:
+            off += CRSF_unpackBE32(payload + off, &(crsf->AccelGyro.sample_time));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.gyro_x));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.gyro_y));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.gyro_z));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.acc_x));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.acc_y));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.acc_z));
+            off += CRSF_unpackBE16(payload + off, &(crsf->AccelGyro.gyro_temp));
+            UPDATE_FRESHNESS(ACCEL_GYRO);
+#endif
+
 #if CRSF_TEL_ENABLE_LINK_STATISTICS
             PROCESS_FRAME(LINK_STATISTICS, LinkStatistics);
             UPDATE_FRESHNESS(LINK_STATISTICS);
+#endif
+
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+            PROCESS_FRAME(LINK_STATISTICS_REPEATER, LinkStatisticsRepeater);
+            UPDATE_FRESHNESS(LINK_STATISTICS_REPEATER);
 #endif
 
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
@@ -682,7 +752,15 @@ CRSF_Status_t CRSF_processFrame(CRSF_t* crsf, const uint8_t* frame, CRSF_FrameTy
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
-        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: memcpy(&(crsf->MAVLinkEnv), payload, (payload[1] > 58 ? 58 : payload[1]) + 2U); UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        case CRSF_FRAMETYPE_MAVLINK_ENVELOPE: {
+            /* Header byte: total_chunks in high nibble (bits 4-7), current_chunk in low nibble (bits 0-3) */
+            crsf->MAVLinkEnv.total_chunks = (payload[0] >> 4U) & 0x0FU;
+            crsf->MAVLinkEnv.current_chunk = payload[0] & 0x0FU;
+            uint8_t dataSize = payload[1] > CRSF_MAX_MAVLINK_PAYLOAD ? CRSF_MAX_MAVLINK_PAYLOAD : payload[1];
+            crsf->MAVLinkEnv.data_size = dataSize;
+            memcpy(crsf->MAVLinkEnv.data, payload + 2U, dataSize);
+            UPDATE_FRESHNESS(MAVLINK_ENVELOPE);
+        }
 #endif
 
 #if CRSF_TEL_ENABLE_MAVLINK_STATUS
@@ -770,8 +848,20 @@ static uint8_t CRSF_validateFrameLength(CRSF_FrameType_t type, uint8_t payloadLe
 #if CRSF_TEL_ENABLE_VTX && defined(CRSF_CONFIG_TX)
         case CRSF_FRAMETYPE_VTX: return (payloadLength >= CRSF_WIRE_SIZE_VTX);
 #endif
-#if CRSF_TEL_ENABLE_LINK_STATISTICS && defined(CRSF_CONFIG_TX)
+#if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_BAROMETER: return (payloadLength >= CRSF_WIRE_SIZE_BAROMETER);
+#endif
+#if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_MAGNETOMETER: return (payloadLength >= CRSF_WIRE_SIZE_MAGNETOMETER);
+#endif
+#if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_TX)
+        case CRSF_FRAMETYPE_ACCEL_GYRO: return (payloadLength >= CRSF_WIRE_SIZE_ACCEL_GYRO);
+#endif
+#if CRSF_TEL_ENABLE_LINK_STATISTICS
         case CRSF_FRAMETYPE_LINK_STATISTICS: return (payloadLength >= CRSF_WIRE_SIZE_LINK_STATISTICS);
+#endif
+#if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
+        case CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER: return (payloadLength >= CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER);
 #endif
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_RX)
         case CRSF_FRAMETYPE_RC_CHANNELS_PACKED: return (payloadLength >= CRSF_WIRE_SIZE_RC_CHANNELS_PACKED);
@@ -844,10 +934,17 @@ CRSF_Status_t CRSF_isValidAddress(CRSF_Address_t addr) {
         case CRSF_ADDRESS_RACE_TAG:
         case CRSF_ADDRESS_VTX:
         case CRSF_ADDRESS_RADIO_TRANSMITTER:
+        case CRSF_ADDRESS_REPEATER_RECEIVER:
         case CRSF_ADDRESS_CRSF_RECEIVER:
+        case CRSF_ADDRESS_REPEATER_TRANSMITTER:
         case CRSF_ADDRESS_CRSF_TRANSMITTER:
         case CRSF_ADDRESS_ELRS_LUA: return CRSF_SUCCESS;
-        default: return CRSF_ERROR_ADDR;
+        default:
+            /* Dynamic address space for NAT (0x20-0x7F) */
+            if ((uint8_t)addr >= CRSF_ADDRESS_NAT_MIN && (uint8_t)addr <= CRSF_ADDRESS_NAT_MAX) {
+                return CRSF_SUCCESS;
+            }
+            return CRSF_ERROR_ADDR;
     }
 }
 #endif

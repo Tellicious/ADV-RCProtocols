@@ -57,7 +57,7 @@ extern "C" {
 #endif
 
 #ifndef CRSF_MAX_DEVICE_NAME_LEN
-#define CRSF_MAX_DEVICE_NAME_LEN 16 /* Max device name length */
+#define CRSF_MAX_DEVICE_NAME_LEN 32 /* Max device name length */
 #endif
 
 #define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56 /* Max parameter settings payload */
@@ -119,7 +119,11 @@ extern "C" {
 #define CRSF_WIRE_SIZE_TEMPERATURE_MIN    3U /* source_id(1) + at least 1 × int16(2) */
 #define CRSF_WIRE_SIZE_VOLTAGES_MIN       3U /* source_id(1) + at least 1 × uint16(2) */
 #define CRSF_WIRE_SIZE_VTX                5U
+#define CRSF_WIRE_SIZE_BAROMETER          8U  /* int32 pressure + int32 baro_temp */
+#define CRSF_WIRE_SIZE_MAGNETOMETER       6U  /* 3 × int16 field */
+#define CRSF_WIRE_SIZE_ACCEL_GYRO         18U /* uint32 sample_time + 7 × int16 */
 #define CRSF_WIRE_SIZE_LINK_STATISTICS    10U
+#define CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER 10U /* identical layout to 0x14 */
 #define CRSF_WIRE_SIZE_RC_CHANNELS_PACKED 22U /* 16 × 11 bits = 176 bits = 22 bytes */
 #define CRSF_WIRE_SIZE_LINK_STATISTICS_RX 5U
 #define CRSF_WIRE_SIZE_LINK_STATISTICS_TX 6U
@@ -128,12 +132,12 @@ extern "C" {
 #define CRSF_WIRE_SIZE_FLIGHT_MODE_MIN    1U /* at least NUL terminator */
 #define CRSF_WIRE_SIZE_ESP_NOW_MESSAGES   52U
 #define CRSF_WIRE_SIZE_PING               2U
-#define CRSF_WIRE_SIZE_DEVICE_INFO_MIN    15U /* dest(1)+orig(1)+name(1 NUL min)+serial(4)+hw(4)+fw(4) */
+#define CRSF_WIRE_SIZE_DEVICE_INFO_MIN    17U /* dest(1)+orig(1)+name(1 NUL min)+serial(4)+hw(4)+fw(4)+params_total(1)+param_ver(1) */
 #define CRSF_WIRE_SIZE_PARAM_ENTRY_MIN    5U  /* dest+orig+num+chunks+parent */
 #define CRSF_WIRE_SIZE_PARAM_READ         4U
 #define CRSF_WIRE_SIZE_PARAM_WRITE_MIN    4U /* dest+orig+param_num + at least 1 data byte */
 #define CRSF_WIRE_SIZE_COMMAND_MIN        3U /* dest+orig+cmd_id (minimum, before inner CRC) */
-#define CRSF_WIRE_SIZE_MAVLINK_ENV_MIN    1U /* chunks byte minimum */
+#define CRSF_WIRE_SIZE_MAVLINK_ENV_MIN    2U /* chunk-index byte + data_size byte */
 #define CRSF_WIRE_SIZE_MAVLINK_STATUS     12U
 
 /* Typedefs ------------------------------------------------------------------*/
@@ -168,10 +172,16 @@ typedef enum {
     CRSF_ADDRESS_RACE_TAG = 0xCC,
     CRSF_ADDRESS_VTX = 0xCE,
     CRSF_ADDRESS_RADIO_TRANSMITTER = 0xEA,
+    CRSF_ADDRESS_REPEATER_RECEIVER = 0xEB,
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
+    CRSF_ADDRESS_REPEATER_TRANSMITTER = 0xED,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
     CRSF_ADDRESS_ELRS_LUA = 0xEF
 } CRSF_Address_t;
+
+/* Dynamic address space for NAT (see spec "Device Addresses") */
+#define CRSF_ADDRESS_NAT_MIN 0x20U
+#define CRSF_ADDRESS_NAT_MAX 0x7FU
 
 /**
  * Frame types
@@ -191,7 +201,11 @@ typedef enum {
     CRSF_FRAMETYPE_VOLTAGES = 0x0E,
     CRSF_FRAMETYPE_DISCONTINUED = 0x0F,
     CRSF_FRAMETYPE_VTX = 0x10,
+    CRSF_FRAMETYPE_BAROMETER = 0x11,
+    CRSF_FRAMETYPE_MAGNETOMETER = 0x12,
+    CRSF_FRAMETYPE_ACCEL_GYRO = 0x13,
     CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
+    CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER = 0x15,
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
     CRSF_FRAMETYPE_SUBSET_RC_CHANNELS = 0x17,
     CRSF_FRAMETYPE_RC_CHANNELS_PACKED_UNUSED = 0x18, //Unused
@@ -524,6 +538,43 @@ typedef struct {
 _Static_assert(sizeof(CRSF_VTX_t) == CRSF_WIRE_SIZE_VTX, "CRSF_VTX_t wire size mismatch");
 
 /**
+ * CRSF_FRAMETYPE_BAROMETER payload
+ */
+typedef struct {
+    int32_t pressure_pa; // Pressure in Pascals
+    int32_t baro_temp;   // Barometer temperature in centidegrees
+} CRSF_Barometer_t;
+
+_Static_assert(sizeof(CRSF_Barometer_t) == CRSF_WIRE_SIZE_BAROMETER, "CRSF_Barometer_t wire size mismatch");
+
+/**
+ * CRSF_FRAMETYPE_MAGNETOMETER payload
+ */
+typedef struct {
+    int16_t field_x; // milligauss * 3
+    int16_t field_y; // milligauss * 3
+    int16_t field_z; // milligauss * 3
+} CRSF_Magnetometer_t;
+
+_Static_assert(sizeof(CRSF_Magnetometer_t) == CRSF_WIRE_SIZE_MAGNETOMETER, "CRSF_Magnetometer_t wire size mismatch");
+
+/**
+ * CRSF_FRAMETYPE_ACCEL_GYRO payload (raw accel/gyro in NEU bodyframe)
+ */
+typedef struct {
+    uint32_t sample_time; // Timestamp of the sample in us
+    int16_t gyro_x;       // LSB = INT16_MAX/2000 DPS
+    int16_t gyro_y;       // LSB = INT16_MAX/2000 DPS
+    int16_t gyro_z;       // LSB = INT16_MAX/2000 DPS
+    int16_t acc_x;        // LSB = INT16_MAX/16 G
+    int16_t acc_y;        // LSB = INT16_MAX/16 G
+    int16_t acc_z;        // LSB = INT16_MAX/16 G
+    int16_t gyro_temp;    // centidegrees
+} CRSF_AccelGyro_t;
+
+_Static_assert(sizeof(CRSF_AccelGyro_t) == CRSF_WIRE_SIZE_ACCEL_GYRO, "CRSF_AccelGyro_t wire size mismatch");
+
+/**
  * CRSF_FRAMETYPE_LINK_STATISTICS payload
  */
 typedef struct {
@@ -541,6 +592,24 @@ typedef struct {
 } CRSF_LinkStatistics_t;
 
 _Static_assert(sizeof(CRSF_LinkStatistics_t) == CRSF_WIRE_SIZE_LINK_STATISTICS, "CRSF_LinkStatistics_t wire size mismatch");
+
+/**
+ * CRSF_FRAMETYPE_LINK_STATISTICS_REPEATER payload (copy of 0x14)
+ */
+typedef struct {
+    uint8_t up_rssi_ant1;      // Uplink RSSI Antenna 1 (dBm * -1)
+    uint8_t up_rssi_ant2;      // Uplink RSSI Antenna 2 (dBm * -1)
+    uint8_t up_link_quality;   // Uplink Package success rate / Link quality (%)
+    int8_t up_snr;             // Uplink SNR (dB)
+    uint8_t active_antenna;    // number of currently best antenna
+    uint8_t rf_profile;        // enum {4fps = 0 , 50fps, 150fps}
+    uint8_t up_rf_power;       // enum {0mW = 0, 10mW, 25mW, 100mW, 500mW, 1000mW, 2000mW, 250mW, 50mW}
+    uint8_t down_rssi;         // Downlink RSSI (dBm * -1)
+    uint8_t down_link_quality; // Downlink Package success rate / Link quality (%)
+    int8_t down_snr;           // Downlink SNR (dB)
+} CRSF_LinkStatisticsRepeater_t;
+
+_Static_assert(sizeof(CRSF_LinkStatisticsRepeater_t) == CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER, "CRSF_LinkStatisticsRepeater_t wire size mismatch");
 
 #if CRSF_USE_PACKED_RC_BITFIELDS
 typedef struct __attribute__((packed)) {
