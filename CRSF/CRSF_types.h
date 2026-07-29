@@ -97,48 +97,48 @@ extern "C" {
 
 /* Characteristics -----------------------------------------------------------*/
 
-#define CRSF_MIN_FRAME_LEN                4U  // Including addr byte and Frame Length
-#define CRSF_MAX_FRAME_LEN                64U // Including addr byte and Frame Length
-#define CRSF_STD_HDR_SIZE                 3U  /* addr,len,type */
-#define CRSF_CRC_SIZE                     1U
-#define CRSF_MAX_PAYLOAD_LEN              (CRSF_MAX_FRAME_LEN - CRSF_CRC_SIZE - CRSF_STD_HDR_SIZE)
+#define CRSF_MIN_FRAME_LEN                      4U  // Including addr byte and Frame Length
+#define CRSF_MAX_FRAME_LEN                      64U // Including addr byte and Frame Length
+#define CRSF_STD_HDR_SIZE                       3U  /* addr,len,type */
+#define CRSF_CRC_SIZE                           1U
+#define CRSF_MAX_PAYLOAD_LEN                    (CRSF_MAX_FRAME_LEN - CRSF_CRC_SIZE - CRSF_STD_HDR_SIZE)
 
 /* Wire payload sizes (bytes) ----------------------------------------------- */
 /* Fixed-size frames: exact payload size on the wire.                         */
 /* Variable-length frames: minimum valid payload size (suffixed _MIN).        */
 
-#define CRSF_WIRE_SIZE_GPS                15U
-#define CRSF_WIRE_SIZE_GPS_TIME           9U
-#define CRSF_WIRE_SIZE_GPS_EXTENDED       20U
-#define CRSF_WIRE_SIZE_VARIO              2U
-#define CRSF_WIRE_SIZE_BATTERY_SENSOR     8U /* uint24 capacity on wire (sizeof struct = 9) */
-#define CRSF_WIRE_SIZE_BAROALT_VSPEED     3U /* packed representation (sizeof struct = 6) */
-#define CRSF_WIRE_SIZE_AIRSPEED           2U
-#define CRSF_WIRE_SIZE_HEARTBEAT          2U
-#define CRSF_WIRE_SIZE_RPM_MIN            4U /* source_id(1) + at least 1 × int24(3) */
-#define CRSF_WIRE_SIZE_TEMPERATURE_MIN    3U /* source_id(1) + at least 1 × int16(2) */
-#define CRSF_WIRE_SIZE_VOLTAGES_MIN       3U /* source_id(1) + at least 1 × uint16(2) */
-#define CRSF_WIRE_SIZE_VTX                5U
-#define CRSF_WIRE_SIZE_BAROMETER          8U  /* int32 pressure + int32 baro_temp */
-#define CRSF_WIRE_SIZE_MAGNETOMETER       6U  /* 3 × int16 field */
-#define CRSF_WIRE_SIZE_ACCEL_GYRO         18U /* uint32 sample_time + 7 × int16 */
-#define CRSF_WIRE_SIZE_LINK_STATISTICS    10U
+#define CRSF_WIRE_SIZE_GPS                      15U
+#define CRSF_WIRE_SIZE_GPS_TIME                 9U
+#define CRSF_WIRE_SIZE_GPS_EXTENDED             20U
+#define CRSF_WIRE_SIZE_VARIO                    2U
+#define CRSF_WIRE_SIZE_BATTERY_SENSOR           8U /* uint24 capacity on wire (sizeof struct = 9) */
+#define CRSF_WIRE_SIZE_BAROALT_VSPEED           3U /* packed representation (sizeof struct = 6) */
+#define CRSF_WIRE_SIZE_AIRSPEED                 2U
+#define CRSF_WIRE_SIZE_HEARTBEAT                2U
+#define CRSF_WIRE_SIZE_RPM_MIN                  4U /* source_id(1) + at least 1 × int24(3) */
+#define CRSF_WIRE_SIZE_TEMPERATURE_MIN          3U /* source_id(1) + at least 1 × int16(2) */
+#define CRSF_WIRE_SIZE_VOLTAGES_MIN             3U /* source_id(1) + at least 1 × uint16(2) */
+#define CRSF_WIRE_SIZE_VTX                      5U
+#define CRSF_WIRE_SIZE_BAROMETER                8U  /* int32 pressure + int32 baro_temp */
+#define CRSF_WIRE_SIZE_MAGNETOMETER             6U  /* 3 × int16 field */
+#define CRSF_WIRE_SIZE_ACCEL_GYRO               18U /* uint32 sample_time + 7 × int16 */
+#define CRSF_WIRE_SIZE_LINK_STATISTICS          10U
 #define CRSF_WIRE_SIZE_LINK_STATISTICS_REPEATER 10U /* identical layout to 0x14 */
-#define CRSF_WIRE_SIZE_RC_CHANNELS_PACKED 22U /* 16 × 11 bits = 176 bits = 22 bytes */
-#define CRSF_WIRE_SIZE_LINK_STATISTICS_RX 5U
-#define CRSF_WIRE_SIZE_LINK_STATISTICS_TX 6U
-#define CRSF_WIRE_SIZE_ATTITUDE           6U
-#define CRSF_WIRE_SIZE_MAVLINK_FC         9U
-#define CRSF_WIRE_SIZE_FLIGHT_MODE_MIN    1U /* at least NUL terminator */
-#define CRSF_WIRE_SIZE_ESP_NOW_MESSAGES   52U
-#define CRSF_WIRE_SIZE_PING               2U
-#define CRSF_WIRE_SIZE_DEVICE_INFO_MIN    17U /* dest(1)+orig(1)+name(1 NUL min)+serial(4)+hw(4)+fw(4)+params_total(1)+param_ver(1) */
-#define CRSF_WIRE_SIZE_PARAM_ENTRY_MIN    5U  /* dest+orig+num+chunks+parent */
-#define CRSF_WIRE_SIZE_PARAM_READ         4U
-#define CRSF_WIRE_SIZE_PARAM_WRITE_MIN    4U /* dest+orig+param_num + at least 1 data byte */
-#define CRSF_WIRE_SIZE_COMMAND_MIN        3U /* dest+orig+cmd_id (minimum, before inner CRC) */
-#define CRSF_WIRE_SIZE_MAVLINK_ENV_MIN    2U /* chunk-index byte + data_size byte */
-#define CRSF_WIRE_SIZE_MAVLINK_STATUS     12U
+#define CRSF_WIRE_SIZE_RC_CHANNELS_PACKED       22U /* 16 × 11 bits = 176 bits = 22 bytes */
+#define CRSF_WIRE_SIZE_LINK_STATISTICS_RX       5U
+#define CRSF_WIRE_SIZE_LINK_STATISTICS_TX       6U
+#define CRSF_WIRE_SIZE_ATTITUDE                 6U
+#define CRSF_WIRE_SIZE_MAVLINK_FC               9U
+#define CRSF_WIRE_SIZE_FLIGHT_MODE_MIN          1U /* at least NUL terminator */
+#define CRSF_WIRE_SIZE_ESP_NOW_MESSAGES         52U
+#define CRSF_WIRE_SIZE_PING                     2U
+#define CRSF_WIRE_SIZE_DEVICE_INFO_MIN          17U /* dest(1)+orig(1)+name(1 NUL min)+serial(4)+hw(4)+fw(4)+params_total(1)+param_ver(1) */
+#define CRSF_WIRE_SIZE_PARAM_ENTRY_MIN          5U  /* dest+orig+num+chunks+parent */
+#define CRSF_WIRE_SIZE_PARAM_READ               4U
+#define CRSF_WIRE_SIZE_PARAM_WRITE_MIN          4U /* dest+orig+param_num + at least 1 data byte */
+#define CRSF_WIRE_SIZE_COMMAND_MIN              3U /* dest+orig+cmd_id (minimum, before inner CRC) */
+#define CRSF_WIRE_SIZE_MAVLINK_ENV_MIN          2U /* chunk-index byte + data_size byte */
+#define CRSF_WIRE_SIZE_MAVLINK_STATUS           12U
 
 /* Typedefs ------------------------------------------------------------------*/
 

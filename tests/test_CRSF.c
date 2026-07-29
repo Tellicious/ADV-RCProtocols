@@ -131,8 +131,7 @@ const uint8_t test_magnetometer_packet[] = {0xC8, 0x08, 0x12, 0x05, 0xDC, 0xF8, 
  * acc  = {1000, -2000, 16000} -> 0x03E8, 0xF830, 0x3E80
  * gyro_temp = 2530 centidegrees -> 0x09E2
  */
-const uint8_t test_accel_gyro_packet[] = {0xC8, 0x14, 0x13, 0x00, 0x01, 0xE2, 0x40, 0x00, 0x64, 0xFF, 0x38, 0x01,
-                                          0x2C, 0x03, 0xE8, 0xF8, 0x30, 0x3E, 0x80, 0x09, 0xE2, 0x99};
+const uint8_t test_accel_gyro_packet[] = {0xC8, 0x14, 0x13, 0x00, 0x01, 0xE2, 0x40, 0x00, 0x64, 0xFF, 0x38, 0x01, 0x2C, 0x03, 0xE8, 0xF8, 0x30, 0x3E, 0x80, 0x09, 0xE2, 0x99};
 
 /* 0x14 Link Statistics
  * upRSSI1=0x41 (−65 dBm), upRSSI2=0x42 (−66 dBm), upLQ=98% (0x62), upSNR=−7 dB(0xF9)
@@ -453,7 +452,7 @@ static void test_address_validation_repeater_nat(void** state) {
      * (it may return CRSF_ERROR_INVALID_FRAME if the type is disabled, which is fine). */
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_REPEATER_RECEIVER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_REPEATER_TRANSMITTER, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
-    assert_true(CRSF_buildFrame(&crsf, 0x40, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);        /* NAT range */
+    assert_true(CRSF_buildFrame(&crsf, 0x40, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR); /* NAT range */
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_NAT_MIN, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_NAT_MAX, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) != CRSF_ERROR_ADDR);
 
@@ -461,7 +460,6 @@ static void test_address_validation_repeater_nat(void** state) {
     assert_true(CRSF_buildFrame(&crsf, 0x8B, CRSF_FRAMETYPE_HEARTBEAT, 0, frame, &frameLength) == CRSF_ERROR_ADDR);
 }
 #endif
-
 
 static void test_build_invalid_frame(void** state) {
     (void)state;
@@ -1444,6 +1442,7 @@ static void test_build_heartbeat(void** state) {
         assert_int_equal(frame[ii], test_heartbeat_packet[ii]);
     }
 }
+
 static void test_process_heartbeat(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -1570,6 +1569,7 @@ static void test_roundtrip_rpm(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_rpm_single_motor(void** state) {
     (void)state;
 
@@ -1609,6 +1609,7 @@ static void test_roundtrip_rpm_single_motor(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_rpm_zero_values(void** state) {
     (void)state;
 
@@ -1729,6 +1730,7 @@ static void test_roundtrip_temperature(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_temperature_single_sensor(void** state) {
     (void)state;
 
@@ -1768,6 +1770,7 @@ static void test_roundtrip_temperature_single_sensor(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_temperature_zero_values(void** state) {
     (void)state;
 
@@ -1859,6 +1862,7 @@ static void test_roundtrip_voltages(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_voltages_single_cell(void** state) {
     (void)state;
 
@@ -1898,6 +1902,7 @@ static void test_roundtrip_voltages_single_cell(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_voltages_zero_values(void** state) {
     (void)state;
 
@@ -2126,6 +2131,7 @@ static void test_build_linkstats(void** state) {
         assert_int_equal(frame[ii], test_linkstats_packet[ii]);
     }
 }
+
 static void test_process_linkstats(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2144,6 +2150,7 @@ static void test_process_linkstats(void** state) {
     assert_int_equal(crsf.LinkStatistics.down_link_quality, 0x63);
     assert_int_equal(crsf.LinkStatistics.down_snr, (int8_t)0xF7);
 }
+
 static void test_process_linkstats_short(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2243,6 +2250,7 @@ static void test_build_linkstats_repeater(void** state) {
         assert_int_equal(frame[ii], test_linkstats_repeater_packet[ii]);
     }
 }
+
 static void test_process_linkstats_repeater(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2413,6 +2421,7 @@ static void test_build_link_rx_id(void** state) {
         assert_int_equal(frame[ii], test_link_rx_id_packet[ii]);
     }
 }
+
 static void test_process_link_rx_id(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2496,6 +2505,7 @@ static void test_build_link_tx_id(void** state) {
         assert_int_equal(frame[ii], test_link_tx_id_packet[ii]);
     }
 }
+
 static void test_process_link_tx_id(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2704,6 +2714,7 @@ static void test_build_flightmode(void** state) {
         assert_int_equal(frame[ii], test_flightmode_packet[ii]);
     }
 }
+
 static void test_process_flightmode(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2752,6 +2763,7 @@ static void test_roundtrip_flight_mode(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_flight_mode_short(void** state) {
     (void)state;
 
@@ -2859,6 +2871,7 @@ static void test_build_device_ping(void** state) {
         assert_int_equal(frame[ii], test_device_ping_packet[ii]);
     }
 }
+
 static void test_process_device_ping(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2935,6 +2948,7 @@ static void test_build_device_info(void** state) {
         assert_int_equal(frame[ii], test_device_info_packet[ii]);
     }
 }
+
 static void test_process_device_info(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -2951,6 +2965,7 @@ static void test_process_device_info(void** state) {
     assert_int_equal(crsf.DeviceInfo.Parameter_version_number, 2);
     assert_string_equal((char*)crsf.DeviceInfo.Device_name, "CRSF-DEV");
 }
+
 static void test_process_device_info_min_length(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -3151,6 +3166,7 @@ static void test_build_param_read(void** state) {
         assert_int_equal(frame[ii], test_param_read_packet[ii]);
     }
 }
+
 static void test_process_param_read(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -3229,6 +3245,7 @@ static void test_build_param_write(void** state) {
         assert_int_equal(frame[ii], test_param_write_packet[ii]);
     }
 }
+
 static void test_process_param_write(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -3291,6 +3308,7 @@ static void test_roundtrip_parameter_write(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_parameter_write_oversized(void** state) {
     (void)state;
 
@@ -3336,6 +3354,7 @@ static void test_roundtrip_parameter_write_oversized(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_parameter_write_min_payload(void** state) {
     (void)state;
 
@@ -3484,6 +3503,7 @@ static void test_roundtrip_command(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_command_oversized(void** state) {
     (void)state;
 
@@ -3538,6 +3558,7 @@ static void test_roundtrip_command_oversized(void** state) {
     }
 #endif
 }
+
 static void test_error_command_bad_inner_crc(void** state) {
     (void)state;
     CRSF_t crsf;
@@ -3616,6 +3637,7 @@ static void test_roundtrip_mavlink_envelope(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_mavlink_envelope_max_data(void** state) {
     (void)state;
 
@@ -3664,6 +3686,7 @@ static void test_roundtrip_mavlink_envelope_max_data(void** state) {
     }
 #endif
 }
+
 static void test_roundtrip_mavlink_envelope_limited_size(void** state) {
     (void)state;
 
@@ -3712,6 +3735,7 @@ static void test_roundtrip_mavlink_envelope_limited_size(void** state) {
     }
 #endif
 }
+
 static void test_mavlink_envelope_nibble_order(void** state) {
     (void)state;
     CRSF_t tx, rx;
@@ -6763,8 +6787,8 @@ int main(void) {
         cmocka_unit_test(test_freshness_edge_cases),
 #endif
 
-/* Frame Tests (grouped per frame: build -> process -> roundtrip) */
-        /* 0x02 GPS */
+    /* Frame Tests (grouped per frame: build -> process -> roundtrip) */
+    /* 0x02 GPS */
 #if CRSF_TEL_ENABLE_GPS && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_gps),
 #endif
@@ -6774,15 +6798,15 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_GPS
         cmocka_unit_test(test_roundtrip_gps),
 #endif
-        /* 0x03 GPS_TIME */
+    /* 0x03 GPS_TIME */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_GPS_TIME
         cmocka_unit_test(test_roundtrip_gps_time),
 #endif
-        /* 0x06 GPS_EXTENDED */
+    /* 0x06 GPS_EXTENDED */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_GPS_EXTENDED
         cmocka_unit_test(test_roundtrip_gps_extended),
 #endif
-        /* 0x07 VARIO */
+    /* 0x07 VARIO */
 #if CRSF_TEL_ENABLE_VARIO && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_vario),
 #endif
@@ -6792,7 +6816,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_VARIO
         cmocka_unit_test(test_roundtrip_vario),
 #endif
-        /* 0x08 BATTERY_SENSOR */
+    /* 0x08 BATTERY_SENSOR */
 #if CRSF_TEL_ENABLE_BATTERY_SENSOR && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_battery),
 #endif
@@ -6802,7 +6826,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_BATTERY_SENSOR
         cmocka_unit_test(test_roundtrip_battery_sensor),
 #endif
-        /* 0x09 BAROALT_VSPEED */
+    /* 0x09 BAROALT_VSPEED */
 #if CRSF_TEL_ENABLE_BAROALT_VSPEED && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_baro),
 #endif
@@ -6815,7 +6839,7 @@ int main(void) {
         cmocka_unit_test(test_baroalt_lut_edge_cases),
 #endif
 #endif
-        /* 0x0A AIRSPEED */
+    /* 0x0A AIRSPEED */
 #if CRSF_TEL_ENABLE_AIRSPEED && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_airspeed),
 #endif
@@ -6825,7 +6849,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_AIRSPEED
         cmocka_unit_test(test_roundtrip_airspeed),
 #endif
-        /* 0x0B HEARTBEAT */
+    /* 0x0B HEARTBEAT */
 #if CRSF_TEL_ENABLE_HEARTBEAT
         cmocka_unit_test(test_build_heartbeat),
         cmocka_unit_test(test_process_heartbeat),
@@ -6833,7 +6857,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_HEARTBEAT
         cmocka_unit_test(test_roundtrip_heartbeat),
 #endif
-        /* 0x0C RPM */
+    /* 0x0C RPM */
 #if CRSF_TEL_ENABLE_RPM && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_rpm),
 #endif
@@ -6845,7 +6869,7 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_rpm_single_motor),
         cmocka_unit_test(test_roundtrip_rpm_zero_values),
 #endif
-        /* 0x0D TEMPERATURE */
+    /* 0x0D TEMPERATURE */
 #if CRSF_TEL_ENABLE_TEMPERATURE && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_temp),
 #endif
@@ -6857,38 +6881,38 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_temperature_single_sensor),
         cmocka_unit_test(test_roundtrip_temperature_zero_values),
 #endif
-        /* 0x0E VOLTAGES */
+    /* 0x0E VOLTAGES */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_VOLTAGES
         cmocka_unit_test(test_roundtrip_voltages),
         cmocka_unit_test(test_roundtrip_voltages_single_cell),
         cmocka_unit_test(test_roundtrip_voltages_zero_values),
 #endif
-        /* 0x10 VTX */
+    /* 0x10 VTX */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_VTX
         cmocka_unit_test(test_roundtrip_vtx),
 #endif
-        /* 0x11 BAROMETER */
+    /* 0x11 BAROMETER */
 #if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_barometer),
 #endif
 #if CRSF_TEL_ENABLE_BAROMETER && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_process_barometer),
 #endif
-        /* 0x12 MAGNETOMETER */
+    /* 0x12 MAGNETOMETER */
 #if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_magnetometer),
 #endif
 #if CRSF_TEL_ENABLE_MAGNETOMETER && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_process_magnetometer),
 #endif
-        /* 0x13 ACCEL_GYRO */
+    /* 0x13 ACCEL_GYRO */
 #if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_accel_gyro),
 #endif
 #if CRSF_TEL_ENABLE_ACCEL_GYRO && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_process_accel_gyro),
 #endif
-        /* 0x14 LINK_STATISTICS */
+    /* 0x14 LINK_STATISTICS */
 #if CRSF_TEL_ENABLE_LINK_STATISTICS
         cmocka_unit_test(test_build_linkstats),
         cmocka_unit_test(test_process_linkstats),
@@ -6897,12 +6921,12 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_LINK_STATISTICS
         cmocka_unit_test(test_roundtrip_link_statistics),
 #endif
-        /* 0x15 LINK_STATISTICS_REPEATER */
+    /* 0x15 LINK_STATISTICS_REPEATER */
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_REPEATER
         cmocka_unit_test(test_build_linkstats_repeater),
         cmocka_unit_test(test_process_linkstats_repeater),
 #endif
-        /* 0x16 RC_CHANNELS_PACKED */
+    /* 0x16 RC_CHANNELS_PACKED */
 #if CRSF_ENABLE_RC_CHANNELS && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_build_rc_channels),
 #endif
@@ -6915,7 +6939,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_ENABLE_RC_CHANNELS
         cmocka_unit_test(test_roundtrip_rc_channels_packed),
 #endif
-        /* 0x1C LINK_STATISTICS_RX */
+    /* 0x1C LINK_STATISTICS_RX */
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_RX
         cmocka_unit_test(test_build_link_rx_id),
         cmocka_unit_test(test_process_link_rx_id),
@@ -6923,7 +6947,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_LINK_STATISTICS_RX
         cmocka_unit_test(test_roundtrip_link_statistics_rx),
 #endif
-        /* 0x1D LINK_STATISTICS_TX */
+    /* 0x1D LINK_STATISTICS_TX */
 #if CRSF_TEL_ENABLE_LINK_STATISTICS_TX
         cmocka_unit_test(test_build_link_tx_id),
         cmocka_unit_test(test_process_link_tx_id),
@@ -6931,7 +6955,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_LINK_STATISTICS_TX
         cmocka_unit_test(test_roundtrip_link_statistics_tx),
 #endif
-        /* 0x1E ATTITUDE */
+    /* 0x1E ATTITUDE */
 #if CRSF_TEL_ENABLE_ATTITUDE && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_build_attitude),
 #endif
@@ -6941,11 +6965,11 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_ATTITUDE
         cmocka_unit_test(test_roundtrip_attitude),
 #endif
-        /* 0x1F MAVLINK_FC */
+    /* 0x1F MAVLINK_FC */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_MAVLINK_FC
         cmocka_unit_test(test_roundtrip_mavlink_fc),
 #endif
-        /* 0x21 FLIGHT_MODE */
+    /* 0x21 FLIGHT_MODE */
 #if CRSF_TEL_ENABLE_FLIGHT_MODE
         cmocka_unit_test(test_build_flightmode),
         cmocka_unit_test(test_process_flightmode),
@@ -6954,11 +6978,11 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_flight_mode),
         cmocka_unit_test(test_roundtrip_flight_mode_short),
 #endif
-        /* 0x22 ESP_NOW_MESSAGES */
+    /* 0x22 ESP_NOW_MESSAGES */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_ESP_NOW_MESSAGES
         cmocka_unit_test(test_roundtrip_esp_now_messages),
 #endif
-        /* 0x28 DEVICE_PING */
+    /* 0x28 DEVICE_PING */
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_build_device_ping),
         cmocka_unit_test(test_process_device_ping),
@@ -6966,7 +6990,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_roundtrip_device_ping),
 #endif
-        /* 0x29 DEVICE_INFO */
+    /* 0x29 DEVICE_INFO */
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_build_device_info),
         cmocka_unit_test(test_process_device_info),
@@ -6978,11 +7002,11 @@ int main(void) {
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP && defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX)
         cmocka_unit_test(test_device_name_long),
 #endif
-        /* 0x2B PARAMETER_SETTINGS_ENTRY */
+    /* 0x2B PARAMETER_SETTINGS_ENTRY */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_roundtrip_parameter_settings_entry),
 #endif
-        /* 0x2C PARAMETER_READ */
+    /* 0x2C PARAMETER_READ */
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_build_param_read),
         cmocka_unit_test(test_process_param_read),
@@ -6990,7 +7014,7 @@ int main(void) {
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_roundtrip_parameter_read),
 #endif
-        /* 0x2D PARAMETER_WRITE */
+    /* 0x2D PARAMETER_WRITE */
 #if CRSF_TEL_ENABLE_PARAMETER_GROUP
         cmocka_unit_test(test_build_param_write),
         cmocka_unit_test(test_process_param_write),
@@ -7000,7 +7024,7 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_parameter_write_oversized),
         cmocka_unit_test(test_roundtrip_parameter_write_min_payload),
 #endif
-        /* 0x32 COMMAND */
+    /* 0x32 COMMAND */
 #if CRSF_ENABLE_COMMAND && defined(CRSF_CONFIG_TX)
         cmocka_unit_test(test_build_command),
 #endif
@@ -7012,14 +7036,14 @@ int main(void) {
         cmocka_unit_test(test_roundtrip_command_oversized),
         cmocka_unit_test(test_error_command_bad_inner_crc),
 #endif
-        /* 0xAA MAVLINK_ENVELOPE */
+    /* 0xAA MAVLINK_ENVELOPE */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_MAVLINK_ENVELOPE
         cmocka_unit_test(test_roundtrip_mavlink_envelope),
         cmocka_unit_test(test_roundtrip_mavlink_envelope_max_data),
         cmocka_unit_test(test_roundtrip_mavlink_envelope_limited_size),
         cmocka_unit_test(test_mavlink_envelope_nibble_order),
 #endif
-        /* 0xAC MAVLINK_STATUS */
+    /* 0xAC MAVLINK_STATUS */
 #if defined(CRSF_CONFIG_TX) && defined(CRSF_CONFIG_RX) && CRSF_TEL_ENABLE_MAVLINK_STATUS
         cmocka_unit_test(test_roundtrip_mavlink_status),
 #endif
