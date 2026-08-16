@@ -25,7 +25,8 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
     FetchContent_Declare(
         cmocka
-        GIT_REPOSITORY https://git.cryptomilk.org/projects/cmocka.git
+        #GIT_REPOSITORY https://git.cryptomilk.org/projects/cmocka.git
+        GIT_REPOSITORY https://gitlab.com/cmocka/cmocka
         GIT_TAG        master
         GIT_SHALLOW    1
     )
