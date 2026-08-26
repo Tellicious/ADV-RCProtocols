@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __SYMAX_H__
-#define __SYMAX_H__
+#ifndef RCPROTOCOLS_SYMAX_H
+#define RCPROTOCOLS_SYMAX_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -311,4 +311,4 @@ uint8_t SymaX_isPacketFresh(const SymaX_t* SymaX, uint8_t packet_type, uint32_t 
 }
 #endif
 
-#endif /* __SYMAX_H__ */
+#endif /* RCPROTOCOLS_SYMAX_H */

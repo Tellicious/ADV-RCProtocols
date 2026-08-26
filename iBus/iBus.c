@@ -50,7 +50,7 @@ void iBus_init(iBus_t* iBus) {
     if (!iBus) {
         return;
     }
-    memset(iBus, 0x00, sizeof(*iBus));
+    (void)memset(iBus, 0x00, sizeof(*iBus));
 #if IBUS_ENABLE_TELEMETRY
     iBus->sensorCount = 1; // Reserve slot 0 for internal voltage
     iBus->sensors[0].type = IBUS_MEAS_TYPE_INTERNAL_VOLTAGE;
@@ -88,7 +88,7 @@ iBus_Status_t iBus_registerSensor(iBus_t* iBus, const iBus_SensorType_t sensor) 
     iBus->sensors[iBus->sensorCount].size = iBus_getSensorSize(sensor); // Auto-assign
 
 #if IBUS_ENABLE_FRESHNESS_CHECK
-    if (iBus->getTimestamp_ms) {
+    if (iBus->getTimestamp_ms != NULL) {
         iBus->sensors[iBus->sensorCount].updated_ms = iBus->getTimestamp_ms();
     }
 #endif
@@ -108,19 +108,21 @@ iBus_Status_t iBus_processFrame(iBus_t* iBus, const uint8_t* frame) {
     iBus->stats.frames_total++;
 #endif
 
-    if (frame[0] != IBUS_SERVO_HDR0 || frame[1] != IBUS_SERVO_HDR1) {
+    if ((frame[0] != IBUS_SERVO_HDR0) || (frame[1] != IBUS_SERVO_HDR1)) {
         return IBUS_ERROR_INVALID_FRAME;
     }
 
-    if (iBus_calcChecksum(frame, (uint8_t)(IBUS_SERVO_FRAME_LEN - 2)) != (uint16_t)(frame[IBUS_SERVO_FRAME_LEN - 2] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1] << 8))) {
+    if (iBus_calcChecksum(frame, (IBUS_SERVO_FRAME_LEN - 2U)) != (uint16_t)((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 2U] | ((uint16_t)frame[IBUS_SERVO_FRAME_LEN - 1U] << 8U))) {
 #if IBUS_ENABLE_STATS
         iBus->stats.frames_bad_crc++;
 #endif
         return IBUS_ERROR_CHECKSUM_FAIL;
     }
 
-    for (uint8_t ch = 0, i = 2; ch < IBUS_MAX_CHANNELS; ch++, i += 2) {
-        iBus->channels[ch] = (uint16_t)(frame[i] | ((uint16_t)frame[i + 1] << 8));
+    uint8_t i = 2U;
+    for (uint8_t ch = 0; ch < IBUS_MAX_CHANNELS; ch++) {
+        iBus->channels[ch] = (uint16_t)((uint16_t)frame[i] | ((uint16_t)frame[i + 1U] << 8U));
+        i += 2U;
     }
 #if IBUS_ENABLE_FRESHNESS_CHECK
     /* freshness update for RC */
@@ -143,12 +145,12 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
     iBus->stats.frames_total++;
 #endif
 
-    if (rx[0] != 0x04 && rx[0] != 0x06) {
+    if ((rx[0] != 0x04U) && (rx[0] != 0x06U)) {
         // This is not a telemetry frame
         return IBUS_TEL_NO_REPLY;
     }
-    uint16_t csum = iBus_calcChecksum(rx, (uint8_t)(rx[0] - 2));
-    if (csum != (uint16_t)(rx[rx[0] - 2] | ((uint16_t)rx[rx[0] - 1] << 8))) {
+    uint16_t csum = iBus_calcChecksum(rx, (uint8_t)(rx[0] - 2U));
+    if (csum != ((uint16_t)rx[rx[0] - 2U] | ((uint16_t)rx[rx[0] - 1U] << 8U))) {
 #if IBUS_ENABLE_STATS
         iBus->stats.frames_bad_crc++;
 #endif
@@ -165,7 +167,7 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
         return IBUS_ERROR_SENSOR_NOT_FOUND; /* do not reply */
     }
 
-    iBus_Sensor_t* s = &iBus->sensors[addr];
+    const iBus_Sensor_t* s = &iBus->sensors[addr];
     uint8_t* p = tx;
 
     switch (cmd) {
@@ -176,7 +178,7 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
 #if IBUS_ENABLE_FRESHNESS_CHECK
             iBus_updateTimestamp(iBus, IBUS_FRAME_TYPE_TEL);
 #endif
-            memcpy(p, rx, 4);
+            (void)memcpy(p, rx, 4);
             *tx_len = 4; // Discovery reply is always 4 bytes
             return IBUS_TEL_REPLY_READY;
             break;
@@ -187,13 +189,13 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
 #if IBUS_ENABLE_FRESHNESS_CHECK
             iBus_updateTimestamp(iBus, IBUS_FRAME_TYPE_TEL);
 #endif
-            *p++ = 0x06;  /* 2B payload: type, size */
-            *p++ = rx[1]; /* Command + address */
-            *p++ = s->type;
-            *p++ = s->size;
+            p[0] = 0x06;  /* 2B payload: type, size */
+            p[1] = rx[1]; /* Command + address */
+            p[2] = s->type;
+            p[3] = s->size;
             csum = iBus_calcChecksum(tx, 4);
-            *p++ = (uint8_t)(csum & 0xFF);
-            *p++ = (uint8_t)(csum >> 8);
+            p[4] = (uint8_t)(csum & 0xFFU);
+            p[5] = (uint8_t)(csum >> 8);
             *tx_len = 6;
             return IBUS_TEL_REPLY_READY;
             break;
@@ -204,18 +206,18 @@ iBus_Status_t iBus_handleTelemetryFromISR(iBus_t* iBus, const uint8_t* rx, uint8
 #if IBUS_ENABLE_FRESHNESS_CHECK
             iBus_updateTimestamp(iBus, IBUS_FRAME_TYPE_TEL);
 #endif
-            *p++ = (uint8_t)(4U + s->size); /* Length of reply */
-            *p++ = rx[1];                   /* Command + address */
-            *p++ = (uint8_t)(s->value & 0xFF);
-            *p++ = (uint8_t)((s->value >> 8) & 0xFF);
+            p[0] = (uint8_t)(s->size + 4U); /* Length of reply */
+            p[1] = rx[1];                   /* Command + address */
+            p[2] = (uint8_t)((uint32_t)s->value & 0xFFU);
+            p[3] = (uint8_t)(((uint32_t)s->value >> 8) & 0xFFU);
             if (s->size == 4U) {
-                *p++ = (uint8_t)((s->value >> 16) & 0xFF);
-                *p++ = (uint8_t)((s->value >> 24) & 0xFF);
+                p[4] = (uint8_t)(((uint32_t)s->value >> 16) & 0xFFU);
+                p[5] = (uint8_t)(((uint32_t)s->value >> 24) & 0xFFU);
             }
-            csum = iBus_calcChecksum(tx, s->size + 2);
-            *p++ = (uint8_t)(csum & 0xFF);
-            *p++ = (uint8_t)(csum >> 8);
-            *tx_len = s->size + 4;
+            csum = iBus_calcChecksum(tx, (uint8_t)(s->size + 2U));
+            p[s->size + 2U] = (uint8_t)(csum & 0xFFU);
+            p[s->size + 3U] = (uint8_t)(csum >> 8);
+            *tx_len = (uint8_t)(s->size + 4U);
             return IBUS_TEL_REPLY_READY;
             break;
         default: break;
@@ -236,7 +238,7 @@ void iBus_resetStats(iBus_t* iBus) {
     if (!iBus) {
         return;
     }
-    memset(&iBus->stats, 0x00, sizeof(iBus->stats));
+    (void)memset(&iBus->stats, 0x00, sizeof(iBus->stats));
 }
 #endif
 
@@ -245,7 +247,7 @@ uint8_t iBus_isFrameFresh(const iBus_t* iBus, uint8_t frame_type, uint32_t max_a
     if (!iBus || !iBus->getTimestamp_ms) {
         return 0;
     }
-    if (frame_type >= IBUS_TRACKED_FRAME_TYPES) {
+    if (frame_type >= (uint8_t)IBUS_TRACKED_FRAME_TYPES) {
         return 0;
     }
 
@@ -266,7 +268,7 @@ static inline uint16_t iBus_calcChecksum(const uint8_t* buf, uint8_t len) {
 #if IBUS_ENABLE_FRESHNESS_CHECK
 static inline void iBus_updateTimestamp(iBus_t* iBus, uint8_t frame_type) {
 
-    if (iBus && iBus->getTimestamp_ms && frame_type < IBUS_TRACKED_FRAME_TYPES) {
+    if ((iBus != NULL) && (iBus->getTimestamp_ms != NULL) && (frame_type < (uint8_t)IBUS_TRACKED_FRAME_TYPES)) {
         iBus->_packet_times[frame_type] = iBus->getTimestamp_ms();
     }
 }

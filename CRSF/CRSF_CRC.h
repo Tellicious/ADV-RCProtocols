@@ -32,8 +32,8 @@
 /* END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __CRSF_CRC_H__
-#define __CRSF_CRC_H__
+#ifndef CRSF_CRC_H
+#define CRSF_CRC_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,7 +101,7 @@ static const uint8_t CRC8_BA_LUT[256] = {
 static inline uint8_t CRSF_calcChecksumLUT(const uint8_t* data, const uint8_t len, const uint8_t* lut) {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < len; i++) {
-        crc = lut[crc ^ *data++];
+        crc = lut[crc ^ data[i]];
     }
     return crc;
 }
@@ -127,4 +127,4 @@ static uint8_t CRSF_calcChecksumPoly(const uint8_t* data, const uint8_t len, con
 }
 #endif
 
-#endif /* __CRSF_CRC_H__ */
+#endif /* CRSF_CRC_H */

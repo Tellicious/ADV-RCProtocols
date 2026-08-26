@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __IBUS_H__
-#define __IBUS_H__
+#ifndef RCPROTOCOLS_IBUS_H
+#define RCPROTOCOLS_IBUS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -241,7 +241,7 @@ static inline iBus_Status_t iBus_writeSensor(iBus_t* iBus, iBus_SensorType_t typ
         if (iBus->sensors[i].type == type) {
             iBus->sensors[i].value = value;
 #if IBUS_ENABLE_FRESHNESS_CHECK
-            if (iBus->getTimestamp_ms) {
+            if (iBus->getTimestamp_ms != NULL) {
                 iBus->sensors[i].updated_ms = iBus->getTimestamp_ms();
             }
 #endif
@@ -318,4 +318,4 @@ uint8_t iBus_isFrameFresh(const iBus_t* iBus, uint8_t frame_type, uint32_t max_a
 }
 #endif
 
-#endif /* __IBUS_H__ */
+#endif /* RCPROTOCOLS_IBUS_H */

@@ -55,18 +55,19 @@ PPM_Status_t PPM_init(PPM_t* PPM, uint32_t timerFrequency, uint16_t timerAutoRel
     if (!timerFrequency) {
         return PPM_ERROR;
     }
-    memset(PPM, 0x00, sizeof(*PPM));
+    (void)memset(PPM, 0x00, sizeof(*PPM));
 
     PPM->_timerAutoReload = timerAutoReload;
     PPM->_freqMultiplier = 1000000.f / timerFrequency;
-    PPM->_packetEndTicks = PPM_PACKET_END_US / PPM->_freqMultiplier;
+    float packetEndTicks = (float)PPM_PACKET_END_US / PPM->_freqMultiplier;
+    PPM->_packetEndTicks = (uint16_t)packetEndTicks;
 
     return PPM_SUCCESS;
 }
 
 #if PPM_ENABLE_FRESHNESS_CHECK
 void PPM_setTimestampCallback(PPM_t* PPM, uint32_t (*getTimestamp_ms)(void)) {
-    if (PPM) {
+    if (PPM != NULL) {
         PPM->getTimestamp_ms = getTimestamp_ms;
     }
 }
@@ -79,11 +80,12 @@ PPM_Status_t PPM_processPacket(PPM_t* PPM, uint16_t timerCounter) {
     volatile int32_t pulseLength = timerCounter - PPM->_lastTimerCounter;
 
     if (timerCounter < PPM->_lastTimerCounter) {
-        pulseLength += PPM->_timerAutoReload + 1;
+        uint32_t ppmInc = (uint32_t)PPM->_timerAutoReload + 1U;
+        pulseLength += (int32_t)ppmInc;
     }
     PPM->_lastTimerCounter = timerCounter;
 
-    if (pulseLength > PPM->_packetEndTicks) {
+    if (pulseLength > (int32_t)PPM->_packetEndTicks) {
         if (PPM->_currentChannel < PPM_MAX_CHANNELS) {
             PPM->_currentChannel = 0;
 #if PPM_ENABLE_STATS
@@ -99,9 +101,12 @@ PPM_Status_t PPM_processPacket(PPM_t* PPM, uint16_t timerCounter) {
     } else if (PPM->_currentChannel >= PPM_MAX_CHANNELS) {
         PPM->_currentChannel++;
         return PPM_WAIT;
+    } else {
+        /* No action required */
     }
 
-    PPM->channels[PPM->_currentChannel] = pulseLength * PPM->_freqMultiplier;
+    float chVal = (float)pulseLength * PPM->_freqMultiplier;
+    PPM->channels[PPM->_currentChannel] = (uint16_t)chVal;
     PPM->_currentChannel++;
 
     if (PPM->_currentChannel == PPM_MAX_CHANNELS) {

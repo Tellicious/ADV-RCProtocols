@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __PPM_H__
-#define __PPM_H__
+#ifndef RCPROTOCOLS_PPM_H
+#define RCPROTOCOLS_PPM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,7 +88,9 @@ typedef struct {
 #endif
 
     float _freqMultiplier;
-    uint16_t _timerAutoReload, _packetEndTicks, _lastTimerCounter;
+    uint16_t _timerAutoReload;
+    uint16_t _packetEndTicks;
+    uint16_t _lastTimerCounter;
     uint8_t _currentChannel;
 
 } PPM_t;
@@ -159,4 +161,4 @@ uint8_t PPM_isPacketFresh(const PPM_t* PPM, uint32_t max_age_ms);
 }
 #endif
 
-#endif /* __PPM_H__ */
+#endif /* RCPROTOCOLS_PPM_H */

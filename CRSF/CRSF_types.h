@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __CRSF_TYPES_H__
-#define __CRSF_TYPES_H__
+#ifndef CRSF_TYPES_H
+#define CRSF_TYPES_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,31 +47,31 @@ extern "C" {
 
 /* Configuration -------------------------------------------------------------*/
 
-#define CRSF_MAX_RPM_VALUES         19 /* Max RPM values */
-#define CRSF_MAX_TEMPERATURE_VALUES 20 /* Max temperature values */
-#define CRSF_MAX_VOLTAGE_VALUES     29 /* Max voltage values */
-#define CRSF_RC_CHANNELS            16 /* Number of RC channels */
+#define CRSF_MAX_RPM_VALUES         19U /* Max RPM values */
+#define CRSF_MAX_TEMPERATURE_VALUES 20U /* Max temperature values */
+#define CRSF_MAX_VOLTAGE_VALUES     29U /* Max voltage values */
+#define CRSF_RC_CHANNELS            16  /* Number of RC channels */
 
 #ifndef CRSF_MAX_FLIGHT_MODE_NAME_LEN
-#define CRSF_MAX_FLIGHT_MODE_NAME_LEN 16 /* Max flight mode name length */
+#define CRSF_MAX_FLIGHT_MODE_NAME_LEN 16U /* Max flight mode name length */
 #endif
 
 #ifndef CRSF_MAX_DEVICE_NAME_LEN
-#define CRSF_MAX_DEVICE_NAME_LEN 32 /* Max device name length */
+#define CRSF_MAX_DEVICE_NAME_LEN 32U /* Max device name length */
 #endif
 
-#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56 /* Max parameter settings payload */
+#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56U /* Max parameter settings payload */
 
 #ifndef CRSF_MAX_PARAM_DATA_LEN
-#define CRSF_MAX_PARAM_DATA_LEN 32 /* Max parameter value length */
+#define CRSF_MAX_PARAM_DATA_LEN 32U /* Max parameter value length */
 #endif
 
 #ifndef CRSF_MAX_COMMAND_PAYLOAD
-#define CRSF_MAX_COMMAND_PAYLOAD 56 /* Max command payload */
+#define CRSF_MAX_COMMAND_PAYLOAD 56U /* Max command payload */
 #endif
 
 #ifndef CRSF_MAX_COMMAND_PAYLOAD_STRINGS
-#define CRSF_MAX_COMMAND_PAYLOAD_STRINGS 20 /* Max size of command payload strings */
+#define CRSF_MAX_COMMAND_PAYLOAD_STRINGS 20U /* Max size of command payload strings */
 #endif
 
 #if CRSF_MAX_COMMAND_PAYLOAD_STRINGS > CRSF_MAX_COMMAND_PAYLOAD - 3
@@ -80,19 +80,19 @@ extern "C" {
 #endif
 
 #ifndef CRSF_MAX_MAVLINK_PAYLOAD
-#define CRSF_MAX_MAVLINK_PAYLOAD 58 /* Max MAVLink payload */
+#define CRSF_MAX_MAVLINK_PAYLOAD 58U /* Max MAVLink payload */
 #endif
 
 #ifndef CRSF_MAX_PARAM_STRING_LENGTH
-#define CRSF_MAX_PARAM_STRING_LENGTH 20 /* Max parameter string length */
+#define CRSF_MAX_PARAM_STRING_LENGTH 20U /* Max parameter string length */
 #endif
 
 #ifndef CRSF_MAX_PARAM_SETTINGS_PAYLOAD
-#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56 /* Max parameter settings payload */
+#define CRSF_MAX_PARAM_SETTINGS_PAYLOAD 56U /* Max parameter settings payload */
 #endif
 
 #ifndef CRSF_MIN_STRING_LENGTH
-#define CRSF_MIN_STRING_LENGTH 2 /* Min string length */
+#define CRSF_MIN_STRING_LENGTH 2U /* Min string length */
 #endif
 
 /* Characteristics -----------------------------------------------------------*/
@@ -466,7 +466,7 @@ typedef struct {
 /**
  * CRSF_FRAMETYPE_BAROALT_VSPEED payload
  */
-/** Payload sent
+/* Payload sent
 typedef struct {
     uint16_t altitude_packed;     // Altitude above start (calibration) point
                                   // Altitude value depends on MSB (bit 15):
@@ -792,12 +792,17 @@ typedef enum {
  */
 typedef union {
     struct {
-        int64_t cur, min, max;
+        int64_t cur;
+        int64_t min;
+        int64_t max;
         char units[5];
     } i; // int-like
 
     struct {
-        int32_t value, min, max, def;
+        int32_t value;
+        int32_t min;
+        int32_t max;
+        int32_t def;
         uint8_t precision;
         int32_t step;
         char units[5];
@@ -805,7 +810,11 @@ typedef union {
 
     struct {
         char options[CRSF_MAX_PARAM_STRING_LENGTH];
-        uint8_t value, hasOptData, min, max, def;
+        uint8_t value;
+        uint8_t hasOptData;
+        uint8_t min;
+        uint8_t max;
+        uint8_t def;
         char units[5];
     } sel; // select
 
@@ -816,7 +825,7 @@ typedef union {
     } str; // string
 
     struct {
-        uint8_t children[CRSF_MAX_PARAM_SETTINGS_PAYLOAD - 1];
+        uint8_t children[CRSF_MAX_PARAM_SETTINGS_PAYLOAD - 1U];
         uint8_t childrenCnt;
     } folder; // folder
 
@@ -1121,4 +1130,4 @@ _Static_assert(sizeof(CRSF_MAVLinkStat_t) == CRSF_WIRE_SIZE_MAVLINK_STATUS, "CRS
 }
 #endif
 
-#endif /* __CRSF_TYPES_H__ */
+#endif /* CRSF_TYPES_H */
