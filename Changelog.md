@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.0
+
+**Improvements:**
+- Reviewed code to improve MISRA compliance
+
 ## v1.2.0
 **New features:**
 - Added new Barometer, Magnetometer, Accel_Gyro and Link Statistics Repeater frame types to CRSF with tests
