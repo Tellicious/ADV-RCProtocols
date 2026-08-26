@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __CRSF_H__
-#define __CRSF_H__
+#ifndef RCPROTOCOLS_CRSF_H
+#define RCPROTOCOLS_CRSF_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -389,46 +389,11 @@ void CRSF_resetStats(CRSF_t* crsf);
  * 
  * \return          1 if frame is fresh, 0 if stale or never received
  */
-uint8_t CRSF_isFrameFresh(const CRSF_t* CRSF, uint8_t frame_type, uint32_t max_age_ms);
+uint8_t CRSF_isFrameFresh(const CRSF_t* crsf, uint8_t frame_type, uint32_t max_age_ms);
 #endif
-
-#if CRSF_ENABLE_COMMAND
-/**
- * @brief   Encode a Direct Command payload (0x32) including inner CRC (0xBA).
- *
- * This helper produces the **payload** for a Direct Command frame:
- *   [CMD_ID][CMD_PAYLOAD...][INNER_CRC]
- *
- * @param[in]  dest_addr   Destination address (extended header).
- * @param[in]  origin_addr Origin address (extended header).
- * @param[in]  cmd_id      Command ID.
- * @param[in]  cmd_payload Pointer to command payload bytes (may be NULL if none).
- * @param[in]  cmd_len     Command payload length in bytes.
- * @param[out] out_payload Output buffer for command payload (+1 for inner CRC).
- * @param[out] out_len     Written payload length (cmd_len + 2 incl. cmd_id + inner CRC).
- * @return     CRSF_SUCCESS on success, error otherwise.
- */
-// CRSF_Status_t CRSF_encodeDirectCommand(uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload, uint8_t cmd_len,
-//                                        uint8_t* out_payload, uint8_t* out_len);
-
-/**
- * @brief   Build a complete Direct Command frame (0x32) into @p out.
- * @param[in]  bus_addr    First header byte (bus address).
- * @param[in]  dest_addr   Destination address (extended header).
- * @param[in]  origin_addr Origin address (extended header).
- * @param[in]  cmd_id      Command ID.
- * @param[in]  cmd_payload Pointer to command payload (may be NULL).
- * @param[in]  cmd_len     Command payload length in bytes.
- * @param[out] out         Output buffer for full CRSF frame (addr..crc).
- * @param[out] out_len     Written frame length.
- * @return     CRSF_SUCCESS on success, error otherwise.
- */
-// CRSF_Status_t CRSF_buildDirectCommandFrame(uint8_t bus_addr, uint8_t dest_addr, uint8_t origin_addr, uint8_t cmd_id, const uint8_t* cmd_payload,
-//                                            uint8_t cmd_len, uint8_t* out, uint8_t* out_len);
-#endif /* CRSF_ENABLE_COMMAND */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __CRSF_H__ */
+#endif /* RCPROTOCOLS_CRSF_H */

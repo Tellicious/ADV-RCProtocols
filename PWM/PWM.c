@@ -55,7 +55,7 @@ PWM_Status_t PWM_init(PWM_t* PWM, uint32_t timerFrequency, uint16_t timerAutoRel
     if (!timerFrequency) {
         return PWM_ERROR;
     }
-    memset(PWM, 0x00, sizeof(*PWM));
+    (void)memset(PWM, 0x00, sizeof(*PWM));
 
     PWM->_timerAutoReload = timerAutoReload;
     PWM->_freqMultiplier = 1000000.f / timerFrequency;
@@ -65,7 +65,7 @@ PWM_Status_t PWM_init(PWM_t* PWM, uint32_t timerFrequency, uint16_t timerAutoRel
 
 #if PWM_ENABLE_FRESHNESS_CHECK
 void PWM_setTimestampCallback(PWM_t* PWM, uint32_t (*getTimestamp_ms)(void)) {
-    if (PWM) {
+    if (PWM != NULL) {
         PWM->getTimestamp_ms = getTimestamp_ms;
     }
 }
@@ -83,11 +83,18 @@ PWM_Status_t PWM_processPacket(PWM_t* PWM, uint8_t channel, uint8_t rising, uint
     }
     PWM->_pulseCounter[channel]++;
 
-    if (PWM->_pulseCounter[channel] >= PWM_SAMPLES_NUM * 2U) {
+    if (PWM->_pulseCounter[channel] >= (PWM_SAMPLES_NUM * 2U)) {
         if (PWM->_fallTimer[channel] > PWM->_riseTimer[channel]) {
-            PWM->channels[channel] = (PWM->_fallTimer[channel] - PWM->_riseTimer[channel]) * PWM->_freqMultiplier / PWM_SAMPLES_NUM;
+            {
+                float chVal = (((float)PWM->_fallTimer[channel] - (float)PWM->_riseTimer[channel]) * PWM->_freqMultiplier) / (float)PWM_SAMPLES_NUM;
+                PWM->channels[channel] = (uint16_t)chVal;
+            }
         } else {
-            PWM->channels[channel] = (PWM->_fallTimer[channel] - PWM->_riseTimer[channel] + PWM->_timerAutoReload + 1U) * PWM->_freqMultiplier / PWM_SAMPLES_NUM;
+            {
+                float chVal =
+                    ((((float)PWM->_fallTimer[channel] - (float)PWM->_riseTimer[channel]) + ((float)PWM->_timerAutoReload + 1.0f)) * PWM->_freqMultiplier) / (float)PWM_SAMPLES_NUM;
+                PWM->channels[channel] = (uint16_t)chVal;
+            }
         }
         PWM->_riseTimer[channel] = 0;
         PWM->_fallTimer[channel] = 0;
@@ -95,7 +102,7 @@ PWM_Status_t PWM_processPacket(PWM_t* PWM, uint8_t channel, uint8_t rising, uint
         PWM->_updatedChannels |= (1U << channel);
     }
 
-    if (PWM->_updatedChannels == ((1 << PWM_MAX_CHANNELS) - 1U)) {
+    if (PWM->_updatedChannels == ((1U << PWM_MAX_CHANNELS) - 1U)) {
         PWM->_updatedChannels = 0;
 #if PWM_ENABLE_STATS
         PWM->packets_total++;

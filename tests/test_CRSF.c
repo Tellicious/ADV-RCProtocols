@@ -2708,7 +2708,7 @@ static void test_build_flightmode(void** state) {
     uint8_t frame[CRSF_MAX_FRAME_LEN];
     uint8_t frameLength = 0;
     CRSF_init(&crsf);
-    strncpy((char*)crsf.FlightMode.flight_mode, "ANGLE", sizeof((char*)crsf.FlightMode.flight_mode));
+    strncpy((char*)crsf.FlightMode.flight_mode, "ANGLE", sizeof(crsf.FlightMode.flight_mode));
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_FLIGHT_MODE, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_flightmode_packet[ii]);
@@ -2942,7 +2942,7 @@ static void test_build_device_info(void** state) {
     crsf.DeviceInfo.Firmware_ID = 0x00030004;
     crsf.DeviceInfo.Parameters_total = 5;
     crsf.DeviceInfo.Parameter_version_number = 2;
-    strncpy((char*)crsf.DeviceInfo.Device_name, "CRSF-DEV", sizeof((char*)crsf.DeviceInfo.Device_name));
+    strncpy((char*)crsf.DeviceInfo.Device_name, "CRSF-DEV", sizeof(crsf.DeviceInfo.Device_name));
     assert_true(CRSF_buildFrame(&crsf, CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_DEVICE_INFO, 0, frame, &frameLength) == CRSF_SUCCESS);
     for (uint8_t ii = 0; ii < frameLength; ii++) {
         assert_int_equal(frame[ii], test_device_info_packet[ii]);

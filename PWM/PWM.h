@@ -31,8 +31,8 @@
  */
 /* END Header */
 
-#ifndef __PWM_H__
-#define __PWM_H__
+#ifndef RCPROTOCOLS_PWM_H
+#define RCPROTOCOLS_PWM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,8 +88,11 @@ typedef struct {
 #endif
 
     uint8_t _pulseCounter[PWM_MAX_CHANNELS];
-    uint16_t _timerAutoReload, _lastTimerCounter, _updatedChannels;
-    uint16_t _riseTimer[PWM_MAX_CHANNELS], _fallTimer[PWM_MAX_CHANNELS];
+    uint16_t _timerAutoReload;
+    uint16_t _lastTimerCounter;
+    uint16_t _updatedChannels;
+    uint16_t _riseTimer[PWM_MAX_CHANNELS];
+    uint16_t _fallTimer[PWM_MAX_CHANNELS];
     float _freqMultiplier;
 } PWM_t;
 
@@ -161,4 +164,4 @@ uint8_t PWM_isPacketFresh(const PWM_t* PWM, uint32_t max_age_ms);
 }
 #endif
 
-#endif /* __PWM_H__ */
+#endif /* RCPROTOCOLS_PWM_H */
